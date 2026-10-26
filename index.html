@@ -815,7 +815,8 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${r==='direzione'?f('reparto','Reparto','text','es. Logistica, Marketing','Compare in alto, sopra il tuo nome.'):''}
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
-   <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>`;
+   <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
+  <div style="max-width:640px;margin-top:16px">${themeCard()}</div>`;
   app.innerHTML=h;}
 document.addEventListener('input',e=>{if(V.name==='profilo'&&e.target.dataset.pf)V.profDirty=true;});
 document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.closest('[data-pfsave]'))return;const u=me();if(!u)return;
@@ -2230,25 +2231,26 @@ function renderAltro(){
   <h2 class="alt-sec">Tournée</h2><div class="list">${tour.map(card).join('')}</div>
   <h2 class="alt-sec">Account</h2><div class="list">${acc.map(card).join('')}</div>
   <div class="alt-cols">
-  <section class="card"><div class="card-head"><h2>Impostazioni</h2></div>
-   <div class="field"><label for="thMode">Tema scuro</label><select class="in" id="thMode">
-    <option value="sera" ${T.modo==='sera'?'selected':''}>Automatico la sera</option><option value="auto" ${T.modo==='auto'?'selected':''}>Come il telefono</option>
-    <option value="chiaro" ${T.modo==='chiaro'?'selected':''}>Sempre chiaro</option><option value="scuro" ${T.modo==='scuro'?'selected':''}>Sempre scuro</option></select></div>
-   ${T.modo==='sera'?`<div class="grid2"><div class="field"><label for="thFrom">Scuro dalle</label><input class="in" type="time" id="thFrom" value="${esc(T.da)}"></div><div class="field"><label for="thTo">fino alle</label><input class="in" type="time" id="thTo" value="${esc(T.a)}"></div></div>`:''}
-   <p class="muted small" style="margin:0">Vale su questo telefono.</p></section>
+  ${themeCard()}
   <section class="card"><div class="card-head"><h2>Come leggere i colori</h2></div>
    <ul class="legend-list"><li><i style="background:var(--ok)"></i>Verde: fatto, pronto, pagato</li><li><i style="background:var(--warn)"></i>Arancio: da fare</li><li><i style="background:#F2B705"></i>Giallo: attenzione o consiglio da leggere</li><li><i style="background:#3B6FB6"></i>Azzurro: nota del referente di zona</li><li><i style="background:var(--bad)"></i>Rosso: problema o dati cambiati</li></ul></section>
   <section class="card">${u&&u.ruolo!=='tm'?`<div class="field"><label class="flabel" for="tourSel2">Tour</label><select class="in" id="tourSel2">${tours().map(t=>`<option ${t===curTour()?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`:''}
    <div><b>${esc(u?u.nome:'')}</b><div class="muted small">${u?esc(u.email)+' · '+ROLE_L[u.ruolo]+(u.tour?' · Tour '+esc(u.tour):''):''}</div></div>
    <div class="row-btns"><button class="btn small" data-logout>Esci</button></div></section></div>`;
 }
+function themeCard(){const T=themePref();return `<section class="card"><div class="card-head"><h2>Tema scuro</h2></div>
+   <div class="field"><label for="thMode">Quando usarlo</label><select class="in" id="thMode">
+    <option value="sera" ${T.modo==='sera'?'selected':''}>Automatico la sera</option><option value="auto" ${T.modo==='auto'?'selected':''}>Come il telefono</option>
+    <option value="chiaro" ${T.modo==='chiaro'?'selected':''}>Sempre chiaro</option><option value="scuro" ${T.modo==='scuro'?'selected':''}>Sempre scuro</option></select></div>
+   ${T.modo==='sera'?`<div class="grid2"><div class="field"><label for="thFrom">Scuro dalle</label><input class="in" type="time" id="thFrom" value="${esc(T.da)}"></div><div class="field"><label for="thTo">fino alle</label><input class="in" type="time" id="thTo" value="${esc(T.a)}"></div></div>`:''}
+   <p class="muted small" style="margin:0">Vale su questo dispositivo.</p></section>`;}
 function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{})};}
 function applyTheme(){if(document.body.classList.contains('landing'))return;const T=themePref();const r=document.documentElement;
   if(T.modo==='auto'){delete r.dataset.theme;return;}
   let dark=T.modo==='scuro';if(T.modo==='sera'){const h=nowHM();dark=T.da<=T.a?(h>=T.da&&h<T.a):(h>=T.da||h<T.a);}
   r.dataset.theme=dark?'dark':'light';}
 setInterval(applyTheme,60000);
-document.addEventListener('change',e=>{if(V.name!=='altro')return;const id=e.target.id;if(!['thMode','thFrom','thTo'].includes(id))return;const T=themePref();
+document.addEventListener('change',e=>{if(V.name!=='altro'&&V.name!=='profilo')return;const id=e.target.id;if(!['thMode','thFrom','thTo'].includes(id))return;const T=themePref();
   if(id==='thMode')T.modo=e.target.value;if(id==='thFrom'&&e.target.value)T.da=e.target.value;if(id==='thTo'&&e.target.value)T.a=e.target.value;
   S.pref.tema=T;savePref();applyTheme();render();});
 function spCard(){
