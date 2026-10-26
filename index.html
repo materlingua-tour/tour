@@ -958,7 +958,7 @@ function renderViaggi(tp,nx){
       :`<div class="row-btns"><button class="btn small primary" data-og="call">Avvisa l’hotel</button></div>`}</div>`);}
   if(nx&&ho){const f=(nx.repliche||[])[0];legs.push(legHTML('Domani mattina',f?`partenza consigliata ${depTime(nx).dep} · ${shortDate(nx.data)}`:shortDate(nx.data),ho.nome,nx.teatroNome||'Teatro',ho.indirizzo,nx.indirizzo,(nx.viaggio||{}).hotelTeatro));}
   if(!legs.length)return '';
-  return `<section class="card" id="c-viaggi"><div class="card-head"><h2>Spostamenti</h2></div>${legs.join('')}<p class="proto">Tempi di esempio: nella versione collegata li calcola Google Maps, senza traffico.</p><div class="row-btns"><a class="btn small ghost" href="https://www.autostrade.it/it/infoviabilita/traffico-in-real-time" target="_blank" rel="noopener">Traffico in autostrada</a></div></section>`;}
+  return `<section class="card" id="c-viaggi"><div class="card-head"><h2>Spostamenti</h2></div>${legs.join('')}<p class="muted small" style="margin:6px 0 0">Tempi stimati senza traffico: controlla la strada prima di partire.</p><div class="row-btns"><a class="btn small ghost" href="https://www.autostrade.it/it/infoviabilita/traffico-in-real-time" target="_blank" rel="noopener">Traffico in autostrada</a></div></section>`;}
 function tourLang(tour){const n=norm(tour);return n.includes('ingl')||n.includes('engl')?'en':n.includes('franc')||n.includes('fren')?'fr':n.includes('spagn')||n.includes('span')?'es':'it';}
 const CRONO_L={
  en:{loc:'en-GB',hi:(d,c)=>`Hi everyone! Tomorrow, ${d}, we're in ${c}.`,hi2:(d,c)=>`Hi everyone! On ${d} we're in ${c}.`,bf:'breakfast',nobf:'No breakfast at the hotel: please plan ahead.',meet:'meet in the lobby',bags:' with your luggage packed',dep:'departure',arr:t=>`arrival at ${t}`,sc:'Soundcheck',nth:['First show','Second show','Third show','Fourth show'],shows:'Shows',and:'and',bye:'See you tomorrow!'},
@@ -2240,7 +2240,7 @@ function renderAltro(){
 }
 function themeCard(){const T=themePref();return `<section class="card"><div class="card-head"><h2>Tema scuro</h2></div>
    <div class="field"><label for="thMode">Quando usarlo</label><select class="in" id="thMode">
-    <option value="sera" ${T.modo==='sera'?'selected':''}>Automatico la sera</option><option value="auto" ${T.modo==='auto'?'selected':''}>Come il telefono</option>
+    <option value="sera" ${T.modo==='sera'?'selected':''}>Automatico la sera</option><option value="auto" ${T.modo==='auto'?'selected':''}>Come il dispositivo</option>
     <option value="chiaro" ${T.modo==='chiaro'?'selected':''}>Sempre chiaro</option><option value="scuro" ${T.modo==='scuro'?'selected':''}>Sempre scuro</option></select></div>
    ${T.modo==='sera'?`<div class="grid2"><div class="field"><label for="thFrom">Scuro dalle</label><input class="in" type="time" id="thFrom" value="${esc(T.da)}"></div><div class="field"><label for="thTo">fino alle</label><input class="in" type="time" id="thTo" value="${esc(T.a)}"></div></div>`:''}
    <p class="muted small" style="margin:0">Vale su questo dispositivo.</p></section>`;}
