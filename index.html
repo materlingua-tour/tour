@@ -794,6 +794,7 @@ function render(){
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo}[V.name];
   if(f)f();
+  if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
 }
 document.addEventListener('click',e=>{const n=e.target.closest('[data-nav]');if(n){go(n.dataset.nav);}});
@@ -2475,6 +2476,14 @@ document.addEventListener('click',async e=>{
 });
 function logout(){if(CFG&&SB){SB.auth.signOut();}S.pref.user='';savePref();document.body.classList.remove('welcome');V={name:'welcome'};render();}
 document.addEventListener('click',e=>{if(e.target.closest('[data-logout]'))logout();});
+document.addEventListener('click',e=>{if(e.target.closest('[data-impf]'))document.getElementById('impFiles').click();});
+document.addEventListener('change',async e=>{if(e.target.id!=='impFiles'||!SB)return;const fs=[...e.target.files];const out=document.getElementById('impOut');let ok=0,ko=0;
+  const all=JSON.stringify(S.c);
+  for(const f of fs){const base=f.name.replace(/\.[^.]+$/,'');const priv=all.includes('"priv_'+base+'"');const path=(priv?'priv_':'')+base;
+    if(!priv&&!all.includes('"'+base+'"')){ko++;continue;}
+    out.textContent='Carico '+(ok+ko+1)+' di '+fs.length+'…';
+    const {error}=await SB.storage.from(priv?'priv':'pub').upload(path,f,{contentType:f.type||'application/octet-stream',upsert:true});if(error){ko++;console.error(error);}else ok++;}
+  out.textContent=ok+' file caricati'+(ko?' · '+ko+' non riconosciuti o non riusciti':'');e.target.value='';});
 document.addEventListener('click',e=>{if(e.target.closest('[data-glogin]')){if(S.pref.user&&!me())SB.auth.signOut().then(googleLogin);else googleLogin();}});
 
 /* ---------- controllo (Direzione e referente di zona) ---------- */
