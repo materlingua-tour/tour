@@ -703,7 +703,7 @@ function setPill(){const p=document.getElementById('storePill');if(!p)return;
   else if(S.mode==='local'){p.className='store-pill local';p.textContent='Solo su questo dispositivo';}
   else{p.className='store-pill';p.textContent='Collegamento…';}}
 async function initStore(){
-  if(CFG){try{await initSupa();}catch(e){S.ready=true;toast('Archivio non raggiungibile: controlla la connessione','bad');render();}return;}
+  if(CFG){try{await initSupa();}catch(e){console.error('[ML] avvio',e);S.ready=true;toast('Errore all’avvio ('+((e&&e.message)||e)+')','bad');try{render();}catch(_){}}return;}
   let db=null;
   try{if(window.claude&&typeof claude.use==='function'){
     const r=await Promise.all([claude.use('db'),claude.use('assets'),claude.use('downloads')]);
@@ -2454,7 +2454,7 @@ function renderWelcome(){
       const test=x=>/esempio/i.test(x.email||'');const G=[['Account di prova',us.filter(test)],['Direzione',us.filter(x=>!test(x)&&x.ruolo==='direzione')],['Referenti di zona',us.filter(x=>!test(x)&&x.ruolo==='venditore')],['Tour Manager',us.filter(x=>!test(x)&&x.ruolo==='tm')]];
       return G.filter(g=>g[1].length).map(([t,l])=>`<span class="wel-grp">${t}</span><div class="wel-list">${l.map(x=>`<button class="wel-u" data-wu="${esc(x.email)}"><span class="tmain"><b>${esc(x.nome)}</b><span class="muted small">${esc(x.email)}</span></span><span class="pill">${x.ruolo==='venditore'&&x.area?'Area '+esc(x.area):esc(deptOf(x))}${x.tour?' · '+esc(x.tour):''}</span></button>`).join('')}</div>`).join('');})()}`;}
   else if(u){
-    const tps=Object.values(S.c.tappe).filter(t=>t.tour===u.tour).sort((a,b)=>a.data.localeCompare(b.data));
+    const tps=u.tour?Object.values(S.c.tappe).filter(t=>t.tour===u.tour&&t.data).sort((a,b)=>a.data.localeCompare(b.data)):[];
     h+=`<h1>Ciao ${esc((u.nome||'').split(' ')[0])}!</h1>
     <p class="wel-role">${esc(deptOf(u))}${u.ruolo==='tm'&&u.tour?` del <b>Tour ${esc(u.tour)}</b>`:''}${u.ruolo==='venditore'&&u.regioni?` · ${u.area?'Area '+esc(u.area)+': ':''}${esc(u.regioni.join(', '))}`:''}</p>
     ${u.ruolo==='tm'&&tps.length?`<p class="muted" style="margin:0">${tps.length} date · dal ${fmtDate(tps[0].data)} al ${fmtDate(tps[tps.length-1].data)}</p>`:''}
