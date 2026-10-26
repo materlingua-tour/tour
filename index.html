@@ -666,7 +666,7 @@ async function blobURL(id){if(!CFG||!isPriv(id))return B(id);const {data,error}=
 async function upAsset(blob,priv){if(!S.assets)throw {code:'assets_unavailable'};return CFG?S.assets.upload(blob,priv):S.assets.upload(blob);}
 function sbErr(e){return {code:(e&&(e.code||e.message))||'errore'};}
 async function initSupa(){
-  await loadScript(SUPA_JS);SB=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'pkce'}});
+  await loadScript(SUPA_JS);SB=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'pkce',lock:async(_n,_t,fn)=>await fn()}});
   S.mode='supa';setPill();
   S.assets={upload:async(blob,priv)=>{const ext=((blob.type||'').split('/')[1]||'bin').replace('jpeg','jpg').replace(/[^a-z0-9]/g,'');
       const id=(priv?'priv_':'')+uid('f')+'.'+ext;const {error}=await SB.storage.from(priv?'priv':'pub').upload(id,blob,{contentType:blob.type||'application/octet-stream',upsert:false});if(error)throw sbErr(error);return {id};}};
@@ -681,10 +681,10 @@ async function initSupa(){
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
   await loadAllSupa();S.ready=true;onData();
-  SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(c)loadCollSupa(c).then(()=>onData(c));}).subscribe();
+  const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>onData());});
 }
-async function loadCollSupa(c){const {data,error}=await SB.from('docs').select('id,data').eq('coll',c).limit(5000);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}
+async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {data:part,error}=await SB.from('docs').select('id,data').eq('coll',c).order('id').range(from,from+999);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}data.push(...part);if(part.length<1000)break;}
   const o={};data.forEach(r=>{o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
 async function googleLogin(){if(!SB)return;const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(error)toast('Accesso non riuscito ('+error.message+')','bad');}
@@ -727,7 +727,8 @@ function pickDay(list){const td=today();let i=list.findIndex(t=>t.data===td);if(
   i=list.findIndex(t=>t.data>td);if(i>=0)return {i,kind:'prossima'};return {i:list.length-1,kind:'passata'};}
 function teatroOf(tp){return tp&&tp.teatroId?S.c.teatri[tp.teatroId]:null;}
 function findP(tappaId,rep){return Object.values(S.c.piantine).find(p=>p.tappaId===tappaId&&p.replica===rep);}
-function dealsFor(tp,rep){return Object.values(S.c.deals).filter(d=>d.data===tp.data&&d.replica===rep&&norm(d.citta)===norm(tp.citta));}
+function sameTour(d,tp){return !d.tour||!tp.tour||d.tour===tp.tour;}
+function dealsFor(tp,rep){return Object.values(S.c.deals).filter(d=>d.data===tp.data&&d.replica===rep&&norm(d.citta)===norm(tp.citta)&&sameTour(d,tp));}
 function dealsHash(ds){return ds.filter(d=>d.stage!=='Chiuso perso').map(d=>[d.id,d.studenti,d.accompagnatori,d.disabili,d.grado,d.note,d.stage].join('|')).sort().join('#');}
 function pStatus(tp,rep){const p=findP(tp.id,rep);const ds=dealsFor(tp,rep);
   if(!p)return {k:'todo',l:'Da creare',p:null,ds};
@@ -2555,7 +2556,7 @@ function renderMappa(){
   const g=groups[sel];
   let prev='';
   if(g){prev=`<div class="mp-prev"><span class="eyebrow">Tappa ${g.items.map(i=>i.n).join(', ')}</span><h2 class="mp-city">${esc(g.items[0].tp.citta)}</h2>`+g.items.map(({tp})=>{
-      const paganti=Object.values(S.c.deals).filter(d=>d.data===tp.data&&norm(d.citta)===norm(tp.citta)&&d.stage!=='Chiuso perso').reduce((a,d)=>a+int(d.studenti),0);
+      const paganti=Object.values(S.c.deals).filter(d=>d.data===tp.data&&norm(d.citta)===norm(tp.citta)&&sameTour(d,tp)&&d.stage!=='Chiuso perso').reduce((a,d)=>a+int(d.studenti),0);
       const iss=dayIssues(tp);
       return `<div class="mp-day"><b>${esc(cap(longDate(tp.data)))}</b>${iss.filter(x=>x!=='Hotel da pagare').length?`<div class="mp-iss">${iss.filter(x=>x!=='Hotel da pagare').map(x=>`<span class="pill warn">⚠ ${esc(x)}</span>`).join('')}</div>`:''}
         <dl class="facts one"><div><dt>Teatro</dt><dd>${esc(tp.teatroNome||'—')}</dd></div><div><dt>Hotel</dt><dd>${tp.hotel?esc(tp.hotel.nome)+' '+hotelPill(tp.hotel):'—'}</dd></div></dl>
