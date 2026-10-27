@@ -1711,6 +1711,7 @@ function renderTools(){
   h+=`<button class="btn small" data-ed="undo" ${V.hist.length?'':'disabled'}>Annulla</button><span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="zout" aria-label="Riduci">−</button><button class="btn small" data-ed="zin" aria-label="Ingrandisci">+</button><button class="btn small" data-ed="fs">${V.fs?'Chiudi schermo intero':'Schermo intero'}</button><span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
+  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona file e posti'}</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
   if(b.url)h+=`<label class="chk"><input type="checkbox" id="showBg" ${V.showBg?'checked':''}> Scansione</label><input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Trasparenza scansione" style="width:90px">`;
   document.getElementById('edTools').innerHTML=h;
@@ -1814,6 +1815,7 @@ app.addEventListener('click',async e=>{
     if(a==='zin'){V.zoom=Math.min(5,V.zoom*1.35);drawEd();return;}
     if(a==='zout'){V.zoom=Math.max(1,V.zoom/1.35);drawEd();return;}
     if(a==='bg'){document.getElementById('bgFile').click();return;}
+    if(a==='scan'){scanPianta();return;}
     if(a==='addzone'){pushHist();const cur=Z();const n=V.t.zone.length;
       const nz={id:uid('z'),nome:n===1?'Galleria':'Zona '+(n+1),tipo:'galleria',w:cur.w,h:cur.h,bg:cur.bg,front:null,rows:[]};
       V.t.zone.push(nz);V.bg[nz.id]={...(V.bg[cur.id]||{})};V.zi=V.t.zone.length-1;resetSel();V.tool='palco';markDirty();
@@ -1874,6 +1876,23 @@ async function renderPdfPage(){
   const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
   await page.render({canvasContext:ctx,viewport:vp}).promise;await setBgCanvas(c);renderTools();
 }
+/* Scansione automatica con Gemini: propone file e posti sulla pianta caricata; il TM poi corregge */
+async function scanPianta(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
+  if(z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
+  V.scanOk=false;V.scanning=true;renderTools();toast('Scansione in corso: ci vogliono 20-40 secondi…');
+  try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const sc=Math.min(1,1800/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    const b64=c.toDataURL('image/jpeg',0.85).split(',')[1];
+    const {data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}});
+    if(error||!data||!data.ok)throw new Error((data&&data.errore)||(error&&error.message)||'errore');
+    if(!data.file.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
+    pushHist();
+    z.rows=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:f2(f.x1*z.w),y1:f2(f.y1*z.h),x2:f2(f.x2*z.w),y2:f2(f.y2*z.h),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);return r;});
+    if(data.palco&&!z.front)z.front={x1:f2(data.palco.x1*z.w),y1:f2(data.palco.y1*z.h),x2:f2(data.palco.x2*z.w),y2:f2(data.palco.y2*z.h)};
+    markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();
+    toast(`Trovate ${z.rows.length} file · ${z.rows.reduce((a,r)=>a+r.posti.length,0)} posti. Controllale: tocca una fila per correggerla`);}
+  catch(e){toast('Scansione non riuscita ('+(e.message||e)+')','bad');}
+  finally{V.scanning=false;if(V.name==='teatro')renderTools();}}
 async function setBgCanvas(c){
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));const z=Z();
   V.bg[z.id]={url:URL.createObjectURL(blob),blob};V.showBg=true;
