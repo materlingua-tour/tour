@@ -440,7 +440,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .lg.reg{border-radius:3px;border:0;background:#BFD9D0}
 .mp-src{margin:4px 4px 0;font-size:12px;color:var(--muted)}
 .it-path{fill:none;stroke:var(--gold);stroke-width:calc(4px * var(--k,1));stroke-dasharray:calc(10px * var(--k,1)) calc(8px * var(--k,1));stroke-linecap:round;stroke-linejoin:round}
-.it-pt{cursor:pointer}
+.it-pt{cursor:pointer}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
 .it-pt circle{fill:var(--surface);stroke:var(--brand);stroke-width:4}
 .it-pt text{font-weight:800;font-family:var(--f-ui);fill:var(--brand);text-anchor:middle;pointer-events:none}
 .it-pt.past circle{fill:var(--brand)}.it-pt.past text{fill:var(--brand-ink)}
@@ -600,10 +600,10 @@ const PALETTE=['#3B6FB6','#E07B28','#8A5BB0','#C8414B','#D9B22B','#2E9C9A','#D96
 const TIPO_L={platea:'Platea',galleria:'Galleria',palchi:'Palchi'};
 const TIPO_O={platea:0,galleria:1,palchi:2};
 const LVL_L={medie:'Medie',superiori:'Superiori'};
-const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note'];
+const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note','presenze'];
 const CONFIRMED=['Chiuso vinto','Pagamento completato','Fattura inviata'];
 
-const S={mode:'pending',db:null,assets:null,downloads:null,ready:false,c:{teatri:{},piantine:{},tappe:{},deals:{},checklist:{},cast:{},documenti:{},impostazioni:{},foto:{},consigli:{},note:{}},pref:{tour:'',tm:''}};
+const S={mode:'pending',db:null,assets:null,downloads:null,ready:false,c:{teatri:{},piantine:{},tappe:{},deals:{},checklist:{},cast:{},documenti:{},impostazioni:{},foto:{},consigli:{},note:{},presenze:{}},pref:{tour:'',tm:''}};
 let V={name:'oggi'};
 const app=document.getElementById('app');
 
@@ -680,10 +680,15 @@ async function initSupa(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){S.pref.user='';savePref();V={name:'welcome'};render();}});
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
-  await loadAllSupa();S.ready=true;onData();
+  await loadAllSupa();S.ready=true;onData();segnaPresenza();
   const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>onData());});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>{onData();segnaPresenza();});});
 }
+/* primo accesso della giornata: serve al TM per sapere se il referente di zona oggi c'è */
+function presKey(email){return String(email||'').toLowerCase().replace(/[^a-z0-9]+/g,'_');}
+function presenteOggi(u){const p=u&&S.c.presenze[presKey(u.email)];return !!(p&&p.giorno===today());}
+async function segnaPresenza(){const u=me();if(!u||!u.confermato)return;const k=presKey(u.email);const p=S.c.presenze[k];if(p&&p.giorno===today())return;
+  try{await put('presenze',k,{email:u.email,giorno:today(),ora:nowHM()});}catch(e){}}
 async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {data:part,error}=await SB.from('docs').select('id,data').eq('coll',c).order('id').range(from,from+999);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}data.push(...part);if(part.length<1000)break;}
   const o={};data.forEach(r=>{o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
@@ -837,12 +842,13 @@ function tmHTML(tp){const u=users().find(x=>x.ruolo==='tm'&&x.tour===tp.tour);
   if(!u)return `<section class="card span2 ref-card"><div class="ref-row"><span class="flabel">Tour Manager</span><span class="muted small">Nessun TM assegnato al tour ${esc(tp.tour)}</span></div></section>`;
   return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Tour Manager di oggi</span><b>${esc(u.nome||u.email)}</b><span class="muted small">${u.telefono?esc(u.telefono):'Numero non ancora inserito nel profilo'}</span></div>
     <div class="ref-btns">${contactBtns(u,u.telefono)}</div></div></section>`;}
-function refHTML(tp){const u=refOf(tp);const ml=(S.c.impostazioni.contatti||{}).numeroML||'';
+const ML_UFFICIALE='06 9480 4048';
+function refHTML(tp){const u=refOf(tp);const ml=(S.c.impostazioni.contatti||{}).numeroML||ML_UFFICIALE;
   if(!u)return `<section class="card span2 ref-card"><div class="ref-row"><span class="flabel">Referente di zona</span><span class="muted small">Nessun referente indicato per ${esc(tp.regione||'questa regione')}${ml?` · Mater Lingua <a class="link" href="${telHref(ml)}">${esc(ml)}</a>`:''}</span></div></section>`;
   const tel=u.telefono||ml;const wa=((S.c.impostazioni.contatti||{}).numeroWA||ml||'').replace(/\D/g,'');const waN=wa.startsWith('00')?wa.slice(2):(!wa||(wa.startsWith('39')&&wa.length>10))?wa:'39'+wa;
-  const on=!!u.confermato;
+  const on=presenteOggi(u);
   if(!on)return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot off" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
-    <span class="muted small">Non usa ancora l’app: per oggi contatta Mater Lingua${ml?' ('+esc(ml)+')':''}, al telefono o su WhatsApp. Su WhatsApp risponde qualunque referente.</span></div>
+    <span class="muted small">Oggi non è ancora entrato nell’app: contatta Mater Lingua${ml?' ('+esc(ml)+')':''}, al telefono o su WhatsApp. Su WhatsApp risponde qualunque referente.</span></div>
     <div class="ref-btns">${ml?`<a class="btn small primary" href="${telHref(ml)}">Chiama Mater Lingua</a>`:''}${waN?`<a class="btn small" href="https://wa.me/${esc(waN)}" target="_blank" rel="noopener">WhatsApp</a>`:''}</div></div></section>`;
   return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot on" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
     <span class="muted small">${tel?`${esc(tel)}${u.telefono?'':' · numero Mater Lingua'}`:'Numero non ancora inserito'}</span></div>
@@ -2600,8 +2606,13 @@ function renderMappa(){
   let svg=`<svg viewBox="${vb.map(f2).join(' ')}" class="it-map" role="img" aria-label="Mappa del percorso della tournée" style="--k:${f2(k)}">`;
   Object.entries(IT_REG).forEach(([n,d])=>{svg+=`<path d="${d}" class="it-reg ${regs.has(norm(n))?'on':''}"><title>${esc(n)}</title></path>`;});
   if(path.length>1)svg+=`<polyline points="${path.map(q=>q.map(f2).join(',')).join(' ')}" class="it-path"/>`;
-  groups.forEach((g,gi)=>{const [x,y]=proj(g.lng,g.lat);const past=g.items.every(it=>it.tp.data<td);const cur=g.items.some(it=>it.tp.id===curId);
-    const lbl=g.items.length>1?g.items[0].n+'–'+g.items[g.items.length-1].n:String(g.items[0].n);const r=vb[2]*(lbl.length>2?0.046:0.036);
+  // pallini che non si sovrappongono: se due tappe sono vicine, i pallini si allontanano e una linea sottile indica il punto vero
+  const lblOf=g=>{const ns=g.items.map(it=>it.n);if(ns.length===1)return String(ns[0]);const cons=ns.every((v,i)=>!i||v===ns[i-1]+1);return cons?ns[0]+'–'+ns[ns.length-1]:ns.length===2?ns[0]+'·'+ns[1]:ns[0]+'+';};
+  const nodes=groups.map(g=>{const [x,y]=proj(g.lng,g.lat);const lbl=lblOf(g);return {x0:x,y0:y,x,y,lbl,r:vb[2]*(lbl.length>2?0.046:0.036)};});
+  for(let it=0;it<80;it++){let moved=false;for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j];let dx=b.x-a.x,dy=b.y-a.y;let d=Math.hypot(dx,dy);const min=(a.r+b.r)*1.35;
+      if(d<min){if(d<0.01){dx=(j%2?1:-1)*0.5;dy=0.5;d=0.7;}const push=(min-d)/2;a.x-=dx/d*push;a.y-=dy/d*push;b.x+=dx/d*push;b.y+=dy/d*push;moved=true;}}if(!moved)break;}
+  nodes.forEach(n=>{if(Math.hypot(n.x-n.x0,n.y-n.y0)>n.r*0.4)svg+=`<line x1="${f2(n.x0)}" y1="${f2(n.y0)}" x2="${f2(n.x)}" y2="${f2(n.y)}" class="it-lead" style="stroke-width:${f2(n.r*0.08)}"/><circle cx="${f2(n.x0)}" cy="${f2(n.y0)}" r="${f2(n.r*0.16)}" class="it-dot"/>`;});
+  groups.forEach((g,gi)=>{const {x,y,lbl,r}=nodes[gi];const past=g.items.every(it=>it.tp.data<td);const cur=g.items.some(it=>it.tp.id===curId);
     const iss=g.items.flatMap(it=>dayIssues(it.tp));
     svg+=`<g class="it-pt ${past?'past':''} ${cur?'cur':''} ${gi===sel?'sel':''}" data-mp="${gi}" tabindex="0" role="button" aria-label="${esc(g.items[0].tp.citta)}${iss.length?': da sistemare, '+esc(iss.join(', ')):''}"><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" style="stroke-width:${f2(r*0.18)}"/><text x="${f2(x)}" y="${f2(y+r*0.35)}" style="font-size:${f2(r*(lbl.length>2?0.7:0.95))}px">${lbl}</text>${iss.length?triSvg(x+r*0.95,y-r*0.95,r*1.05):''}</g>`;});
   svg+=`</svg>`;
