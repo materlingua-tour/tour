@@ -690,7 +690,7 @@ function presenteOggi(u){const p=u&&S.c.presenze[presKey(u.email)];return !!(p&&
 async function segnaPresenza(){const u=me();if(!u||!u.confermato)return;const k=presKey(u.email);const p=S.c.presenze[k];if(p&&p.giorno===today())return;
   try{await put('presenze',k,{email:u.email,giorno:today(),ora:nowHM()});}catch(e){}}
 async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {data:part,error}=await SB.from('docs').select('id,data').eq('coll',c).order('id').range(from,from+999);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}data.push(...part);if(part.length<1000)break;}
-  const o={};data.forEach(r=>{o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
+  const o={};data.forEach(r=>{if(r.data&&(r.data.rimossa||r.data.escluso))return;o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
 async function googleLogin(){if(!SB)return;const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(error)toast('Accesso non riuscito ('+error.message+')','bad');}
 async function put(coll,id,data){
