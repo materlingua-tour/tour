@@ -440,7 +440,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .lg.reg{border-radius:3px;border:0;background:#BFD9D0}
 .mp-src{margin:4px 4px 0;font-size:12px;color:var(--muted)}
 .it-path{fill:none;stroke:var(--gold);stroke-width:calc(4px * var(--k,1));stroke-dasharray:calc(10px * var(--k,1)) calc(8px * var(--k,1));stroke-linecap:round;stroke-linejoin:round}
-.it-pt{cursor:pointer}.contatti{list-style:none;margin:0;padding:0;display:grid;gap:8px}.contatti li{display:flex;flex-direction:column;gap:1px}.contatti a{width:fit-content}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
+.it-pt{cursor:pointer}.pt-day.past{opacity:.7}.pt-reps{display:flex;flex-wrap:wrap;gap:10px 18px}.pt-rep{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.contatti{list-style:none;margin:0;padding:0;display:grid;gap:8px}.contatti li{display:flex;flex-direction:column;gap:1px}.contatti a{width:fit-content}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
 .it-pt circle{fill:var(--surface);stroke:var(--brand);stroke-width:4}
 .it-pt text{font-weight:800;font-family:var(--f-ui);fill:var(--brand);text-anchor:middle;pointer-events:none}
 .it-pt.past circle{fill:var(--brand)}.it-pt.past text{fill:var(--brand-ink)}
@@ -733,7 +733,9 @@ function curTour(){const ts=tours();return ts.includes(S.pref.tour)?S.pref.tour:
 function tourTappe(){const tr=curTour();return Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));}
 function pickDay(list){const td=today();let i=list.findIndex(t=>t.data===td);if(i>=0)return {i,kind:'oggi'};
   i=list.findIndex(t=>t.data>td);if(i>=0)return {i,kind:'prossima'};return {i:list.length-1,kind:'passata'};}
-function teatroOf(tp){return tp&&tp.teatroId?S.c.teatri[tp.teatroId]:null;}
+function teatroDoc(tp){return tp&&tp.teatroId?S.c.teatri[tp.teatroId]||null:null;}
+/* sala "mappata" = il teatro ha almeno una fila disegnata (i teatri arrivati da HubSpot all'inizio sono vuoti) */
+function teatroOf(tp){const t=teatroDoc(tp);return t&&(t.zone||[]).some(z=>(z.rows||[]).length)?t:null;}
 function findP(tappaId,rep){return Object.values(S.c.piantine).find(p=>p.tappaId===tappaId&&p.replica===rep);}
 function sameTour(d,tp){return !d.tour||!tp.tour||d.tour===tp.tour;}
 function dealsFor(tp,rep){return Object.values(S.c.deals).filter(d=>d.data===tp.data&&d.replica===rep&&norm(d.citta)===norm(tp.citta)&&sameTour(d,tp));}
@@ -1068,7 +1070,7 @@ document.addEventListener('click',async e=>{
   else if(a==='next'&&i<list.length-1){V.dayId=list[i+1].id;V.cronoEdit=false;render();}
   else if(a==='goto'){V.dayId=b.dataset.id;render();window.scrollTo(0,0);}
   else if(a==='gotoP'){AUTO_SC[b.dataset.id]=1;goFrom('oggi',{dayId:b.dataset.id});const el=document.getElementById('c-piantine');if(el)window.scrollTo(0,Math.max(0,el.getBoundingClientRect().top+window.scrollY-12));}
-  else if(a==='mapnew'){openEditor(null,{nome:tp.teatroNome||'',citta:tp.citta||'',tappaId:tp.id});}
+  else if(a==='mapnew'){const d=teatroDoc(tp);openEditor(d?d.id:null,{nome:tp.teatroNome||'',citta:tp.citta||'',tappaId:tp.id});}
   else if(a==='openp'){const p=findP(tp.id,b.dataset.rep);openPiantina(p.id,'oggi');}
   else if(a==='newp'){createFromTappa(tp,b.dataset.rep);}
   else if(a==='check'){openCheck(tp.id,'oggi');}
@@ -1337,6 +1339,7 @@ document.addEventListener('click',e=>{if(V.name!=='tournee')return;if(e.target.c
 
 /* =================== ELENCHI =================== */
 function renderPiantineList(){
+  if(role()==='tm')return renderPiantineTour();
   const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   const ps=Object.values(S.c.piantine).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(a.replica||'').localeCompare(b.replica||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Piantine</h1><p class="muted" style="margin:0">Di solito le crei dalla pagina Oggi, partendo dai deal di HubSpot. Qui trovi tutte quelle salvate.</p></div>`;
@@ -1351,6 +1354,23 @@ function renderPiantineList(){
     <div class="card-actions"><button class="btn small" data-ls="openp" data-id="${p.id}" ${t?'':'disabled'}>Apri</button>${delBtn('p',p.id)}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;
 }
+function renderPiantineTour(){
+  const list=tourTappe();const td=today();
+  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Piantine</h1><p class="muted" style="margin:0">Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.</p></div>`;
+  if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
+  else if(!list.length)h+=`<div class="empty"><b>Nessuna data in calendario.</b></div>`;
+  else h+=`<div class="list">${list.map(tp=>{const t=teatroOf(tp);const past=tp.data<td;
+    return `<article class="card pt-day ${past?'past':''}" id="pd_${esc(tp.id)}"><div class="card-head"><div><div class="card-title">${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</div><div class="card-meta">${esc(tp.teatroNome||'Teatro da definire')}</div></div>
+      ${t?'<span class="pill ok">Sala mappata</span>':`<button class="btn small primary" data-pt="map" data-id="${esc(tp.id)}">Mappa la sala</button>`}</div>
+      <div class="pt-reps">${(tp.repliche||[]).map(r=>{const st=pStatus(tp,r);return `<div class="pt-rep"><b>${esc(r)}</b><span class="pill ${st.k==='ok'?'ok':st.k==='stale'?'bad':'warn'}">${st.l}</span>
+        ${!t?'':st.p?`<button class="btn small ${st.k==='stale'?'primary':''}" data-pt="open" data-id="${esc(tp.id)}" data-rep="${esc(r)}">${st.k==='stale'?'Apri e aggiorna':'Apri'}</button>`:`<button class="btn small primary" data-pt="new" data-id="${esc(tp.id)}" data-rep="${esc(r)}">${st.ds.length?'Crea da HubSpot':'Crea piantina'}</button>`}</div>`;}).join('')||'<span class="muted small">Orari non indicati</span>'}</div></article>`;}).join('')}</div>`;
+  app.innerHTML=h;
+  if(!V.ptScrolled){V.ptScrolled=true;const nx=list.find(tp=>tp.data>=td);const el=nx&&document.getElementById('pd_'+nx.id);if(el)el.scrollIntoView({block:'start'});}
+}
+document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.target.closest('[data-pt]');if(!b)return;const tp=S.c.tappe[b.dataset.id];if(!tp)return;const a=b.dataset.pt;
+  if(a==='map'){const d=teatroDoc(tp);openEditor(d?d.id:null,{nome:tp.teatroNome||'',citta:tp.citta||'',tappaId:tp.id});V.from='piantine';}
+  else if(a==='open'){const p=findP(tp.id,b.dataset.rep);if(p)openPiantina(p.id,'piantine');}
+  else if(a==='new'){V.dayId=tp.id;createFromTappa(tp,b.dataset.rep);}});
 function renderTeatriList(){
   const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. Se una data della tournée ha una sala non ancora mappata, la trovi segnalata nella pagina Oggi.</p></div>
@@ -2506,7 +2526,7 @@ function inZone(tp){const u=me();if(!u||u.ruolo!=='venditore')return true;return
 function lockAt(p){if(!p||!p.data)return null;const d=dObj(p.data);d.setHours(6,0,0,0);return d;}
 function plLocked(p){if(role()!=='venditore')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
 function navFor(){const r=role();
-  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze','m','Auto'],['piantine','Piantine',''],['checklist','Checklist',''],['mappa','Mappa',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
+  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze','m','Auto'],['piantine','Piantine',''],['checklist','Checklist',''],['mappa','Mappa',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
   if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['profilo','Il mio profilo','']];
   return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['qr','QR docenti',''],['auto','Auto ed emergenze',''],['accessi','Accessi',''],['profilo','Il mio profilo','']];}
 const NAV_DESC={mappa:'Il percorso della tournée sulla cartina.',teatri:'Le sale mappate, una volta per tutte.',cast:'Persone in tournée e documenti d’identità.',documenti:'SIAE, tagliandi ZTL, fatture hotel, dati per le fatture.',qr:'I codici delle scuole per i docenti.',checklist:'I report di fine giornata.',accessi:'Chi entra nell’app e cosa vede.',auto:'Targa, km, guasti, incidenti e numeri utili.',profilo:'I tuoi dati: nome, telefono, chat Google.',oggi:'La giornata in corso.'};
