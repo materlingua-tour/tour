@@ -419,7 +419,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .wel-card .in{background:#FFFFFF;color:#14201D;border-color:#D3DDDA}
 .wel-logo{background:#196457!important;width:130px;height:70px}
 .wel-card h1{color:#14201D}
-.wel-google{width:100%}.t-card[hidden]{display:none!important}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--bad)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.wel-google{width:100%}.t-card[hidden]{display:none!important}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .wel-sep{display:flex;align-items:center;gap:10px;color:#56645F;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wel-sep::before,.wel-sep::after{content:"";flex:1;height:1px;background:#D3DDDA}
 .wel-list{display:flex;flex-direction:column;gap:8px}
@@ -440,7 +440,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .lg.reg{border-radius:3px;border:0;background:#BFD9D0}
 .mp-src{margin:4px 4px 0;font-size:12px;color:var(--muted)}
 .it-path{fill:none;stroke:var(--gold);stroke-width:calc(4px * var(--k,1));stroke-dasharray:calc(10px * var(--k,1)) calc(8px * var(--k,1));stroke-linecap:round;stroke-linejoin:round}
-.it-pt{cursor:pointer}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
+.it-pt{cursor:pointer}.contatti{list-style:none;margin:0;padding:0;display:grid;gap:8px}.contatti li{display:flex;flex-direction:column;gap:1px}.contatti a{width:fit-content}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
 .it-pt circle{fill:var(--surface);stroke:var(--brand);stroke-width:4}
 .it-pt text{font-weight:800;font-family:var(--f-ui);fill:var(--brand);text-anchor:middle;pointer-events:none}
 .it-pt.past circle{fill:var(--brand)}.it-pt.past text{fill:var(--brand-ink)}
@@ -847,12 +847,29 @@ function refHTML(tp){const u=refOf(tp);const ml=(S.c.impostazioni.contatti||{}).
   if(!u)return `<section class="card span2 ref-card"><div class="ref-row"><span class="flabel">Referente di zona</span><span class="muted small">Nessun referente indicato per ${esc(tp.regione||'questa regione')}${ml?` · Mater Lingua <a class="link" href="${telHref(ml)}">${esc(ml)}</a>`:''}</span></div></section>`;
   const tel=u.telefono||ml;const wa=((S.c.impostazioni.contatti||{}).numeroWA||ml||'').replace(/\D/g,'');const waN=wa.startsWith('00')?wa.slice(2):(!wa||(wa.startsWith('39')&&wa.length>10))?wa:'39'+wa;
   const on=presenteOggi(u);
-  if(!on)return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot off" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
-    <span class="muted small">Oggi non è ancora entrato nell’app: contatta Mater Lingua${ml?' ('+esc(ml)+')':''}, al telefono o su WhatsApp. Su WhatsApp risponde qualunque referente.</span></div>
+  if(!on)return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot off" aria-hidden="true" title="Oggi non è ancora entrato nell’app"></span>${esc(u.nome||u.email)}</b>
+    <span class="muted small">Mater Lingua · ${esc(ml)}</span></div>
     <div class="ref-btns">${ml?`<a class="btn small primary" href="${telHref(ml)}">Chiama Mater Lingua</a>`:''}${waN?`<a class="btn small" href="https://wa.me/${esc(waN)}" target="_blank" rel="noopener">WhatsApp</a>`:''}</div></div></section>`;
-  return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot on" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
-    <span class="muted small">${tel?`${esc(tel)}${u.telefono?'':' · numero Mater Lingua'}`:'Numero non ancora inserito'}</span></div>
+  return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot on" aria-hidden="true" title="Oggi è entrato nell’app"></span>${esc(u.nome||u.email)}</b>
+    <span class="muted small">${u.telefono?esc(u.telefono):'Mater Lingua · '+esc(ml)}</span></div>
     <div class="ref-btns">${contactBtns(u,tel)}</div></div></section>`;}
+/* Referenti del teatro: dal testo del Calendar ricava nome + numeri (un contatto per riga, numeri cliccabili).
+   Un numero rimasto senza nome va al primo nome che non ne ha uno. */
+const RX_TEL=/\+?\d[\d\s./-]{6,}\d/g,RX_MAIL=/[\w.+-]+@[\w.-]+\.\w+/g;
+function contattiTeatro(tp){if(Array.isArray(tp.contatti)&&tp.contatti.length)return tp.contatti;
+  const raw=[tp.referente||'',tp.telReferente||'',tp.emailReferente||''].join('\n');const out=[];const sciolti=[];
+  raw.split(/\n+/).forEach(line=>{const tels=(line.match(RX_TEL)||[]).map(s=>s.trim()),mails=line.match(RX_MAIL)||[];let rest=line.replace(RX_MAIL,' ').replace(RX_TEL,' ');
+    // più nomi sulla stessa riga separati dai numeri: "Denis Brao 392… Simone Del Mul 335…"
+    const parts=line.replace(RX_MAIL,' ').split(RX_TEL).map(s=>s.replace(/[,;·|]+/g,' ').trim());
+    if(tels.length&&parts.length===tels.length+1){parts.forEach((nm,i)=>{if(i<tels.length){if(nm){const sp=nm.split(/\s+/);/* se prima ci sono due nomi attaccati, l'ultimo prende il numero */
+          if(sp.length>=4&&!out.length&&i===0){out.push({nome:sp.slice(0,2).join(' '),tels:[],mails:[]});out.push({nome:sp.slice(2).join(' '),tels:[tels[i]],mails:[]});}else out.push({nome:nm,tels:[tels[i]],mails:[]});}
+          else {const prev=out[out.length-1];if(prev&&!prev.tels.length)prev.tels.push(tels[i]);else sciolti.push(tels[i]);}}
+        else if(nm)out.push({nome:nm,tels:[],mails:[]});});}
+    else if(rest.trim())out.push({nome:rest.trim(),tels:[],mails:[]});
+    mails.forEach(m=>{const c=out[out.length-1];c?c.mails.push(m):out.push({nome:'',tels:[],mails:[m]});});});
+  sciolti.forEach(t=>{const c=out.find(x=>!x.tels.length);c?c.tels.push(t):out.push({nome:'',tels:[t],mails:[]});});
+  return out.filter(c=>c.nome||c.tels.length||c.mails.length);}
+function contattiHTML(tp){return `<ul class="contatti">${contattiTeatro(tp).map(c=>`<li>${c.nome?`<b>${esc(c.nome)}</b>`:''}${c.tels.map(t=>`<a class="link" href="${telHref(t)}">${esc(t)}</a>`).join('')}${c.mails.map(m=>`<a class="link" href="mailto:${esc(m)}">${esc(m)}</a>`).join('')}</li>`).join('')}</ul>`;}
 function noteKey(tp,r){return tp.id+'_'+String(r).replace(/[^0-9]/g,'');}
 function noteHTML(tp,r){const k=noteKey(tp,r);const n=S.c.note[k];const can=role()!=='tm';
   if(V.noteEdit===k)return `<div class="rep-note edit"><label class="flabel" for="noteT">Nota per il TM · replica ${esc(r)}</label><textarea class="in ta" id="noteT" rows="3" placeholder="es. Il Liceo Volta arriva con un pullman in ritardo; la prof. Rossi chiede posti vicini all’uscita">${esc(n?n.testo:'')}</textarea>
@@ -887,24 +904,24 @@ function renderOggi(){
   h+=`<section class="card span2"><div class="card-head"><h2>${esc(tp.teatroNome||t?.nome||'Teatro')}</h2>${t?'<span class="pill ok">Sala mappata</span>':'<span class="pill warn">Sala da mappare</span>'}</div>
     <div>${addrLink(tp.indirizzo)}</div>
     ${first?`<div class="timeline">
-      ${(()=>{const d=depTime(tp);return `<div class="tl-dep"><b>${d.dep}</b><span>Partenza consigliata</span><small>${d.m?`dall’hotel · ${fmtMin(d.m)} di strada`:'tempo di strada non disponibile'}</small></div>`;})()}
-      <div><b>${addMin(first,-75)}</b><span>Arrivo in teatro</span></div>
-      <div><b>${addMin(first,-45)}</b><span>Soundcheck</span></div>
-      <div><b>${addMin(first,-30)}</b><span>Apertura porte</span></div>
+      ${role()==='venditore'?'':`<div><b>${addMin(first,-75)}</b><span>Arrivo in teatro</span></div>
+      <div><b>${addMin(first,-60)}</b><span>Inizio soundcheck</span></div>`}
+      <div><b>${addMin(first,-30)}</b><span>Apertura porte${role()==='venditore'?'':'<br>e fine soundcheck'}</span></div>
       ${reps.map((r,j)=>`<div class="tl-rep"><b>${esc(r)}</b><span>${j+1}ª replica · fine ${repEnd(tp,r)}</span></div>`).join('')}</div>`:''}
-    <dl class="facts">
-      ${tp.referente?`<div><dt>Referente teatro</dt><dd>${esc(tp.referente)} ${tp.telReferente?`<button class="link" data-copy="${esc(tp.telReferente)}">${esc(tp.telReferente)}</button>`:''}</dd></div>`:''}
+    ${role()==='venditore'?'':`<dl class="facts">
+      ${tp.referente||tp.telReferente?`<div><dt>Referente teatro</dt><dd>${contattiHTML(tp)}</dd></div>`:''}
       ${tp.tecnico?`<div><dt>Tecnico teatro</dt><dd>${esc(tp.tecnico)} ${tp.telTecnico?`<button class="link" data-copy="${esc(tp.telTecnico)}">${esc(tp.telTecnico)}</button>`:''}</dd></div>`:''}
       <div><dt>Vigili del Fuoco</dt><dd>${tp.vvf?esc(tp.vvf):'Non previsti'}</dd></div>
       ${tp.maschere===true?`<div><dt>Maschere</dt><dd>Presenti</dd></div>`:''}
       ${tp.note?`<div><dt>Note Logistica</dt><dd>${esc(tp.note)}</dd></div>`:''}
-    </dl>
+    </dl>`}
     ${tp.maschere===false?`<div class="warn-row">${TRI}<span>Niente maschere in sala: le scuole le fai accomodare tu, con piantina e QR.</span></div>`:''}
     ${(()=>{const z=docsFor(tp).find(d=>/ztl/i.test(d.categoria||''));const dz=z?null:ztlDrive(tp);if(!z&&!dz&&!tp.ztl)return '';
       return `<div class="ztl-row">${TRI}<span><b>Zona ZTL</b><span class="muted small">${z||dz?'Stampa il tagliando ed esponilo sul cruscotto del van.':'Il tagliando non ha il nome standard: cercalo nella cartella e stampalo.'}</span></span>${z?`<button class="btn small primary" data-view="${esc(z.file)}" data-ext="${esc(z.ext||'pdf')}" data-title="${esc(z.titolo||'Tagliando ZTL')}">Scarica tagliando ZTL</button>`:dz?`<a class="btn small primary" href="${esc(dz.url)}" target="_blank" rel="noopener">Scarica tagliando ZTL</a>`:`<a class="btn small" href="${ZTL_DRIVE}" target="_blank" rel="noopener">Apri la cartella dei tagliandi</a>`}</div>`;})()}
     ${role()==='venditore'?'':(()=>{const tm=memoria(tp).filter(m=>m.k!=='m_rist');const off=officialTips(tp);return `<div class="mem-box"><div class="mem-h"><span class="eyebrow">Info e consigli su questo teatro</span></div>${tm.some(m=>!m.mine)&&role()==='tm'?'<span class="muted small">Tocca un consiglio per dire se ti è stato utile.</span>':''}${tm.length||Object.keys(off).length?memHTML(tm,off):'<p class="muted small" style="margin:0">Ancora nessun consiglio dei TM su questo teatro.</p>'}
       ${V.tipOpen==='teatro'?tipForm(MEM_K.filter(([k])=>k!=='m_rist'),'es. Carico e scarico dal cortile: citofonare “Palco”'):''}</div>`;})()}
     <div class="row-btns">${t?'':`<button class="btn small" data-og="mapnew">Mappa la sala</button>`}${role()==='tm'&&V.tipOpen!=='teatro'?'<button class="btn small" data-og="tip" data-kind="teatro">+ Aggiungi un consiglio sul teatro</button>':''}</div></section>`;
+  h+=fotoCard(tp);
   // Piantine
   h+=`<section class="card" id="c-piantine"><div class="card-head"><h2>Piantine di sala</h2></div>
     <div class="warn-row">${TRI}<span>Ricordati di mettere il roll-up nel foyer, ben visibile.</span></div><div class="plist">`;
@@ -915,7 +932,6 @@ function renderOggi(){
       <div class="row-btns">${!t?`<span class="muted small">Prima mappa la sala</span>`:st.p?`<button class="btn small ${st.k==='stale'?'primary':''}" data-og="openp" data-rep="${esc(r)}">${st.k==='stale'?'Apri e aggiorna':'Apri'}</button><button class="btn small" data-og="acc" data-rep="${esc(r)}">Accoglienza</button>${role()==='venditore'?'':`<button class="btn small" data-og="qr" data-rep="${esc(r)}">QR docenti</button>`}`:`<button class="btn small primary" data-og="newp" data-rep="${esc(r)}">${st.ds.length?'Crea da HubSpot':'Crea piantina'}</button>`}</div>${noteHTML(tp,r)}</div>`;});
   if(!reps.length)h+=`<p class="muted">Orari delle repliche non indicati.</p>`;
   h+=`</div></section>`;
-  h+=fotoCard(tp);
   h+=fotoRepCard(tp,false);
   const vend=role()==='venditore';
   if(!vend){
@@ -974,7 +990,7 @@ function renderViaggi(tp,nx){
        <ul class="chk-list"><li>Camere pronte${ho.camere?`: <b>${esc(ho.camere)}</b>`:' come da prenotazione'}</li><li>Parcheggio per il van</li><li>${ho.noColazione?'Conferma che la colazione non è inclusa':'Orario della colazione'+(ho.colazione?` (indicato: ${esc(ho.colazione)})`:'')}</li>${ho.pagamento==='pagato'?'<li>Hotel già saldato dalla Direzione</li>':'<li>Da pagare con la carta aziendale, fattura a Mater Lingua</li>'}</ul>
        <div class="row-btns">${ho.telefono?`<a class="btn small primary" href="${telHref(ho.telefono)}">Chiama l’hotel</a>`:''}<button class="btn small ghost" data-og="call">Chiudi</button></div>`
       :`<div class="row-btns"><button class="btn small primary" data-og="call">Avvisa l’hotel</button></div>`}</div>`);}
-  if(nx&&ho){const f=(nx.repliche||[])[0];legs.push(legHTML('Domani mattina',f?`partenza consigliata ${depTime(nx).dep} · ${shortDate(nx.data)}`:shortDate(nx.data),ho.nome,nx.teatroNome||'Teatro',ho.indirizzo,nx.indirizzo,(nx.viaggio||{}).hotelTeatro));}
+  if(false&&nx&&ho){const f=(nx.repliche||[])[0];legs.push(legHTML('Domani mattina',f?`partenza consigliata ${depTime(nx).dep} · ${shortDate(nx.data)}`:shortDate(nx.data),ho.nome,nx.teatroNome||'Teatro',ho.indirizzo,nx.indirizzo,(nx.viaggio||{}).hotelTeatro));}
   if(!legs.length)return '';
   return `<section class="card" id="c-viaggi"><div class="card-head"><h2>Spostamenti</h2></div>${legs.join('')}<p class="muted small" style="margin:6px 0 0">Tempi stimati senza traffico: controlla la strada prima di partire.</p><div class="row-btns"><a class="btn small ghost" href="https://www.autostrade.it/it/infoviabilita/traffico-in-real-time" target="_blank" rel="noopener">Traffico in autostrada</a></div></section>`;}
 function tourLang(tour){const n=norm(tour);return n.includes('ingl')||n.includes('engl')?'en':n.includes('franc')||n.includes('fren')?'fr':n.includes('spagn')||n.includes('span')?'es':'it';}
@@ -995,7 +1011,7 @@ function cronoText(nx,tp,opt){
   const d=dObj(nx.data).toLocaleDateString(L.loc,{weekday:'long',day:'numeric',month:'long'});
   const lines=[tp&&tp.data&&addDays(tp.data,1)!==nx.data?L.hi2(d,nx.citta):L.hi(d,nx.citta)];
   if(opt&&opt.no)lines.push(L.nobf);else lines.push(`${(opt&&opt.colazione)||floor5(addMin(depTime(nx).meet,-30))} ${L.bf}`);const D=depTime(nx);
-  lines.push(`${D.meet} ${L.meet}${sameHotel?'':L.bags}`,`${D.dep} ${L.dep}`,`${D.arr} ${L.arr(nx.teatroNome||(t&&t.nome)||'teatro')}`,`${addMin(f,-45)}–${addMin(f,-30)} ${L.sc}`);
+  lines.push(`${D.meet} ${L.meet}${sameHotel?'':L.bags}`,`${D.dep} ${L.dep}`,`${D.arr} ${L.arr(nx.teatroNome||(t&&t.nome)||'teatro')}`,`${addMin(f,-60)}–${addMin(f,-30)} ${L.sc}`);
   r.forEach((x,j)=>lines.push(`${x}–${repEnd(nx,x)} ${L.nth[j]||L.shows}`));lines.push(L.bye);
   return lines.join('\n');
 }
