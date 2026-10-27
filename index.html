@@ -419,7 +419,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .wel-card .in{background:#FFFFFF;color:#14201D;border-color:#D3DDDA}
 .wel-logo{background:#196457!important;width:130px;height:70px}
 .wel-card h1{color:#14201D}
-.wel-google{width:100%}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.wel-google{width:100%}.t-card[hidden]{display:none!important}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--bad)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .wel-sep{display:flex;align-items:center;gap:10px;color:#56645F;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wel-sep::before,.wel-sep::after{content:"";flex:1;height:1px;background:#D3DDDA}
 .wel-list{display:flex;flex-direction:column;gap:8px}
@@ -691,8 +691,8 @@ async function googleLogin(){if(!SB)return;const {error}=await SB.auth.signInWit
 async function put(coll,id,data){
   if(S.mode==='supa'){const d=clone(data);delete d.id;
     // se il documento esiste già: UPDATE (le regole di accesso permettono ad es. a TM e referenti di aggiornare il proprio profilo)
-    if(S.c[coll]&&S.c[coll][id]){const {data:upd,error}=await SB.from('docs').update({data:d}).eq('coll',coll).eq('id',id).select('id');if(error)throw sbErr(error);if(!upd||!upd.length)throw {code:'permesso negato'};}
-    else{const {error}=await SB.from('docs').insert({coll,id,data:d});if(error)throw sbErr(error);}S.c[coll][id]=coll==='teatri'?normT({...d,id}):{...d,id};return;}
+    const {data:upd,error}=await SB.from('docs').update({data:d}).eq('coll',coll).eq('id',id).select('id');if(error)throw sbErr(error);
+    if(!upd||!upd.length){const {error:e2}=await SB.from('docs').insert({coll,id,data:d});if(e2)throw sbErr(e2);}S.c[coll][id]=coll==='teatri'?normT({...d,id}):{...d,id};return;}
   if(S.mode==='db'){await S.db.doc(coll+'/'+id).set(data);}
   else{S.c[coll][id]=coll==='teatri'?normT(data):clone(data);saveLocal();}
 }
@@ -798,6 +798,7 @@ function render(){
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo}[V.name];
   if(f)f();
+  setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
 }
@@ -828,15 +829,22 @@ document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.clo
   const ch=lista[i].chat;if(ch&&!/^https?:\/\//i.test(ch)){toast('Il link della chat deve iniziare con https://','warn');return;}
   try{await put('impostazioni','utenti',{lista});S.c.impostazioni.utenti={lista,id:'utenti'};V.profDirty=false;toast('Profilo salvato');render();}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}});
 function refOf(tp){const c=users().filter(u=>u.ruolo==='venditore'&&(u.regioni||[]).some(r=>regMatch(r,tp.regione)));return c.find(u=>!u.prova)||c[0]||null;}
-function contactBtns(u,tel){const chat=u&&u.chat;return `${tel?`<a class="btn small primary" href="${telHref(tel)}">Chiama</a>`:''}${chat?`<a class="btn small" href="${esc(chat)}" target="_blank" rel="noopener">Chat Google</a>`:`<a class="btn small" href="https://mail.google.com/chat/" target="_blank" rel="noopener">Chat Google</a>`}`;}
+function contactBtns(u,tel){const chat=u&&u.chat;return `${tel?`<a class="btn small primary" href="${telHref(tel)}">Chiama</a>`:''}${chat?`<a class="btn small" href="${esc(chat)}" target="_blank" rel="noopener">Chat Google</a>`:u&&u.email?`<button class="btn small" data-chatmail="${esc(u.email)}" data-chatname="${esc(u.nome||u.email)}">Chat Google</button>`:''}`;}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-chatmail]');if(!b)return;const em=b.dataset.chatmail;
+  window.open('https://mail.google.com/chat/u/0/#chat/home','_blank','noopener');
+  navigator.clipboard&&navigator.clipboard.writeText(em).catch(()=>{});toast('Si apre Google Chat: incolla '+em+' in “Nuova chat” per scrivere a '+b.dataset.chatname);});
 function tmHTML(tp){const u=users().find(x=>x.ruolo==='tm'&&x.tour===tp.tour);
   if(!u)return `<section class="card span2 ref-card"><div class="ref-row"><span class="flabel">Tour Manager</span><span class="muted small">Nessun TM assegnato al tour ${esc(tp.tour)}</span></div></section>`;
   return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Tour Manager di oggi</span><b>${esc(u.nome||u.email)}</b><span class="muted small">${u.telefono?esc(u.telefono):'Numero non ancora inserito nel profilo'}</span></div>
     <div class="ref-btns">${contactBtns(u,u.telefono)}</div></div></section>`;}
 function refHTML(tp){const u=refOf(tp);const ml=(S.c.impostazioni.contatti||{}).numeroML||'';
   if(!u)return `<section class="card span2 ref-card"><div class="ref-row"><span class="flabel">Referente di zona</span><span class="muted small">Nessun referente indicato per ${esc(tp.regione||'questa regione')}${ml?` · Mater Lingua <a class="link" href="${telHref(ml)}">${esc(ml)}</a>`:''}</span></div></section>`;
-  const tel=u.telefono||ml;
-  return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b>${esc(u.nome||u.email)}</b>
+  const tel=u.telefono||ml;const wa=((S.c.impostazioni.contatti||{}).numeroWA||ml||'').replace(/\D/g,'');const waN=wa.startsWith('00')?wa.slice(2):(!wa||(wa.startsWith('39')&&wa.length>10))?wa:'39'+wa;
+  const on=!!u.confermato;
+  if(!on)return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot off" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
+    <span class="muted small">Non usa ancora l’app: per oggi contatta Mater Lingua${ml?' ('+esc(ml)+')':''}, al telefono o su WhatsApp. Su WhatsApp risponde qualunque referente.</span></div>
+    <div class="ref-btns">${ml?`<a class="btn small primary" href="${telHref(ml)}">Chiama Mater Lingua</a>`:''}${waN?`<a class="btn small" href="https://wa.me/${esc(waN)}" target="_blank" rel="noopener">WhatsApp</a>`:''}</div></div></section>`;
+  return `<section class="card span2 ref-card"><div class="ref-row"><div class="ref-who"><span class="flabel">Referente di zona di oggi${u.area?' · Area '+esc(u.area):''}</span><b><span class="dot on" aria-hidden="true"></span>${esc(u.nome||u.email)}</b>
     <span class="muted small">${tel?`${esc(tel)}${u.telefono?'':' · numero Mater Lingua'}`:'Numero non ancora inserito'}</span></div>
     <div class="ref-btns">${contactBtns(u,tel)}</div></div></section>`;}
 function noteKey(tp,r){return tp.id+'_'+String(r).replace(/[^0-9]/g,'');}
@@ -898,10 +906,11 @@ function renderOggi(){
     const as=st.p&&Object.keys(accOf(st.p)).length?accStats(st.p):null;
     h+=`<div class="prow"><div class="prow-t"><b>${esc(r)}</b><span class="pill ${st.k==='ok'?'ok':st.k==='stale'?'bad':'warn'}">${st.l}</span></div>
       <div class="muted small">${st.p?`${st.p.scuole.length} scuole · ${tot} persone`:st.ds.length?`${st.ds.filter(d=>d.stage!=='Chiuso perso').length} deal su HubSpot · ${tot} persone`:'Nessun deal su HubSpot'}${as?` · arrivate ${as.arr}/${as.tot}${as.late?`, ${as.late} in ritardo`:''}`:''}</div>
-      <div class="row-btns">${!t?`<span class="muted small">Prima mappa la sala</span>`:st.p?`<button class="btn small ${st.k==='stale'?'primary':''}" data-og="openp" data-rep="${esc(r)}">${st.k==='stale'?'Apri e aggiorna':'Apri'}</button><button class="btn small" data-og="acc" data-rep="${esc(r)}">Accoglienza</button><button class="btn small" data-og="qr" data-rep="${esc(r)}">QR docenti</button>`:`<button class="btn small primary" data-og="newp" data-rep="${esc(r)}">${st.ds.length?'Crea da HubSpot':'Crea piantina'}</button>`}</div>${noteHTML(tp,r)}</div>`;});
+      <div class="row-btns">${!t?`<span class="muted small">Prima mappa la sala</span>`:st.p?`<button class="btn small ${st.k==='stale'?'primary':''}" data-og="openp" data-rep="${esc(r)}">${st.k==='stale'?'Apri e aggiorna':'Apri'}</button><button class="btn small" data-og="acc" data-rep="${esc(r)}">Accoglienza</button>${role()==='venditore'?'':`<button class="btn small" data-og="qr" data-rep="${esc(r)}">QR docenti</button>`}`:`<button class="btn small primary" data-og="newp" data-rep="${esc(r)}">${st.ds.length?'Crea da HubSpot':'Crea piantina'}</button>`}</div>${noteHTML(tp,r)}</div>`;});
   if(!reps.length)h+=`<p class="muted">Orari delle repliche non indicati.</p>`;
   h+=`</div></section>`;
   h+=fotoCard(tp);
+  h+=fotoRepCard(tp,false);
   const vend=role()==='venditore';
   if(!vend){
   // Checklist
@@ -1144,6 +1153,21 @@ async function shrinkImage(file,max){max=max||1600;const url=URL.createObjectURL
   c.getContext('2d').drawImage(img,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));}catch(e){return file;}finally{URL.revokeObjectURL(url);}}
 async function uploadPhoto(file,priv){const blob=await shrinkImage(file);const up=await upAsset(blob,priv);return up.id;}
 function fotoFor(tp){return Object.values(S.c.foto||{}).filter(f=>f.tappaId===tp.id&&f.tipo==='scenografia').sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));}
+function fotoRepFor(tp){return Object.values(S.c.foto||{}).filter(f=>f.tappaId===tp.id&&f.tipo==='replica').sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));}
+function thumbsRep(fs){return `<div class="thumbs">${fs.map(f=>`<button class="thumb" data-view="${esc(f.asset)}" data-ext="jpg" data-title="Replica ${esc(f.replica||'')} · ${esc(f.teatroNome||'')} · ${esc(shortDate(f.data))}"><img data-bid="${esc(f.asset)}" alt="Foto della replica del ${esc(shortDate(f.data))}" loading="lazy"><span>${esc(shortDate(f.data))}${f.replica?' · '+esc(f.replica):''}</span></button>`).join('')}</div>`;}
+/* le foto delle repliche sono private (ci sono gli studenti): si caricano con un link temporaneo */
+async function fillPriv(){const els=[...document.querySelectorAll('img[data-bid]:not([src])')];for(const el of els){try{el.src=await blobURL(el.dataset.bid);}catch(e){}}}
+function fotoRepCard(tp,inCk){const fs=fotoRepFor(tp);const tm=role()==='tm';if(!fs.length&&!tm)return '';
+  return `<section class="card"><div class="card-head"><h2>Foto delle repliche</h2>${fs.length?`<span class="pill ok">${fs.length} foto</span>`:'<span class="pill warn">Da caricare</span>'}</div>
+   <p class="muted small" style="margin:0">${tm?'Carica qualche foto di ogni replica: il referente di zona le recupera da qui per mandarle a chi le chiede.':'Tocca una foto per vederla e scaricarla.'}</p>
+   ${fs.length?thumbsRep(fs):''}
+   ${tm?`<div class="row-btns">${(tp.repliche||['']).map(r=>`<label class="btn small ${fs.length?'':'primary'}">${r?'Foto replica '+esc(r):'Carica foto'}<input type="file" accept="image/*" multiple data-fotorep="${esc(r)}" hidden></label>`).join('')}</div>`:''}</section>`;}
+document.addEventListener('change',async e=>{if(!e.target.matches('[data-fotorep]'))return;const files=[...(e.target.files||[])];if(!files.length)return;
+  const tp=V.name==='check'?V.tp:S.c.tappe[V.dayId];if(!tp)return;const rep_=e.target.dataset.fotorep;let ok=0;
+  for(const f of files){toast('Carico la foto '+(ok+1)+' di '+files.length+'…');
+    try{const asset=await uploadPhoto(f,true);const id=uid('f');const doc={tipo:'replica',replica:rep_,tappaId:tp.id,teatroId:tp.teatroId||'',teatroNome:tp.teatroNome||'',citta:tp.citta||'',tour:tp.tour,data:tp.data,ts:nowStamp(),tm:tmName(),asset};
+      S.c.foto[id]={...doc,id};await put('foto',id,doc);ok++;}catch(err){toast('Foto non caricata ('+(err.code||err.message||'errore')+')','bad');}}
+  if(ok)toast(ok===1?'Foto caricata':ok+' foto caricate');const y=window.scrollY;render();window.scrollTo(0,y);});
 function fattureFor(tp){return Object.values(S.c.foto||{}).filter(f=>f.tappaId===tp.id&&f.tipo==='fattura').sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));}
 function fotoTeatro(t){return Object.values(S.c.foto||{}).filter(f=>f.tipo==='scenografia'&&f.teatroId===t.id).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));}
 function thumbs(fs){return `<div class="thumbs">${fs.map(f=>`<button class="thumb" data-view="${esc(f.asset)}" data-ext="jpg" data-title="Scenografia · ${esc(f.teatroNome||'')} · ${esc(shortDate(f.data))}"><img src="${esc(B(f.asset))}" alt="Foto della scenografia del ${esc(shortDate(f.data))}" loading="lazy"><span>${esc(shortDate(f.data))} · ${esc((f.ts||'').slice(11,16))}</span></button>`).join('')}</div>`;}
@@ -1308,16 +1332,26 @@ function renderPiantineList(){
 function renderTeatriList(){
   const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. Se una data della tournée ha una sala non ancora mappata, la trovi segnalata nella pagina Oggi.</p></div>
-  <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button></div>`;
+  <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button></div>
+  <div class="t-filters"><input class="in" id="tSearch" type="search" placeholder="Cerca teatro o città" value="${esc(V.tq||'')}" aria-label="Cerca teatro o città">
+   <select class="in" id="tLang" aria-label="Lingua della tournée"><option value="">Tutte le lingue</option>${[['fr','Francese'],['en','Inglese'],['es','Spagnolo']].map(([k,l])=>`<option value="${k}" ${V.tl===k?'selected':''}>${l}</option>`).join('')}</select></div>
+  <p class="muted small" id="tCount" style="margin:0 0 10px"></p>`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!ts.length)h+=`<div class="empty"><b>Nessun teatro mappato.</b></div>`;
   else h+=`<div class="list">${ts.map(t=>{const files=t.zone.reduce((a,z)=>a+new Set(z.rows.map(r=>r.fila)).size,0);const noFront=t.zone.some(z=>z.rows.length&&!z.front);
-    return `<article class="card"><div class="card-title">${esc(t.nome)}</div><div class="card-meta">${esc(t.citta||'Città non indicata')}</div>
+    const langs=[...new Set(Object.values(S.c.tappe).filter(tp=>tp.teatroId===t.id||(!tp.teatroId&&norm(tp.teatroNome)===norm(t.nome)&&norm(tp.citta)===norm(t.citta))).map(tp=>tourLang(tp.tour)))].join(' ');
+    const nome=/^[\s\-–—]*$/.test(t.nome||'')?'Teatro da definire':t.nome;
+    return `<article class="card t-card" data-s="${esc(norm(nome+' '+(t.citta||'')))}" data-l="${esc(langs)}"><div class="card-title">${esc(nome)}</div><div class="card-meta">${esc(t.citta||'Città non indicata')}${langs?' · '+langs.split(' ').map(l=>({fr:'Francese',en:'Inglese',es:'Spagnolo'})[l]||'').filter(Boolean).join(', '):''}</div>
     <div class="card-meta">${t.zone.map(z=>esc(z.nome)).join(' + ')} · ${files} file · ${seatsTot(t)} posti${noFront?' · fronte non segnato':''}</div>
     ${(()=>{const m=memoriaTeatro(t),fs=fotoTeatro(t);return m.length||fs.length?`<details class="mem-d"><summary>Memoria del teatro${m.length?' · '+m.length+' consigli':''}${fs.length?' · '+fs.length+' foto':''}</summary>${memHTML(m)}${fs.length?`<span class="flabel">Foto della scenografia</span>${thumbs(fs.slice(0,8))}`:''}</details>`:'';})()}
     <div class="card-actions"><button class="btn small" data-ls="editt" data-id="${t.id}">Modifica mappa</button>${delBtn('t',t.id)}</div></article>`;}).join('')}</div>`;
-  app.innerHTML=h;
+  app.innerHTML=h;filterTeatri();
 }
+function filterTeatri(){const q=norm(V.tq||''),l=V.tl||'';let n=0;const cs=document.querySelectorAll('.t-card');
+  cs.forEach(c=>{const ok=(!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w)))&&(!l||c.dataset.l.split(' ').includes(l));c.hidden=!ok;if(ok)n++;});
+  const el=document.getElementById('tCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+' teatri':n+' teatri su '+cs.length):'';}
+document.addEventListener('input',e=>{if(V.name==='teatri'&&e.target.id==='tSearch'){V.tq=e.target.value;filterTeatri();}});
+document.addEventListener('change',e=>{if(V.name==='teatri'&&e.target.id==='tLang'){V.tl=e.target.value;filterTeatri();}});
 function delBtn(kind,id){const key=kind+':'+id;return V.confirm===key?`<button class="btn small danger" data-ls="delok" data-kind="${kind}" data-id="${id}">Conferma eliminazione</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
   :`<button class="btn small ghost" data-ls="delask" data-kind="${kind}" data-id="${id}">Elimina</button>`;}
 document.addEventListener('click',async e=>{
@@ -1356,7 +1390,8 @@ function ckBad(it,v){const o=it[2]||{};return !o.pres&&!o.tip&&(o.inv?v==='si':v
 function ckNoteOpen(it,v){return (it[2]||{}).tip?v==='si':ckBad(it,v);}
 const MEM_K=[['m_rist','Ristoranti per il pranzo'],...CK.find(x=>x.id==='memoria').q.map(([k,l])=>[k,l])];
 function ckVisible(ck,item){const o=item[2]||{};return !o.dep||((ck.risposte||{})[o.dep]||{}).v==='si';}
-function ckProblems(ck){let n=0;CK.forEach(sec=>sec.q.forEach(it=>{if(ckVisible(ck,it)&&ckBad(it,((ck.risposte||{})[it[0]]||{}).v))n++;}));return n;}
+const REF_CK=['teatro','scuole'];
+function ckProblems(ck,secs){let n=0;CK.filter(sec=>!secs||secs.includes(sec.id)).forEach(sec=>sec.q.forEach(it=>{if(ckVisible(ck,it)&&ckBad(it,((ck.risposte||{})[it[0]]||{}).v))n++;}));return n;}
 function sameTheatre(a,b){if(!a||!b)return false;if(a.teatroId&&b.teatroId)return a.teatroId===b.teatroId;return norm(a.teatroNome)===norm(b.teatroNome)&&norm(a.citta)===norm(b.citta);}
 function memoria(tp){const out=[];
   Object.entries(S.c.consigli||{}).forEach(([cid,c])=>{if(!sameTheatre(c,tp))return;const l=(MEM_K.find(x=>x[0]===c.k)||[c.k,'Consiglio'])[1];
@@ -1409,9 +1444,11 @@ function renderCheck(){
   const acc=accSummary(tp);
   let h=`<div class="ws-top"><button class="btn back" data-ck="back" aria-label="Indietro">←<span class="hide-sm"> Indietro</span></button><div class="ws-title"><b>Checklist · ${esc(cap(longDate(tp.data)))}</b><span class="muted small">${esc(tp.citta)} · ${esc(tp.teatroNome||t?.nome||'')} · ${esc(tmName()||'TM non indicato')}</span></div><span class="save-state" id="ckState"></span></div>
   ${ck.inviata?`<div class="banner ok">Inviata alla Logistica il ${new Date(ck.inviataIl).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. Se modifichi qualcosa, ricordati di reinviarla.</div>`:''}
-  ${role()!=='tm'?`<div class="banner">Solo lettura: la checklist la compila il Tour Manager.</div>`:''}
+  ${role()==='venditore'?`<div class="banner">Solo lettura: qui vedi teatro e scuole. La checklist la compila il Tour Manager.</div>`:role()!=='tm'?`<div class="banner">Solo lettura: la checklist la compila il Tour Manager.</div>`:''}
+  ${role()==='tm'?fotoRepCard(tp,true):''}
   <div class="ck-wrap">`;
-  CK.forEach(s=>{const okable=s.q.some(it=>!(it[2]||{}).pres);const allTip=s.q.length&&s.q.every(it=>(it[2]||{}).tip);h+=`<section class="card"><div class="card-head"><h2>${esc(s.t)}</h2>${okable&&role()==='tm'?`<button class="btn small allok" data-ck="allok" data-s="${s.id}">${allTip?'Nessun suggerimento':'Tutto ok'}</button>`:''}</div>
+  const refView=role()==='venditore';
+  CK.filter(s=>!refView||REF_CK.includes(s.id)).forEach(s=>{const okable=s.q.some(it=>!(it[2]||{}).pres);const allTip=s.q.length&&s.q.every(it=>(it[2]||{}).tip);h+=`<section class="card"><div class="card-head"><h2>${esc(s.t)}</h2>${okable&&role()==='tm'?`<button class="btn small allok" data-ck="allok" data-s="${s.id}">${allTip?'Nessun suggerimento':'Tutto ok'}</button>`:''}</div>
     ${s.id==='hotel'?`<span class="muted small">${esc(hotelLbl)}</span>`:''}
     ${s.lead?`<p style="margin:0;font-weight:600">${esc(s.lead)}</p>`:''}
     ${s.hint?`<p class="muted small" style="margin:0">${esc(s.hint)}</p>`:''}
@@ -1420,8 +1457,9 @@ function renderCheck(){
     ${(s.sc||[]).map(([k,l,n,leg])=>scale(k,l,n,leg)).join('')}
     ${s.x.map(([k,l,o])=>`<div class="field"><label for="x_${k}">${esc(l)}</label>${o&&o.hint?`<span class="muted small">${esc(o.hint)}</span>`:''}<textarea class="in ta" id="x_${k}" data-ckx="${k}" rows="2" placeholder="Lascia vuoto se non c’è nulla da segnalare">${esc(ck.testi[k]||'')}</textarea></div>`).join('')}</section>`;});
   const stars=(k,l)=>`<div class="ck-row"><span class="ck-l">${l}</span><div class="seg sm">${[1,2,3,4,5].map(n=>`<button data-ck="voto" data-k="${k}" data-v="${n}" class="${ck.voti[k]===n?'on':''}" aria-label="${l}: ${n} su 5">${n}</button>`).join('')}</div></div>`;
-  h+=`<section class="card"><div class="card-head"><h2>Chiusura</h2></div>${stars('teatro','Valutazione del teatro')}${stars('hotel','Valutazione dell’hotel')}
-    <div class="field"><label for="ckNote">Altre note per la Logistica</label><textarea class="in ta" id="ckNote" data-ckx="__note" rows="2">${esc(ck.testi.__note||'')}</textarea></div></section></div>
+  if(!refView)h+=`<section class="card"><div class="card-head"><h2>Chiusura</h2></div>${stars('teatro','Valutazione del teatro')}${stars('hotel','Valutazione dell’hotel')}
+    <div class="field"><label for="ckNote">Altre note per la Logistica</label><textarea class="in ta" id="ckNote" data-ckx="__note" rows="2">${esc(ck.testi.__note||'')}</textarea></div></section>`;
+  h+=`</div>
   ${role()!=='tm'?'':`<div class="send-bar"><span class="muted small">${missing?`Mancano ${missing} risposte Sì/No`:'Tutto compilato'}</span><button class="btn primary" data-ck="send" ${missing?'disabled':''}>${ck.inviata?'Reinvia alla Logistica':'Invia alla Logistica'}</button></div>`}`;
   app.innerHTML=h;setCkState();
   if(role()!=='tm')app.querySelectorAll('.ck-wrap input,.ck-wrap textarea').forEach(el=>{el.readOnly=true;if(el.type==='checkbox')el.disabled=true;});
@@ -2447,7 +2485,7 @@ function lockAt(p){if(!p||!p.data)return null;const d=dObj(p.data);d.setHours(6,
 function plLocked(p){if(role()==='tm')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
 function navFor(){const r=role();
   if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze','m','Auto'],['piantine','Piantine',''],['checklist','Checklist',''],['mappa','Mappa',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
-  if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['documenti','Documenti',''],['qr','QR docenti',''],['profilo','Il mio profilo','']];
+  if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['profilo','Il mio profilo','']];
   return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['qr','QR docenti',''],['auto','Auto ed emergenze',''],['accessi','Accessi',''],['profilo','Il mio profilo','']];}
 const NAV_DESC={mappa:'Il percorso della tournée sulla cartina.',teatri:'Le sale mappate, una volta per tutte.',cast:'Persone in tournée e documenti d’identità.',documenti:'SIAE, tagliandi ZTL, fatture hotel, dati per le fatture.',qr:'I codici delle scuole per i docenti.',checklist:'I report di fine giornata.',accessi:'Chi entra nell’app e cosa vede.',auto:'Targa, km, guasti, incidenti e numeri utili.',profilo:'I tuoi dati: nome, telefono, chat Google.',oggi:'La giornata in corso.'};
 
@@ -2504,10 +2542,11 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-glogin]')){if(S
 function renderControllo(){
   const td=today();const ts=tours();
   let h=`<div class="page-head"><span class="eyebrow">${esc(me()?deptOf(me()):'')}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div><div class="ctl-grid${isDir()?' has-table':''}">`;
-  ts.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;
+  const tOrd=ts.map(tr=>{const l=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));return {tr,d:l.length?l[pickDay(l).i].data:'9999'};}).sort((a,b)=>a.d.localeCompare(b.d)||a.tr.localeCompare(b.tr)).map(x=>x.tr);
+  tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;
     const pk=pickDay(list);const tp=list[pk.i];const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);
     const past=list.filter(t=>t.data<=td);const last=past[past.length-1];const ck=last?S.c.checklist[last.id]:null;
-    const nos=ck&&ck.risposte?ckProblems(ck):0;
+    const nos=ck&&ck.risposte?ckProblems(ck,role()==='venditore'?REF_CK:null):0;
     const reps=tp.repliche||[];
     h+=`<article class="card ctl"><div class="card-head"><h2>Tour ${esc(tr)}</h2><span class="muted small">${tm?esc(tm.nome):'TM non assegnato'}</span></div>${tm&&(tm.telefono||tm.chat)?`<div class="row-btns">${contactBtns(tm,tm.telefono)}</div>`:''}
       <div class="ctl-day"><span class="eyebrow">${pk.kind==='oggi'?'Oggi':pk.kind==='prossima'?'Prossima data':'Ultima data'}</span><b>${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}</span></div>
@@ -2517,7 +2556,7 @@ function renderControllo(){
       <div class="row-btns"><button class="btn small primary" data-ctl="${tp.id}">Apri la giornata</button><button class="btn small" data-ctlmap="${esc(tr)}">Mappa</button></div></article>`;});
   h+=`</div>`;
   if(isDir()&&ts.length){h+=`<div class="ctl-table-wrap"><h2 class="alt-sec">Tutti i tour</h2><table class="ctl-table"><thead><tr><th>Tour</th><th>Tour Manager</th><th>Giornata</th><th>Piantine</th><th>Checklist</th><th>Scenografia</th><th>Km stimati</th><th>Da sistemare</th><th></th></tr></thead><tbody>`;
-    ts.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;const pk=pickDay(list);const tp=list[pk.i];
+    tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;const pk=pickDay(list);const tp=list[pk.i];
       const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);const reps=tp.repliche||[];const okP=reps.filter(r=>pStatus(tp,r).k==='ok').length;
       const past=list.filter(t=>t.data<=td);const last=past[past.length-1];const ck=last?S.c.checklist[last.id]:null;const fs=fotoFor(tp);
       const v=S.c.impostazioni[vKey(tr)]||{};let km='—';if(v.kmIniziali!=null&&v.kmIniziali!==''||(v.letture||[]).length){const save=S.pref.tour;S.pref.tour=tr;const est=kmEstimate();S.pref.tour=save;km=est?est.km.toLocaleString('it-IT'):'—';}
@@ -2550,7 +2589,7 @@ function renderMappa(){
   const groups=[];list.forEach((tp,i)=>{if(tp.lat==null||tp.lng==null)return;const g=groups.find(x=>Math.abs(x.lat-tp.lat)<0.02&&Math.abs(x.lng-tp.lng)<0.02);
     if(g)g.items.push({tp,n:i+1});else groups.push({lat:+tp.lat,lng:+tp.lng,items:[{tp,n:i+1}]});});
   const pk=list.length?pickDay(list):null;const curId=pk?list[pk.i].id:null;
-  const sel=V.mapSel||(curId&&groups.findIndex(g=>g.items.some(it=>it.tp.id===curId)));
+  const sel=V.mapSel!=null&&groups[V.mapSel]?V.mapSel:(curId?groups.findIndex(g=>g.items.some(it=>it.tp.id===curId)):-1);
   const path=list.filter(t=>t.lat!=null).map(t=>proj(+t.lng,+t.lat));
   const regs=new Set(list.map(t=>norm(t.regione)));
   let vb=[0,0,920,1085];const pts=groups.map(g=>proj(g.lng,g.lat));
@@ -2605,14 +2644,17 @@ function renderAccessi(){
   const ct=S.c.impostazioni.contatti||{};
   h+=`<section class="card" style="margin-top:16px;max-width:640px"><div class="card-head"><h2>Numero Mater Lingua per i TM</h2></div>
     <p class="muted small" style="margin:0">Il TM lo chiama per il referente di zona quando il referente non ha un numero suo.</p>
-    <div class="newp" style="margin:0"><input class="in" id="numML" type="tel" value="${esc(ct.numeroML||'')}" placeholder="es. 051 000 0000" style="flex:1 1 200px;max-width:280px"><button class="btn small primary" data-numml>Salva numero</button></div></section>`;
+    <div class="grid2"><div class="field"><label for="numML">Numero da chiamare</label><input class="in" id="numML" type="tel" value="${esc(ct.numeroML||'')}" placeholder="es. 051 000 0000"></div>
+    <div class="field"><label for="numWA">Numero WhatsApp (Rasayel)</label><input class="in" id="numWA" type="tel" value="${esc(ct.numeroWA||'')}" placeholder="se diverso, es. +39 333 000 0000"></div></div>
+    <p class="muted small" style="margin:0">Il TM li vede quando il referente di zona non usa ancora l’app. Se il WhatsApp è vuoto si usa il numero da chiamare.</p>
+    <div class="row-btns"><button class="btn small primary" data-numml>Salva i numeri</button></div></section>`;
   app.innerHTML=h+spCard();
 }
 document.addEventListener('input',e=>{if(V.name!=='accessi')return;const c=e.target.closest('[data-acc]');const f=e.target.dataset.af;if(!c||!f)return;const u=V.accEdit[+c.dataset.acc];
   u[f]=f==='regioni'?e.target.value.split(',').map(x=>x.trim()).filter(Boolean):e.target.value;if(f==='ruolo')render();});
 document.addEventListener('change',e=>{if(V.name!=='accessi')return;const c=e.target.closest('[data-acc]');const f=e.target.dataset.af;if(!c||!f||e.target.tagName!=='SELECT')return;V.accEdit[+c.dataset.acc][f]=e.target.value;if(f==='ruolo')render();});
 document.addEventListener('click',async e=>{if(V.name!=='accessi')return;
-  if(e.target.closest('[data-numml]')){try{await putImp('contatti',{numeroML:document.getElementById('numML').value.trim()});toast('Numero salvato');}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}return;}
+  if(e.target.closest('[data-numml]')){try{await putImp('contatti',{numeroML:document.getElementById('numML').value.trim(),numeroWA:document.getElementById('numWA').value.trim()});toast('Numeri salvati');}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}return;}
   if(e.target.closest('[data-aadd]')){V.accEdit.push({nome:'',email:'',ruolo:'tm',tour:''});render();return;}
   const d=e.target.closest('[data-adel]');if(d){V.accDel=+d.dataset.adel;render();return;}
   const k=e.target.closest('[data-adelok]');if(k){V.accEdit.splice(+k.dataset.adelok,1);V.accDel=null;render();return;}
