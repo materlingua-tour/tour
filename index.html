@@ -689,7 +689,10 @@ async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
 async function googleLogin(){if(!SB)return;const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(error)toast('Accesso non riuscito ('+error.message+')','bad');}
 async function put(coll,id,data){
-  if(S.mode==='supa'){const d=clone(data);delete d.id;const {error}=await SB.from('docs').upsert({coll,id,data:d});if(error)throw sbErr(error);S.c[coll][id]=coll==='teatri'?normT({...d,id}):{...d,id};return;}
+  if(S.mode==='supa'){const d=clone(data);delete d.id;
+    // se il documento esiste già: UPDATE (le regole di accesso permettono ad es. a TM e referenti di aggiornare il proprio profilo)
+    if(S.c[coll]&&S.c[coll][id]){const {data:upd,error}=await SB.from('docs').update({data:d}).eq('coll',coll).eq('id',id).select('id');if(error)throw sbErr(error);if(!upd||!upd.length)throw {code:'permesso negato'};}
+    else{const {error}=await SB.from('docs').insert({coll,id,data:d});if(error)throw sbErr(error);}S.c[coll][id]=coll==='teatri'?normT({...d,id}):{...d,id};return;}
   if(S.mode==='db'){await S.db.doc(coll+'/'+id).set(data);}
   else{S.c[coll][id]=coll==='teatri'?normT(data):clone(data);saveLocal();}
 }
@@ -2482,7 +2485,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-wback]')){V.wstep=1;render();return;}
   if(e.target.closest('[data-wgo]')){const lista=clone(users());const x=lista.find(y=>y.email===V.wuser);if(!x)return;
     x.nome=document.getElementById('wNome').value.trim()||x.nome;x.telefono=document.getElementById('wTel').value.trim();x.confermato=true;
-    try{await put('impostazioni','utenti',{lista});S.c.impostazioni.utenti={lista};}catch(err){}
+    try{await put('impostazioni','utenti',{lista});S.c.impostazioni.utenti={lista,id:'utenti'};}catch(err){toast('Non riesco a salvare i tuoi dati ('+(err.code||err.message)+'). Riprova o avvisa la Direzione.','bad');return;}
     S.pref.user=x.email;S.pref.tour=x.tour||'';savePref();document.body.classList.remove('welcome');go(x.ruolo==='tm'?'oggi':'controllo');}
 });
 function logout(){if(CFG&&SB){SB.auth.signOut();}S.pref.user='';savePref();document.body.classList.remove('welcome');V={name:'welcome'};render();}
