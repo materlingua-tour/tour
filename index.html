@@ -1084,7 +1084,7 @@ document.addEventListener('click',async e=>{
     S.c.checklist[tp.id]={...ck,id:tp.id};render();try{await put('checklist',tp.id,ck);}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}}
 });
 function createFromTappa(tp,rep){
-  if(role()!=='tm'&&plLocked({data:tp.data})){toast('Dalle 06:00 del giorno della replica la piantina la crea solo il Tour Manager','warn');return;}
+  if(role()==='venditore'&&plLocked({data:tp.data})){toast('Dalle 06:00 del giorno della replica la piantina la gestisce il Tour Manager','warn');return;}
   const t=teatroOf(tp);if(!t){toast('Prima mappa la sala','bad');return;}
   const p=prepP({id:uid('p'),tappaId:tp.id,teatroId:t.id,data:tp.data,replica:rep});
   const ds=dealsFor(tp,rep);let msg='';
@@ -2488,7 +2488,7 @@ function allTours(){return [...new Set([...Object.values(S.c.tappe),...Object.va
 function regMatch(a,b){a=norm(a);b=norm(b);return !!a&&!!b&&(a===b||a.startsWith(b)||b.startsWith(a));}
 function inZone(tp){const u=me();if(!u||u.ruolo!=='venditore')return true;return (u.regioni||[]).some(r=>regMatch(r,tp.regione));}
 function lockAt(p){if(!p||!p.data)return null;const d=dObj(p.data);d.setHours(6,0,0,0);return d;}
-function plLocked(p){if(role()==='tm')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
+function plLocked(p){if(role()!=='venditore')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
 function navFor(){const r=role();
   if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze','m','Auto'],['piantine','Piantine',''],['checklist','Checklist',''],['mappa','Mappa',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
   if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['profilo','Il mio profilo','']];
