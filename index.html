@@ -883,8 +883,8 @@ function renderOggi(){
       ${tp.note?`<div><dt>Note Logistica</dt><dd>${esc(tp.note)}</dd></div>`:''}
     </dl>
     ${tp.maschere===false?`<div class="warn-row">${TRI}<span>Niente maschere in sala: le scuole le fai accomodare tu, con piantina e QR.</span></div>`:''}
-    ${(()=>{const z=docsFor(tp).find(d=>/ztl/i.test(d.categoria||''));if(!z&&!tp.ztl)return '';
-      return `<div class="ztl-row">${TRI}<span><b>Zona ZTL</b><span class="muted small">Stampa il tagliando ed esponilo sul cruscotto del van.</span></span>${z?`<button class="btn small primary" data-view="${esc(z.file)}" data-ext="${esc(z.ext||'pdf')}" data-title="${esc(z.titolo||'Tagliando ZTL')}">Scarica tagliando ZTL</button>`:`<button class="btn small" data-og="ztlmiss">Scarica tagliando ZTL</button>`}</div>`;})()}
+    ${(()=>{const z=docsFor(tp).find(d=>/ztl/i.test(d.categoria||''));const dz=z?null:ztlDrive(tp);if(!z&&!dz&&!tp.ztl)return '';
+      return `<div class="ztl-row">${TRI}<span><b>Zona ZTL</b><span class="muted small">${z||dz?'Stampa il tagliando ed esponilo sul cruscotto del van.':'Il tagliando non ha il nome standard: cercalo nella cartella e stampalo.'}</span></span>${z?`<button class="btn small primary" data-view="${esc(z.file)}" data-ext="${esc(z.ext||'pdf')}" data-title="${esc(z.titolo||'Tagliando ZTL')}">Scarica tagliando ZTL</button>`:dz?`<a class="btn small primary" href="${esc(dz.url)}" target="_blank" rel="noopener">Scarica tagliando ZTL</a>`:`<a class="btn small" href="${ZTL_DRIVE}" target="_blank" rel="noopener">Apri la cartella dei tagliandi</a>`}</div>`;})()}
     ${role()==='venditore'?'':(()=>{const tm=memoria(tp).filter(m=>m.k!=='m_rist');const off=officialTips(tp);return `<div class="mem-box"><div class="mem-h"><span class="eyebrow">Info e consigli su questo teatro</span></div>${tm.some(m=>!m.mine)&&role()==='tm'?'<span class="muted small">Tocca un consiglio per dire se ti è stato utile.</span>':''}${tm.length||Object.keys(off).length?memHTML(tm,off):'<p class="muted small" style="margin:0">Ancora nessun consiglio dei TM su questo teatro.</p>'}
       ${V.tipOpen==='teatro'?tipForm(MEM_K.filter(([k])=>k!=='m_rist'),'es. Carico e scarico dal cortile: citofonare “Palco”'):''}</div>`;})()}
     <div class="row-btns">${t?'':`<button class="btn small" data-og="mapnew">Mappa la sala</button>`}${role()==='tm'&&V.tipOpen!=='teatro'?'<button class="btn small" data-og="tip" data-kind="teatro">+ Aggiungi un consiglio sul teatro</button>':''}</div></section>`;
@@ -2176,6 +2176,14 @@ document.addEventListener('change',e=>{if(V.name!=='cast'||e.target.id!=='cFile'
   if(f.size>20*1024*1024){toast('File troppo grande (massimo 20 MB)','bad');return;}V.edit._blob=f;V.edit._blobName=f.name;const n=document.getElementById('cFileName');if(n)n.textContent=f.name;});
 
 /* =================== DOCUMENTI =================== */
+/* Tagliandi ZTL dalla cartella Drive (elenco aggiornato ogni ora dallo script Google).
+   Nome standard: "ZTL - CITTÀ - AAAA-MM-GG.pdf" (per una data) oppure "ZTL - CITTÀ.pdf" (per tutte le date in quella città). */
+function ztlDate(s){let m=s.match(/(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  m=s.match(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})/);if(m)return (m[3].length===2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');return '';}
+function ztlDrive(tp){const fs=((S.c.impostazioni.ztl_files||{}).files)||[];const c=norm(tp.citta).replace(/[^a-z0-9]/g,'');if(!c)return null;
+  const ok=fs.filter(f=>{const n=norm(f.name);if(!/^ztl/.test(n))return false;return n.replace(/[^a-z0-9]/g,'').includes(c);});
+  return ok.find(f=>ztlDate(f.name)===tp.data)||ok.find(f=>!ztlDate(f.name))||null;}
+const ZTL_DRIVE='https://drive.google.com/drive/folders/1Nf_NRnczjDN12sMIlookC-YTAa3uWveL';
 const DCAT=['SIAE','Tagliando ZTL','Piantine originali','Hotel e prenotazioni','Altro'];
 function docsFor(tp){return Object.values(S.c.documenti).filter(d=>d.tappaId===tp.id||(d.data&&d.data===tp.data&&d.tour===tp.tour));}
 function renderDocs(){
