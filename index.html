@@ -1884,7 +1884,8 @@ async function scanPianta(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)re
     const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
     const b64=c.toDataURL('image/jpeg',0.85).split(',')[1];
     const {data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}});
-    if(error||!data||!data.ok)throw new Error((data&&data.errore)||(error&&error.message)||'errore');
+    if(error){let msg=error.message;try{const ctx=error.context;if(ctx&&ctx.json){const j=await ctx.clone().json();msg=(ctx.status?ctx.status+' · ':'')+(j.errore||j.message||j.msg||JSON.stringify(j));}}catch(_){try{msg=(error.context.status||'')+' · '+(await error.context.text()).slice(0,160);}catch(__){}}throw new Error(msg);}
+    if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');
     if(!data.file.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
     pushHist();
     z.rows=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:f2(f.x1*z.w),y1:f2(f.y1*z.h),x2:f2(f.x2*z.w),y2:f2(f.y2*z.h),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);return r;});
