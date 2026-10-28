@@ -576,6 +576,8 @@ details.rep>summary .pill{white-space:normal}
 @media (min-width:901px){.ctl-grid.has-table{display:none}}.nowrap{white-space:nowrap}
 .wel-grp{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 .ztl-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);border-radius:10px;padding:10px 12px}.ztl-row>span{flex:1 1 180px;display:flex;flex-direction:column}.ztl-row .muted{color:var(--hl-ink);opacity:.85}
+.ins-box{background:var(--surface-2,rgba(127,127,127,.08));border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+.tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
 <div class="shell">
@@ -729,7 +731,7 @@ function onData(c){if(landingToken()){renderLanding();return;}renderNav();if((V.
 /* ---------- tournée ---------- */
 function tours(){const u=me();const all=allTours();if(!u)return all;
   if(u.ruolo==='tm')return all.filter(t=>t===u.tour);if(u.ruolo==='venditore')return all.filter(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t)));return all;}
-const ALL='__ALL__',ALL_VIEWS=['mappa','cast','piantine'];
+const ALL='__ALL__',ALL_VIEWS=['tournee','mappa','cast','piantine','auto'];
 const TOUR_COLS={'FRANCESE 1':'#3B6FB6','FRANCESE 2':'#8A5BB0','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
 function tourCol(tr){return TOUR_COLS[tr]||PALETTE[Math.abs([...String(tr)].reduce((a,c)=>a*31+c.charCodeAt(0),7))%PALETTE.length];}
 function canAll(){const u=me();return !!u&&u.ruolo!=='tm';}
@@ -1219,6 +1221,10 @@ const EMG_DEF={assicurazione:{nome:'',tel:''},numeri:[{nome:'Emergenze (Carabini
 function emg(){return {...EMG_DEF,...(S.c.impostazioni.emergenze||{})};}
 function vKey(tr){return 'veicolo_'+norm(tr||curTour()).replace(/[^a-z0-9]+/g,'_');}
 function vData(){return S.c.impostazioni[vKey()]||{};}
+function flotta(){return ((S.c.impostazioni.flotta||{}).veicoli||[]);}
+function vehOf(v){return flotta().find(x=>x.id===(v||{}).veicoloId)||null;}
+function parseNum(txt){return String(txt||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.lastIndexOf(':');return i>0?{nome:l.slice(0,i).trim(),tel:l.slice(i+1).trim()}:{nome:l,tel:''};});}
+function vehLbl(x){return [x.modello,x.targa].filter(Boolean).join(' · ')||'Veicolo';}
 function tourLegs(){const l=tourTappe();const out=[];
   l.forEach((tp,i)=>{const v=tp.viaggio||{};const f=(tp.repliche||[])[0]||'09:00';const pv=l[i-1];
     if(v.hotelTeatro&&v.hotelTeatro.km)out.push({ts:tp.data+'T'+f,km:+v.hotelTeatro.km,l:`${pv&&pv.hotel?pv.hotel.nome:'Hotel'} → ${tp.teatroNome||'Teatro'}`,data:tp.data,quando:'mattina'});
@@ -1227,31 +1233,44 @@ function tourLegs(){const l=tourTappe();const out=[];
 function kmEstimate(){const v=vData();const rs=[...(v.letture||[])].sort((a,b)=>a.ts.localeCompare(b.ts));const base=rs.length?rs[rs.length-1]:(v.kmIniziali!=null&&v.kmIniziali!==''?{km:+v.kmIniziali,ts:v.kmIniTs||''}:null);
   if(!base)return null;const now=nowStamp();const legs=tourLegs();const done=legs.filter(x=>x.ts>base.ts&&x.ts<=now);
   return {km:Math.round(base.km+done.reduce((a,x)=>a+x.km,0)),base,done,legs,now,toEnd:Math.round(legs.filter(x=>x.ts>now).reduce((a,x)=>a+x.km,0))};}
+function autoOverview(){const save=S.pref.tour;let s='';
+  try{tours().forEach(t=>{S.pref.tour=t;const v=vData(),est=kmEstimate(),rs=(v.letture||[]).length,veh=vehOf(v),tg=veh?veh.targa:v.targa;
+    s+=`<section class="card" style="border-left:5px solid ${tourCol(t)}"><div class="card-head"><span class="tour-tag" style="--tc:${tourCol(t)}">${esc(t)}</span>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>
+     ${veh?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.compagnia?`<span class="muted small"> · ${esc(veh.compagnia)}</span>`:''}${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}
+     <div class="km-big"><b>${est?est.km.toLocaleString('it-IT'):'—'}</b><span>km stimati adesso</span></div>
+     <p class="muted small" style="margin:0">${est?`Ultimo dato ${est.base.ts?esc(shortDate(est.base.ts.slice(0,10))):''}${est.base.foto?' (con foto)':''} · ${rs} letture · mancano circa ${est.toEnd.toLocaleString('it-IT')} km a fine tour`:'Km alla consegna non ancora inseriti'}</p>
+     <div class="row-btns"><button class="btn small" data-au="opent" data-t="${esc(t)}">Apri</button></div></section>`;});}
+  finally{S.pref.tour=save;}
+  return s;}
 function renderAuto(){
-  const v=vData();const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
+  if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}</div>${role()==='direzione'?flottaCard():''}`;return;}
+  const v=vData();const veh=vehOf(v);const tg=veh?veh.targa:v.targa;const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
   let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
-  h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${v.targa?`<span class="pill">${esc(v.targa)}</span>`:'<span class="pill warn">Targa da inserire</span>'}</div>`;
-  if(V.vEdit)h+=`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>
+  h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>${veh&&!V.vEdit?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}`;
+  if(V.vEdit)h+=`${flotta().length?`<div class="field"><label for="vVeh">Veicolo del tour</label><select class="in" id="vVeh"><option value="">— Scegli —</option>${flotta().map(x=>`<option value="${esc(x.id)}" ${x.id===v.veicoloId?'selected':''}>${esc(vehLbl(x))}</option>`).join('')}</select></div>`:`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>`}
      <div class="field"><label for="vKm0">Km alla consegna</label><input class="in" id="vKm0" type="number" inputmode="numeric" value="${esc(v.kmIniziali??'')}"></div>
      <div class="row-btns"><button class="btn small primary" data-au="vsave">Salva</button><button class="btn small" data-au="vcancel">Annulla</button></div>`;
   else h+=`<div class="km-big"><b>${est?est.km.toLocaleString('it-IT'):'—'}</b><span>km stimati adesso</span></div>
      <p class="muted small" style="margin:0">${est?`Ultimo dato: ${est.base.km.toLocaleString('it-IT')} km${est.base.ts?' il '+esc(shortDate(est.base.ts.slice(0,10)))+' alle '+esc(est.base.ts.slice(11,16)):''}${est.base.foto?' (con foto)':''} + ${est.done.length} tratti percorsi. Mancano circa ${est.toEnd.toLocaleString('it-IT')} km a fine tour.`:'Inserisci i km alla consegna dell’auto: da lì l’app somma i tratti della tournée.'}</p>
      <p class="muted small" style="margin:0">Il tratto hotel→teatro si aggiunge all’inizio della 1ª replica, quello teatro→hotel alle 20:00.</p>
-     ${canV?`<div class="row-btns"><button class="btn small primary" data-au="rnew">Correggi i km</button><button class="btn small" data-au="vedit">${v.targa?'Modifica targa e km iniziali':'Inserisci targa e km'}</button></div>`:''}`;
+     ${canV?`<div class="row-btns"><button class="btn small primary" data-au="rnew">Correggi i km</button><button class="btn small" data-au="vedit">${tg?'Cambia veicolo o km iniziali':'Scegli il veicolo e i km'}</button></div>`:''}`;
   if(V.rNew)h+=`<div class="km-form"><div class="field"><label for="rKm">Km sul contachilometri</label><input class="in" id="rKm" type="number" inputmode="numeric" value="${est?est.km:''}"></div>
      <div class="field"><label for="rFoto">Foto del contachilometri</label><input class="in" id="rFoto" type="file" accept="image/*"></div>
      <div class="row-btns"><button class="btn small primary" data-au="rsave">Salva lettura</button><button class="btn small" data-au="rcancel">Annulla</button></div></div>`;
   if(rs.length)h+=`<details class="km-hist"><summary>Letture (${rs.length})</summary>${rs.map(r=>`<div class="km-row"><b>${(+r.km).toLocaleString('it-IT')} km</b><span class="muted small">${esc(shortDate(r.ts.slice(0,10)))} ${esc(r.ts.slice(11,16))}${r.tm?' · '+esc(r.tm):''}</span>${r.foto?`<button class="btn small ghost" data-view="${esc(r.foto)}" data-ext="jpg" data-title="Contachilometri ${esc(r.km)} km">Foto</button>`:''}</div>`).join('')}</details>`;
   if(est&&est.legs.length)h+=`<details class="km-hist"><summary>Tratti della tournée (${est.legs.length})</summary>${est.legs.map(x=>`<div class="km-row ${x.ts<=est.now?'done':''}"><b>${x.km} km</b><span class="small">${esc(x.l)}</span><span class="muted small">${esc(shortDate(x.data))} · ${x.quando}</span></div>`).join('')}<p class="proto">Km di esempio: nella versione collegata li calcola Google Maps per ogni tratto.</p></details>`;
   h+=`</section>`;
-  const ass=E.assicurazione||{};
+  const ass=E.assicurazione||{};const vn=veh?parseNum(veh.altri):[];
   h+=`<section class="card"><div class="card-head"><h2>Emergenze</h2></div>
-   <div class="emg"><span class="flabel">Guasto</span><div class="row-btns"><a class="btn small primary" href="${mapsSearch('officina meccanica')}" target="_blank" rel="noopener">Officine vicine</a><a class="btn small" href="tel:803116">Soccorso stradale ACI</a></div></div>
-   <div class="emg"><span class="flabel">Incidente</span><div class="row-btns">${ass.tel?`<a class="btn small primary" href="${telHref(ass.tel)}">Assicurazione${ass.nome?' · '+esc(ass.nome):''}</a>`:'<span class="pill warn">Numero assicurazione da inserire (Direzione)</span>'}<a class="btn small" href="tel:112">112</a></div>
+   ${veh?`<div class="ins-box"><span class="flabel">Da dire alla centrale</span><p style="margin:0">Targa <b>${esc(veh.targa||'—')}</b> · ${esc(veh.compagnia||'Assicurazione')} · polizza <b>${esc(veh.polizza||'—')}</b></p>
+     <div class="row-btns"><button class="btn small" data-au="cpins">Copia targa e polizza</button><button class="btn small" data-au="cppos">Copia la mia posizione</button></div></div>`:''}
+   <div class="emg"><span class="flabel">Guasto</span><div class="row-btns">${veh&&veh.assistenza?`<a class="btn small primary" href="${telHref(veh.assistenza)}">Assistenza stradale · ${esc(veh.compagnia||'assicurazione')}</a>`:'<a class="btn small" href="tel:803116">Soccorso stradale ACI</a>'}<a class="btn small" href="${mapsSearch('officina meccanica')}" target="_blank" rel="noopener">Officine vicine</a></div>
+    ${veh?'<p class="muted small" style="margin:0">Prima di chiamare da soli un carro attrezzi, chiama la centrale dell’assicurazione e comunica targa, numero di polizza e posizione esatta del veicolo.</p>':''}</div>
+   <div class="emg"><span class="flabel">Incidente</span><div class="row-btns">${veh&&veh.sinistri?`<a class="btn small primary" href="${telHref(veh.sinistri)}">Sinistri · ${esc(veh.compagnia||'assicurazione')}</a>`:ass.tel?`<a class="btn small primary" href="${telHref(ass.tel)}">Assicurazione${ass.nome?' · '+esc(ass.nome):''}</a>`:veh?'':'<span class="pill warn">Assicurazione da inserire (Direzione)</span>'}${vn.map(n=>`<a class="btn small" href="${telHref(n.tel)}">${esc(n.nome)}</a>`).join('')}<a class="btn small" href="tel:112">112</a></div>
     <p class="muted small" style="margin:0">Metti in sicurezza le persone, chiama il 112 se ci sono feriti, compila la constatazione amichevole (CAI), fotografa i mezzi e avvisa la Direzione.</p></div>
    <div class="emg"><span class="flabel">Salute</span><div class="row-btns"><a class="btn small" href="${mapsSearch('farmacia di turno')}" target="_blank" rel="noopener">Farmacia di turno</a><a class="btn small" href="${mapsSearch('guardia medica')}" target="_blank" rel="noopener">Guardia medica</a><a class="btn small" href="${mapsSearch('pronto soccorso')}" target="_blank" rel="noopener">Pronto soccorso</a></div></div>
    <p class="muted small" style="margin:0">Le ricerche si aprono in Google Maps vicino a dove sei.</p></section>`;
-  h+=`<section class="card"><div class="card-head"><h2>Numeri utili</h2>${isDir&&!V.eEdit?'<button class="btn small" data-au="eedit">Modifica</button>':''}</div>`;
+  h+=`${isDir?flottaCard():''}<section class="card"><div class="card-head"><h2>Numeri utili</h2>${isDir&&!V.eEdit?'<button class="btn small" data-au="eedit">Modifica</button>':''}</div>`;
   if(V.eEdit)h+=`<div class="field"><label for="eAssN">Assicurazione: compagnia</label><input class="in" id="eAssN" value="${esc(ass.nome||'')}"></div>
      <div class="field"><label for="eAssT">Assicurazione: numero per i sinistri</label><input class="in" id="eAssT" type="tel" value="${esc(ass.tel||'')}"></div>
      <div class="field"><label for="eNum">Altri numeri, uno per riga (Nome: numero)</label><textarea class="in ta" id="eNum" rows="6">${esc((E.numeri||[]).map(n=>n.nome+': '+n.tel).join('\n'))}</textarea></div>
@@ -1259,12 +1278,32 @@ function renderAuto(){
   else h+=`<div class="doclist">${(E.numeri||[]).map(n=>`<div class="docrow"><span class="tmain"><b>${esc(n.nome)}</b><span class="muted small">${esc(n.tel)}</span></span><a class="btn small" href="${telHref(n.tel)}">Chiama</a></div>`).join('')||'<p class="muted small">Nessun numero.</p>'}</div>`;
   app.innerHTML=h+`</section></div>`;
 }
+function flottaCard(){const fl=flotta();const ed=V.fEdit;let s=`<section class="card"><div class="card-head"><h2>Parco veicoli</h2>${ed?'':'<button class="btn small" data-au="fnew">+ Veicolo</button>'}</div>`;
+  const used=id=>tours().filter(t=>(S.c.impostazioni[vKey(t)]||{}).veicoloId===id);
+  if(ed){const x=ed==='new'?{}:fl.find(y=>y.id===ed)||{};const F=(id,l,val,ph)=>`<div class="field"><label for="${id}">${l}</label><input class="in" id="${id}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
+    s+=`<div class="grid2">${F('fMod','Modello',x.modello,'Fiat Talento')}${F('fTarga','Targa',x.targa,'AB123CD')}${F('fComp','Compagnia assicurativa',x.compagnia)}${F('fPol','Numero di polizza',x.polizza)}${F('fAss','Assistenza stradale (numero)',x.assistenza)}${F('fSin','Sinistri / incidente (numero)',x.sinistri)}</div>
+     <div class="field"><label for="fAltri">Altri numeri, uno per riga (Nome: numero)</label><textarea class="in ta" id="fAltri" rows="2">${esc(x.altri||'')}</textarea></div>
+     <label class="chk"><input type="checkbox" id="fNol" ${x.noleggio?'checked':''}> Veicolo a noleggio</label>
+     <div class="row-btns"><button class="btn small primary" data-au="fsave" data-id="${esc(ed)}">Salva</button><button class="btn small" data-au="fcancel">Annulla</button></div>`;}
+  else s+=fl.length?`<div class="doclist">${fl.map(x=>{const u=used(x.id);return `<div class="docrow"><span class="tmain"><b>${esc(vehLbl(x))}</b><span class="muted small">${esc(x.compagnia||'Assicurazione da inserire')}${x.polizza?' · polizza '+esc(x.polizza):''}${u.length?' · '+esc(u.join(', ')):' · non assegnato'}</span></span><button class="btn small" data-au="fedit" data-id="${esc(x.id)}">Modifica</button></div>`;}).join('')}</div>`:'<p class="muted small" style="margin:0">Nessun veicolo. Aggiungili qui, poi assegnali a ogni tour con “Scegli il veicolo”.</p>';
+  return s+'</section>';}
 async function putImp(key,o){const cur=clone(S.c.impostazioni[key]||{});const out={...cur,...o};delete out.id;S.c.impostazioni[key]={...out,id:key};await put('impostazioni',key,out);}
 document.addEventListener('click',async e=>{if(V.name!=='auto')return;const b=e.target.closest('[data-au]');if(!b)return;const a=b.dataset.au;const y=window.scrollY;const re=()=>{render();window.scrollTo(0,y);};
   try{
+  if(a==='opent'){S.pref.tour=b.dataset.t;try{savePref&&savePref();}catch(_){}render();window.scrollTo(0,0);return;}
   if(a==='vedit'){V.vEdit=true;V.rNew=false;re();}
+  else if(a==='fnew'){V.fEdit='new';re();}
+  else if(a==='fedit'){V.fEdit=b.dataset.id;re();}
+  else if(a==='fcancel'){V.fEdit=null;re();}
+  else if(a==='fsave'){const g=id=>document.getElementById(id).value.trim();const fl=clone(flotta());const id=b.dataset.id==='new'?uid('v'):b.dataset.id;
+    const o={id,modello:g('fMod'),targa:g('fTarga').toUpperCase(),compagnia:g('fComp'),polizza:g('fPol'),assistenza:g('fAss'),sinistri:g('fSin'),altri:document.getElementById('fAltri').value.trim(),noleggio:document.getElementById('fNol').checked};
+    const i=fl.findIndex(x=>x.id===id);if(i>=0)fl[i]=o;else fl.push(o);await putImp('flotta',{veicoli:fl});V.fEdit=null;toast('Veicolo salvato');re();}
+  else if(a==='cpins'){const veh=vehOf(vData());if(veh)copyText(`Targa ${veh.targa} · ${veh.compagnia} · polizza ${veh.polizza}`,'Targa e polizza copiate');}
+  else if(a==='cppos'){if(!navigator.geolocation){toast('Posizione non disponibile','warn');return;}toast('Cerco la posizione…');
+    navigator.geolocation.getCurrentPosition(pp=>{const {latitude:la,longitude:lo}=pp.coords;copyText(`Posizione: https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`,'Posizione copiata: incollala dove ti serve');},()=>toast('Attiva la posizione del telefono e riprova','warn'),{enableHighAccuracy:true,timeout:15000});}
   else if(a==='vcancel'){V.vEdit=false;re();}
-  else if(a==='vsave'){const km=document.getElementById('vKm0').value;const v=vData();await putImp(vKey(),{targa:document.getElementById('vTarga').value.trim().toUpperCase(),kmIniziali:km===''?'':int(km),kmIniTs:String(km)!==String(v.kmIniziali??'')?nowStamp():(v.kmIniTs||nowStamp())});V.vEdit=false;toast('Veicolo salvato');re();}
+  else if(a==='vsave'){const km=document.getElementById('vKm0').value;const v=vData();const vs=document.getElementById('vVeh'),vt=document.getElementById('vTarga');const sel=vs?flotta().find(x=>x.id===vs.value):null;
+    await putImp(vKey(),{...(vs?{veicoloId:vs.value,targa:sel?sel.targa:''}:{targa:vt.value.trim().toUpperCase()}),kmIniziali:km===''?'':int(km),kmIniTs:String(km)!==String(v.kmIniziali??'')?nowStamp():(v.kmIniTs||nowStamp())});V.vEdit=false;toast('Veicolo salvato');re();}
   else if(a==='rnew'){V.rNew=true;V.vEdit=false;re();}
   else if(a==='rcancel'){V.rNew=false;re();}
   else if(a==='rsave'){const km=document.getElementById('rKm').value;const f=document.getElementById('rFoto').files[0];
@@ -1329,12 +1368,12 @@ function renderTournee(){
   const list=tourTappe();const td=today();
   let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Tournée</h1><p class="muted" style="margin:0">Tocca una data per aprire la sua giornata.</p><div class="row-btns"><button class="btn small" data-trmap>${IC.mappa} Vedi la mappa della tournée</button></div></div>`;
   if(!list.length){app.innerHTML=h+`<div class="empty"><b>Nessuna data.</b></div>`;return;}
-  let month='';h+=`<div class="tlist">`;
+  const isAll=curTour()===ALL;let month='';h+=`<div class="tlist">`;
   list.forEach(tp=>{const m=dObj(tp.data).toLocaleDateString('it-IT',{month:'long',year:'numeric'});if(m!==month){month=m;h+=`<div class="tmonth">${esc(cap(m))}</div>`;}
     const ck=S.c.checklist[tp.id]||{};const past=tp.data<td;
-    h+=`<button class="trow ${tp.data===td?'today':''}" data-tr="${tp.id}">
+    h+=`<button class="trow ${tp.data===td?'today':''}" data-tr="${tp.id}"${isAll?` style="border-left:5px solid ${tourCol(tp.tour)}"`:''}>
       <span class="tdate"><b>${dObj(tp.data).getDate()}</b><span>${dObj(tp.data).toLocaleDateString('it-IT',{weekday:'short'})}</span></span>
-      <span class="tmain"><b>${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}${teatroOf(tp)?'':' · sala da mappare'}</span></span>
+      <span class="tmain">${isAll?`<span class="tour-tag" style="--tc:${tourCol(tp.tour)}">${esc(tp.tour)}</span>`:''}<b>${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}${teatroOf(tp)?'':' · sala da mappare'}</span></span>
       <span class="tmeta">${(tp.repliche||[]).map(r=>{const st=pStatus(tp,r);return `<span class="dot ${st.k}" title="Piantina ${esc(r)}: ${st.l}"></span>`;}).join('')}
         ${tp.hotel?hotelPill(tp.hotel):''}${ck.inviata?'<span class="pill ok">Checklist</span>':past?'<span class="pill bad">Checklist mancante</span>':''}</span></button>`;});
   h+=`</div><p class="muted small">Pallini: un pallino per replica · verde piantina pronta, arancio da creare, rosso dati HubSpot cambiati.</p>`;
