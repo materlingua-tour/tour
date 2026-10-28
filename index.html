@@ -577,6 +577,7 @@ details.rep>summary .pill{white-space:normal}
 .wel-grp{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 .ztl-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);border-radius:10px;padding:10px 12px}.ztl-row>span{flex:1 1 180px;display:flex;flex-direction:column}.ztl-row .muted{color:var(--hl-ink);opacity:.85}
 .ins-box{background:var(--surface-2,rgba(127,127,127,.08));border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+.card-head .tour-tag{margin:0;align-self:center}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -1237,13 +1238,13 @@ function autoOverview(){const save=S.pref.tour;let s='';
   try{tours().forEach(t=>{S.pref.tour=t;const v=vData(),est=kmEstimate(),rs=(v.letture||[]).length,veh=vehOf(v),tg=veh?veh.targa:v.targa;
     s+=`<section class="card" style="border-left:5px solid ${tourCol(t)}"><div class="card-head"><span class="tour-tag" style="--tc:${tourCol(t)}">${esc(t)}</span>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>
      ${veh?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.compagnia?`<span class="muted small"> · ${esc(veh.compagnia)}</span>`:''}${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}
-     <div class="km-big"><b>${est?est.km.toLocaleString('it-IT'):'—'}</b><span>km stimati adesso</span></div>
+     ${est?`<div class="km-big"><b>${est.km.toLocaleString('it-IT')}</b><span>km stimati adesso</span></div>`:''}
      <p class="muted small" style="margin:0">${est?`Ultimo dato ${est.base.ts?esc(shortDate(est.base.ts.slice(0,10))):''}${est.base.foto?' (con foto)':''} · ${rs} letture · mancano circa ${est.toEnd.toLocaleString('it-IT')} km a fine tour`:'Km alla consegna non ancora inseriti'}</p>
      <div class="row-btns"><button class="btn small" data-au="opent" data-t="${esc(t)}">Apri</button></div></section>`;});}
   finally{S.pref.tour=save;}
   return s;}
 function renderAuto(){
-  if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}</div>${role()==='direzione'?flottaCard():''}`;return;}
+  if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}${role()==='direzione'?flottaCard(true):''}</div>`;return;}
   const v=vData();const veh=vehOf(v);const tg=veh?veh.targa:v.targa;const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
   let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
   h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>${veh&&!V.vEdit?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}`;
@@ -1278,7 +1279,7 @@ function renderAuto(){
   else h+=`<div class="doclist">${(E.numeri||[]).map(n=>`<div class="docrow"><span class="tmain"><b>${esc(n.nome)}</b><span class="muted small">${esc(n.tel)}</span></span><a class="btn small" href="${telHref(n.tel)}">Chiama</a></div>`).join('')||'<p class="muted small">Nessun numero.</p>'}</div>`;
   app.innerHTML=h+`</section></div>`;
 }
-function flottaCard(){const fl=flotta();const ed=V.fEdit;let s=`<section class="card"><div class="card-head"><h2>Parco veicoli</h2>${ed?'':'<button class="btn small" data-au="fnew">+ Veicolo</button>'}</div>`;
+function flottaCard(wide){const fl=flotta();const ed=V.fEdit;let s=`<section class="card"${wide?' style="grid-column:1/-1"':''}><div class="card-head"><h2>Parco veicoli</h2>${ed?'':'<button class="btn small" data-au="fnew">+ Veicolo</button>'}</div>`;
   const used=id=>tours().filter(t=>(S.c.impostazioni[vKey(t)]||{}).veicoloId===id);
   if(ed){const x=ed==='new'?{}:fl.find(y=>y.id===ed)||{};const F=(id,l,val,ph)=>`<div class="field"><label for="${id}">${l}</label><input class="in" id="${id}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
     s+=`<div class="grid2">${F('fMod','Modello',x.modello,'Fiat Talento')}${F('fTarga','Targa',x.targa,'AB123CD')}${F('fComp','Compagnia assicurativa',x.compagnia)}${F('fPol','Numero di polizza',x.polizza)}${F('fAss','Assistenza stradale (numero)',x.assistenza)}${F('fSin','Sinistri / incidente (numero)',x.sinistri)}</div>
