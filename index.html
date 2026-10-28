@@ -1471,11 +1471,11 @@ document.addEventListener('input',e=>{if(V.name==='teatri'&&e.target.id==='tSear
 document.addEventListener('change',e=>{if(V.name==='teatri'&&e.target.id==='tLang'){V.tl=e.target.value;filterTeatri();}});
 function archToggle(n){return isDir()&&(n||V.showArch)?`<label class="chk small" style="margin:0 0 10px"><input type="checkbox" data-arch-show ${V.showArch?'checked':''}> Mostra solo gli archiviati (${n})</label>`:'';}
 function archBtn(kind,o){if(!isDir())return '';const key=kind+':'+o.id;
-  if(o.archiviato)return `<button class="btn small" data-ls="unarch" data-kind="${kind}" data-id="${o.id}">Ripristina</button>`;
+  if(o.archiviato)return `<button class="btn small" data-ls="unarch" data-kind="${kind}" data-id="${o.id}">Ripristina</button>`+delBtn(kind,o.id);
   return V.confirm===key?`<button class="btn small primary" data-ls="archok" data-kind="${kind}" data-id="${o.id}">Conferma: archivia</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
   :`<button class="btn small ghost" data-ls="delask" data-kind="${kind}" data-id="${o.id}">Archivia</button>`;}
 document.addEventListener('change',e=>{if(e.target.matches('[data-arch-show]')){V.showArch=e.target.checked;V.confirm=null;render();}});
-function delBtn(kind,id){const key=kind+':'+id;return V.confirm===key?`<button class="btn small danger" data-ls="delok" data-kind="${kind}" data-id="${id}">Conferma eliminazione</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
+function delBtn(kind,id){const key=kind+':'+id;return V.confirm===key?`<button class="btn small danger" data-ls="delok" data-kind="${kind}" data-id="${id}">Elimina per sempre</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
   :`<button class="btn small ghost" data-ls="delask" data-kind="${kind}" data-id="${id}">Elimina</button>`;}
 document.addEventListener('click',async e=>{
   if(V.name!=='piantine'&&V.name!=='teatri')return;const b=e.target.closest('[data-ls]');if(!b)return;const a=b.dataset.ls;
