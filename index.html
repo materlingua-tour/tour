@@ -419,7 +419,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .wel-card .in{background:#FFFFFF;color:#14201D;border-color:#D3DDDA}
 .wel-logo{background:#196457!important;width:130px;height:70px}
 .wel-card h1{color:#14201D}
-.wel-google{width:100%}.t-card[hidden]{display:none!important}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.wel-google{width:100%}.t-card[hidden],.p-card[hidden]{display:none!important}.bulk{margin:0 0 14px;border:2px solid var(--brand)}.bulk-car{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--hl-bg);border:1px solid var(--hl-bd);margin-bottom:10px}.bulk-orig{overflow-wrap:anywhere}.bulk-ok{margin:6px 0;padding-left:18px;display:grid;gap:4px;max-height:260px;overflow:auto}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .wel-sep{display:flex;align-items:center;gap:10px;color:#56645F;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wel-sep::before,.wel-sep::after{content:"";flex:1;height:1px;background:#D3DDDA}
 .wel-list{display:flex;flex-direction:column;gap:8px}
@@ -440,7 +440,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .lg.reg{border-radius:3px;border:0;background:#BFD9D0}
 .mp-src{margin:4px 4px 0;font-size:12px;color:var(--muted)}
 .it-path{fill:none;stroke:var(--gold);stroke-width:calc(4px * var(--k,1));stroke-dasharray:calc(10px * var(--k,1)) calc(8px * var(--k,1));stroke-linecap:round;stroke-linejoin:round}
-.it-pt{cursor:pointer}.pt-day.past{opacity:.7}.pt-reps{display:flex;flex-wrap:wrap;gap:10px 18px}.pt-rep{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.contatti{list-style:none;margin:0;padding:0;display:grid;gap:8px}.contatti li{display:flex;flex-direction:column;gap:1px}.contatti a{width:fit-content}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
+.it-pt{cursor:pointer}.it-sm{cursor:pointer}.it-sm .hit{fill:transparent;stroke:none}.it-sm circle:not(.hit){fill:var(--surface);stroke:var(--brand)}.it-sm.past circle:not(.hit){fill:var(--brand)}.it-sm.iss circle:not(.hit){stroke:#F2B705}.lg.iss{border-color:#F2B705!important;background:var(--surface)}.pt-day.past{opacity:.7}.pt-reps{display:flex;flex-wrap:wrap;gap:10px 18px}.pt-rep{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.contatti{list-style:none;margin:0;padding:0;display:grid;gap:8px}.contatti li{display:flex;flex-direction:column;gap:1px}.contatti a{width:fit-content}.it-lead{stroke:var(--brand);opacity:.55}.it-dot{fill:var(--brand)}
 .it-pt circle{fill:var(--surface);stroke:var(--brand);stroke-width:4}
 .it-pt text{font-weight:800;font-family:var(--f-ui);fill:var(--brand);text-anchor:middle;pointer-events:none}
 .it-pt.past circle{fill:var(--brand)}.it-pt.past text{fill:var(--brand-ink)}
@@ -690,7 +690,7 @@ function presenteOggi(u){const p=u&&S.c.presenze[presKey(u.email)];return !!(p&&
 async function segnaPresenza(){const u=me();if(!u||!u.confermato)return;const k=presKey(u.email);const p=S.c.presenze[k];if(p&&p.giorno===today())return;
   try{await put('presenze',k,{email:u.email,giorno:today(),ora:nowHM()});}catch(e){}}
 async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {data:part,error}=await SB.from('docs').select('id,data').eq('coll',c).order('id').range(from,from+999);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}data.push(...part);if(part.length<1000)break;}
-  const o={};data.forEach(r=>{if(r.data&&(r.data.rimossa||r.data.escluso))return;o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
+  const o={};data.forEach(r=>{if(r.data&&(r.data.rimossa||r.data.escluso||/DA ASSEGNARE/i.test(r.data.tour||'')))return;o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
 async function googleLogin(){if(!SB)return;const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(error)toast('Accesso non riuscito ('+error.message+')','bad');}
 async function put(coll,id,data){
@@ -729,8 +729,13 @@ function onData(c){if(landingToken()){renderLanding();return;}renderNav();if((V.
 /* ---------- tournée ---------- */
 function tours(){const u=me();const all=allTours();if(!u)return all;
   if(u.ruolo==='tm')return all.filter(t=>t===u.tour);if(u.ruolo==='venditore')return all.filter(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t)));return all;}
-function curTour(){const ts=tours();return ts.includes(S.pref.tour)?S.pref.tour:(ts[0]||'');}
-function tourTappe(){const tr=curTour();return Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));}
+const ALL='__ALL__',ALL_VIEWS=['mappa','cast','piantine'];
+const TOUR_COLS={'FRANCESE 1':'#3B6FB6','FRANCESE 2':'#8A5BB0','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
+function tourCol(tr){return TOUR_COLS[tr]||PALETTE[Math.abs([...String(tr)].reduce((a,c)=>a*31+c.charCodeAt(0),7))%PALETTE.length];}
+function canAll(){const u=me();return !!u&&u.ruolo!=='tm';}
+function curTour(){const ts=tours();if(S.pref.tour===ALL&&canAll()&&ALL_VIEWS.includes(V.name))return ALL;return ts.includes(S.pref.tour)?S.pref.tour:(ts[0]||'');}
+function tourLbl(){const t=curTour();return t===ALL?'Tutti i tour':'Tour '+t;}
+function tourTappe(){const tr=curTour();return Object.values(S.c.tappe).filter(t=>(tr===ALL||t.tour===tr)&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));}
 function pickDay(list){const td=today();let i=list.findIndex(t=>t.data===td);if(i>=0)return {i,kind:'oggi'};
   i=list.findIndex(t=>t.data>td);if(i>=0)return {i,kind:'prossima'};return {i:list.length-1,kind:'passata'};}
 function teatroDoc(tp){return tp&&tp.teatroId?S.c.teatri[tp.teatroId]||null:null;}
@@ -786,7 +791,7 @@ function renderNav(){
   nl.innerHTML=items.map(([k,l,m,sh])=>{const on=cur===k;return `<button class="nav-item ${m?'':'desk-only'} ${on?'on':''}" data-nav="${k}" aria-current="${on?'page':'false'}" aria-label="${esc(l)}">${IC[k]||''}${sh?`<span class="desk-only">${l}</span><span class="mob-only">${sh}</span>`:`<span>${l}</span>`}</button>`;}).join('')
     +`<button class="nav-item mob-only ${others.includes(cur)||cur==='altro'?'on':''}" data-nav="altro">${IC.altro}<span>Altro</span></button>`;
   const ts=tours();const tr=curTour();const u=me();
-  document.getElementById('navTour').innerHTML=ts.length&&u&&u.ruolo!=='tm'?`<label class="flabel" for="tourSel">Tour</label><select class="in" id="tourSel">${ts.map(t=>`<option ${t===tr?'selected':''}>${esc(t)}</option>`).join('')}</select>`:(u&&u.tour?`<span class="flabel">Tour</span><b>${esc(u.tour)}</b>`:'');
+  document.getElementById('navTour').innerHTML=ts.length&&u&&u.ruolo!=='tm'?`<label class="flabel" for="tourSel">Tour</label><select class="in" id="tourSel">${canAll()&&ALL_VIEWS.includes(V.name)?`<option value="${ALL}" ${tr===ALL?'selected':''}>Tutti i tour</option>`:''}${ts.map(t=>`<option ${t===tr?'selected':''}>${esc(t)}</option>`).join('')}</select>`:(u&&u.tour?`<span class="flabel">Tour</span><b>${esc(u.tour)}</b>`:'');
   const nu=document.getElementById('navUser');if(nu)nu.innerHTML=u?`<span class="nu-name">${esc(u.nome)}</span><span class="flabel">${esc(u.email||'')}</span><button class="link nu-out" data-logout>Esci</button>`:'';
   document.querySelectorAll('.id-box').forEach(b=>{b.querySelector('.id-dept').textContent=u?deptOf(u):'';b.querySelector('.id-name').textContent=u?u.nome||'':'';});
   setPill();
@@ -1224,7 +1229,7 @@ function kmEstimate(){const v=vData();const rs=[...(v.letture||[])].sort((a,b)=>
   return {km:Math.round(base.km+done.reduce((a,x)=>a+x.km,0)),base,done,legs,now,toEnd:Math.round(legs.filter(x=>x.ts>now).reduce((a,x)=>a+x.km,0))};}
 function renderAuto(){
   const v=vData();const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
   h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${v.targa?`<span class="pill">${esc(v.targa)}</span>`:'<span class="pill warn">Targa da inserire</span>'}</div>`;
   if(V.vEdit)h+=`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>
      <div class="field"><label for="vKm0">Km alla consegna</label><input class="in" id="vKm0" type="number" inputmode="numeric" value="${esc(v.kmIniziali??'')}"></div>
@@ -1322,7 +1327,7 @@ async function offlinePDF(tp,btn){
 /* =================== TOURNÉE =================== */
 function renderTournee(){
   const list=tourTappe();const td=today();
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Tournée</h1><p class="muted" style="margin:0">Tocca una data per aprire la sua giornata.</p><div class="row-btns"><button class="btn small" data-trmap>${IC.mappa} Vedi la mappa della tournée</button></div></div>`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Tournée</h1><p class="muted" style="margin:0">Tocca una data per aprire la sua giornata.</p><div class="row-btns"><button class="btn small" data-trmap>${IC.mappa} Vedi la mappa della tournée</button></div></div>`;
   if(!list.length){app.innerHTML=h+`<div class="empty"><b>Nessuna data.</b></div>`;return;}
   let month='';h+=`<div class="tlist">`;
   list.forEach(tp=>{const m=dObj(tp.data).toLocaleDateString('it-IT',{month:'long',year:'numeric'});if(m!==month){month=m;h+=`<div class="tmonth">${esc(cap(m))}</div>`;}
@@ -1344,19 +1349,28 @@ function renderPiantineList(){
   const ps=Object.values(S.c.piantine).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(a.replica||'').localeCompare(b.replica||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Piantine</h1><p class="muted" style="margin:0">Di solito le crei dalla pagina Oggi, partendo dai deal di HubSpot. Qui trovi tutte quelle salvate.</p></div>`;
   if(ts.length)h+=`<div class="newp"><select class="in" id="newpT" aria-label="Teatro">${ts.map(t=>`<option value="${t.id}">${esc(t.nome)}${t.citta?' · '+esc(t.citta):''}</option>`).join('')}</select><button class="btn" data-ls="newp">Nuova piantina libera</button></div>`;
+  const tourOfP=p=>{const tp=p.tappaId&&S.c.tappe[p.tappaId];return tp?tp.tour:'';};
+  h+=`<div class="t-filters"><input class="in" id="pSearch" type="search" placeholder="Cerca teatro, città, scuola o data (es. 23/11)" value="${esc(V.pq||'')}" aria-label="Cerca piantine">
+   ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option ${V.pt===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!ps.length)h+=`<div class="empty"><b>Ancora nessuna piantina.</b></div>`;
   else h+=`<div class="list">${ps.map(p=>{const t=S.c.teatri[p.teatroId];const tot=(p.scuole||[]).reduce((a,s)=>a+int(s.persone),0);
-    return `<article class="card"><div class="card-title">${esc(t?t.nome:'Teatro eliminato')}</div>
-    <div class="card-meta">${fmtDate(p.data)} · replica ${esc(p.replica||'')}${t&&t.citta?' · '+esc(t.citta):''}</div>
+    const tr=tourOfP(p);
+    return `<article class="card p-card" data-s="${esc(norm([t?t.nome:'',t?t.citta:'',fmtDate(p.data),p.data,tr,...(p.scuole||[]).map(s=>s.nome)].join(' ')))}" data-t="${esc(tr)}"${tr?` style="border-left:5px solid ${tourCol(tr)}"`:''}><div class="card-title">${esc(t?t.nome:'Teatro eliminato')}</div>
+    <div class="card-meta">${tr?esc(tr)+' · ':''}${fmtDate(p.data)} · replica ${esc(p.replica||'')}${t&&t.citta?' · '+esc(t.citta):''}</div>
     <div class="card-meta">${(p.scuole||[]).length} scuole · ${tot} persone${p.hubspot?' · da HubSpot':''}</div>
     <div class="dots">${(p.scuole||[]).map(s=>`<i style="background:${zcol(s)}" title="${esc(s.nome)}"></i>`).join('')}</div>
     <div class="card-actions"><button class="btn small" data-ls="openp" data-id="${p.id}" ${t?'':'disabled'}>Apri</button>${delBtn('p',p.id)}</div></article>`;}).join('')}</div>`;
-  app.innerHTML=h;
+  app.innerHTML=h;filterPiantine();
 }
+function filterPiantine(){const q=norm(V.pq||''),t=V.pt||'';let n=0;const cs=document.querySelectorAll('.p-card');
+  cs.forEach(c=>{const ok=(!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w)))&&(!t||c.dataset.t===t);c.hidden=!ok;if(ok)n++;});
+  const el=document.getElementById('pCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+' piantine':n+' piantine su '+cs.length):'';}
+document.addEventListener('input',e=>{if(V.name==='piantine'&&e.target.id==='pSearch'){V.pq=e.target.value;filterPiantine();}});
+document.addEventListener('change',e=>{if(V.name==='piantine'&&e.target.id==='pTour'){V.pt=e.target.value;filterPiantine();}});
 function renderPiantineTour(){
   const list=tourTappe();const td=today();
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Piantine</h1><p class="muted" style="margin:0">Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.</p></div>`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Piantine</h1><p class="muted" style="margin:0">Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.</p></div>`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!list.length)h+=`<div class="empty"><b>Nessuna data in calendario.</b></div>`;
   else h+=`<div class="list">${list.map(tp=>{const t=teatroOf(tp);const past=tp.data<td;
@@ -1371,10 +1385,69 @@ document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.ta
   if(a==='map'){const d=teatroDoc(tp);openEditor(d?d.id:null,{nome:tp.teatroNome||'',citta:tp.citta||'',tappaId:tp.id});V.from='piantine';}
   else if(a==='open'){const p=findP(tp.id,b.dataset.rep);if(p)openPiantina(p.id,'piantine');}
   else if(a==='new'){V.dayId=tp.id;createFromTappa(tp,b.dataset.rep);}});
+/* ---------- caricamento di massa delle piante (Direzione) ----------
+   Dal nome del file (e della cartella) l'app riconosce città e teatro; quelli che non riconosce
+   si sistemano a mano, uno dopo l'altro. Le piante diventano lo sfondo della sala da mappare. */
+function bulkTokens(s){return norm(s).replace(/\.(pdf|png|jpe?g|webp|heic)$/,'').replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!['teatro','cinema','cine','auditorium','sala','di','del','della','pianta','piantina','platea','the','de','la','il','pdf'].includes(w));}
+function bulkMatch(name){const tk=new Set(bulkTokens(name));let best=null,bs=0,second=0;
+  Object.values(S.c.teatri).forEach(t=>{const ct=bulkTokens(t.citta||''),nt=bulkTokens(t.nome||'');if(!nt.length)return;
+    const cityOk=ct.length&&ct.every(w=>tk.has(w));const hit=nt.filter(w=>tk.has(w)).length/nt.length;const sc=(cityOk?1:0)+hit;
+    if(sc>bs){second=bs;bs=sc;best=t;}else if(sc>second)second=sc;});
+  return bs>=1.5&&bs-second>=0.25?best:null;}
+function bulkHTML(){const B_=V.bulk;const ok=B_.items.filter(x=>x.t||x.nuovo),todo=B_.items.filter(x=>!x.t&&!x.nuovo&&!x.salta);
+  const cur=B_.items[B_.i];const cities=[...new Set(Object.values(S.c.teatri).map(t=>t.citta).filter(Boolean))].sort();
+  let s=`<section class="card bulk"><div class="card-head"><h2>Caricamento piante</h2><span class="pill ${todo.length?'warn':'ok'}">${ok.length} riconosciute · ${todo.length} da sistemare</span></div>`;
+  if(B_.busy)return s+`<p>${esc(B_.busy)}</p></section>`;
+  if(cur&&!cur.t&&!cur.nuovo&&!cur.salta||V.bulkShow){const it=cur;const tl=Object.values(S.c.teatri).filter(t=>!it.citta||norm(t.citta)===norm(it.citta)).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    s+=`<div class="bulk-car"><span class="muted small">Da sistemare ${B_.items.filter(x=>!x.t&&!x.nuovo).indexOf(it)+1} di ${B_.items.filter(x=>!x.t&&!x.nuovo).length}</span>
+      <div class="flabel">Nome originale</div><b class="bulk-orig">${esc(it.path)}</b>
+      <div class="grid2"><div class="field"><label for="bkCity">Città</label><input class="in" id="bkCity" list="bkCities" value="${esc(it.citta||'')}"><datalist id="bkCities">${cities.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+      <div class="field"><label for="bkT">Teatro</label><select class="in" id="bkT"><option value="">— Scegli il teatro —</option>${tl.map(t=>`<option value="${t.id}" ${it.sel===t.id?'selected':''}>${esc(t.nome)}${it.citta?'':' · '+esc(t.citta||'')}</option>`).join('')}<option value="__new" ${it.sel==='__new'?'selected':''}>+ Nuovo teatro…</option></select></div></div>
+      ${it.sel==='__new'?`<div class="field"><label for="bkNew">Nome del nuovo teatro</label><input class="in" id="bkNew" value="${esc(it.nomeNuovo||'')}"></div>`:''}
+      <div class="row-btns"><button class="btn small primary" data-bulk="ok">Conferma e vai al prossimo</button><button class="btn small" data-bulk="skip">Salta questo file</button></div></div>`;}
+  s+=`<details ${todo.length?'':'open'}><summary>Riconosciute (${ok.length})</summary><ul class="bulk-ok">${ok.map(x=>`<li><span class="muted small">${esc(x.path)}</span> → <b>${esc(x.t?x.t.nome+' · '+(x.t.citta||''):x.nuovo.nome+' · '+x.nuovo.citta+' (nuovo)')}</b></li>`).join('')}</ul></details>
+   <div class="row-btns"><button class="btn primary" data-bulk="save" ${ok.length?'':'disabled'}>Salva e carica ${ok.length} piante</button><button class="btn ghost" data-bulk="cancel">Annulla</button>${todo.length?'<span class="muted small">Quelle non sistemate restano fuori: puoi ricaricarle dopo.</span>':''}</div></section>`;
+  return s;}
+function bulkStart(files){const items=[...files].filter(f=>/pdf|image/.test(f.type)||/\.(pdf|png|jpe?g|webp)$/i.test(f.name)).map(f=>{const path=(f.webkitRelativePath||f.name);const t=bulkMatch(path);return {f,path,t,nuovo:null,salta:false,citta:t?t.citta:'',sel:''};});
+  if(!items.length){toast('Nessun PDF o immagine tra i file scelti','warn');return;}
+  V.bulk={items,i:Math.max(0,items.findIndex(x=>!x.t))};const n=items.filter(x=>x.t).length;render();
+  toast(`${items.length} file: ${n} riconosciuti${items.length-n?`, ${items.length-n} da sistemare a mano`:''}`,items.length-n?'warn':undefined);}
+async function bulkToPng(f){let c=document.createElement('canvas');
+  if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){await loadScript(PDFJS);await loadScript(PDFJS_W);const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc=PDFJS_W;
+    const pdf=await lib.getDocument({data:await f.arrayBuffer(),isEvalSupported:false}).promise;const pg=await pdf.getPage(1);const v0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:Math.min(3,2000/v0.width)});
+    c.width=Math.round(vp.width);c.height=Math.round(vp.height);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:g,viewport:vp}).promise;}
+  else{const img=await createImageBitmap(f);const sc=Math.min(1,2000/img.width);c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);}
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));return {blob,w:c.width,h:c.height};}
+async function bulkSave(){const B_=V.bulk;const list=B_.items.filter(x=>x.t||x.nuovo);let ok=0,ko=0;
+  for(let i=0;i<list.length;i++){const x=list[i];B_.busy=`Carico ${i+1} di ${list.length}: ${x.path}`;render();
+    try{const {blob,w,h:hh}=await bulkToPng(x.f);const up=await upAsset(blob,false);
+      let t=x.t?normT(clone(S.c.teatri[x.t.id])):{id:uid('t'),nome:x.nuovo.nome,citta:x.nuovo.citta,zone:[{id:uid('z'),nome:'Platea',tipo:'platea',w:1000,h:1000,bg:null,front:null,rows:[]}]};
+      const z=t.zone[0];z.bg=up.id;if(!z.rows.length){z.w=1000;z.h=Math.round(1000*hh/w);}t.piantaOriginale=x.path;t.aggiornato=new Date().toISOString();
+      const id=t.id;delete t.id;await put('teatri',id,t);ok++;}catch(e){ko++;console.error(e);}}
+  V.bulk=null;render();toast(`${ok} piante caricate${ko?` · ${ko} non riuscite`:''}: ora le sale sono pronte da mappare`,ko?'warn':undefined);}
+document.addEventListener('click',e=>{if(V.name!=='teatri')return;const b=e.target.closest('[data-bulk]');if(!b)return;const a=b.dataset.bulk;
+  if(a==='files')document.getElementById('bulkF').click();else if(a==='dir')document.getElementById('bulkD').click();
+  else if(a==='cancel'){V.bulk=null;render();}
+  else if(a==='save'){bulkSave();}
+  else if(a==='ok'||a==='skip'){const B_=V.bulk;const it=B_.items[B_.i];if(!it)return;
+    if(a==='skip')it.salta=true;
+    else{const sel=document.getElementById('bkT').value;const city=document.getElementById('bkCity').value.trim();
+      if(sel==='__new'){const nm=(document.getElementById('bkNew')||{}).value||'';if(!nm.trim()||!city){toast('Scrivi città e nome del nuovo teatro','bad');return;}it.nuovo={nome:nm.trim(),citta:city};}
+      else if(sel){it.t=S.c.teatri[sel];}else{toast('Scegli il teatro o salta il file','bad');return;}}
+    const nx=B_.items.findIndex(x=>!x.t&&!x.nuovo&&!x.salta);B_.i=nx<0?0:nx;render();}});
+document.addEventListener('change',e=>{if(V.name!=='teatri')return;
+  if(e.target.id==='bulkF'||e.target.id==='bulkD'){bulkStart(e.target.files);e.target.value='';return;}
+  if(!V.bulk)return;const it=V.bulk.items[V.bulk.i];if(!it)return;
+  if(e.target.id==='bkCity'){it.citta=e.target.value.trim();it.sel='';render();}
+  else if(e.target.id==='bkT'){it.sel=e.target.value;render();}
+  else if(e.target.id==='bkNew'){it.nomeNuovo=e.target.value;}});
+function repartiList(cur){const base=['','Direzione','Direzione Operativa','Direzione Artistica','Logistica e Organizzazione Tournée','Amministrazione e Contabilità','Marketing e Comunicazione','Sviluppo Prodotto','Commerciale','Progetto app Tour Manager'];
+  users().forEach(u=>{if(u.reparto&&!base.includes(u.reparto))base.push(u.reparto);});if(cur&&!base.includes(cur))base.push(cur);return base;}
 function renderTeatriList(){
   const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. Se una data della tournée ha una sala non ancora mappata, la trovi segnalata nella pagina Oggi.</p></div>
-  <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button></div>
+  <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button>${isDir()?`<button class="btn" data-bulk="files">Carica piante in blocco</button><button class="btn ghost" data-bulk="dir">Carica una cartella</button><input type="file" id="bulkF" multiple accept="application/pdf,image/*" hidden><input type="file" id="bulkD" webkitdirectory multiple hidden>`:''}</div>
+  ${V.bulk?bulkHTML():''}
   <div class="t-filters"><input class="in" id="tSearch" type="search" placeholder="Cerca teatro o città" value="${esc(V.tq||'')}" aria-label="Cerca teatro o città">
    <select class="in" id="tLang" aria-label="Lingua della tournée"><option value="">Tutte le lingue</option>${[['fr','Francese'],['en','Inglese'],['es','Spagnolo']].map(([k,l])=>`<option value="${k}" ${V.tl===k?'selected':''}>${l}</option>`).join('')}</select></div>
   <p class="muted small" id="tCount" style="margin:0 0 10px"></p>`;
@@ -1464,7 +1537,7 @@ async function ckTipsToMemory(tp,ck){const ws=[];CK.find(x=>x.id==='memoria').q.
   else if(old)ws.push(del('consigli',id));});try{await Promise.all(ws);}catch(e){}}
 function renderChecklistList(){
   const list=tourTappe();const td=today();
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Checklist</h1><p class="muted" style="margin:0">Una per ogni data, da compilare subito dopo l’ultima replica. Quando la invii arriva alla Logistica.</p></div><div class="tlist">`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Checklist</h1><p class="muted" style="margin:0">Una per ogni data, da compilare subito dopo l’ultima replica. Quando la invii arriva alla Logistica.</p></div><div class="tlist">`;
   list.forEach(tp=>{const ck=S.c.checklist[tp.id]||{};const st=ck.inviata?'<span class="pill ok">Inviata</span>':ck.risposte&&Object.keys(ck.risposte).length?'<span class="pill warn">In bozza</span>':tp.data<=td?'<span class="pill bad">Da compilare</span>':'<span class="pill">In programma</span>';
     h+=`<button class="trow" data-ckl="${tp.id}"><span class="tdate"><b>${dObj(tp.data).getDate()}</b><span>${dObj(tp.data).toLocaleDateString('it-IT',{month:'short'})}</span></span><span class="tmain"><b>${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}</span></span><span class="tmeta">${st}</span></button>`;});
   app.innerHTML=h+`</div>`;
@@ -2199,11 +2272,11 @@ async function exportPDF(btn){
 
 /* =================== CAST =================== */
 const DOC_TIPI=['Carta d’identità','Passaporto','Patente'];
-function tourCast(){const tr=curTour();return Object.entries(S.c.cast).map(([k,c])=>c.id?c:{...c,id:k}).filter(c=>c.tour===tr).sort((a,b)=>(a.cognome||'').localeCompare(b.cognome||''));}
+function tourCast(){const tr=curTour();return Object.entries(S.c.cast).map(([k,c])=>c.id?c:{...c,id:k}).filter(c=>tr===ALL||c.tour===tr).sort((a,b)=>(tr===ALL?(a.tour||'').localeCompare(b.tour||''):0)||(a.cognome||'').localeCompare(b.cognome||''));}
 function lastDate(){const l=tourTappe();return l.length?l[l.length-1].data:'';}
 function renderCast(){
   const list=tourCast();const end=lastDate();
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Cast</h1><p class="muted">Gli attori in tournée e, più sotto, i tecnici, con il documento d’identità sempre a portata di mano per hotel e controlli.</p></div>
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Cast</h1><p class="muted">Gli attori in tournée e, più sotto, i tecnici, con il documento d’identità sempre a portata di mano per hotel e controlli.</p></div>
   ${isDir()?'<div class="newp"><button class="btn primary" data-cs="add">+ Aggiungi persona</button></div>':`<p class="muted small">Il cast e i documenti li carica la Direzione.${role()==='tm'?' Ruolo e telefono dei tecnici li inserisci tu.':''}</p>`}`;
   if(!list.length&&!V.edit)h+=`<div class="empty"><b>Nessuno in elenco per questo tour.</b><span class="muted small">Aggiungi attori e tecnici con il loro documento.</span></div>`;
   const attori=list.filter(c=>!isTec(c)),tecnici=list.filter(isTec);
@@ -2213,13 +2286,13 @@ function renderCast(){
     if(c==='__TEC__'){h+=`</div>${tecnici.length?`<h2 class="cast-sec">Tecnici</h2><p class="muted small" style="margin:0 0 10px">Fonico e tecnico luci di Mater Lingua che viaggiano con il tour.${role()==='tm'?' Il primo giorno scegli chi fa cosa e salva il numero.':''}</p>`:''}<div class="list">`;return;}
     if(V.edit&&V.edit.id===c.id){h+=castForm(V.edit);return;}
     if(isTec(c)){const rd=TEC_R.includes(c.ruolo),canT=role()==='tm'||isDir(),open=canT&&((V.tecEdit&&V.tecEdit===c.id)||!rd||!c.telefono);
-      h+=`<article class="card"><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}</div>${rd?`<span class="pill">${esc(c.ruolo)}</span>`:'<span class="pill warn">Ruolo da scegliere</span>'}</div>
+      h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}</div>`:''}</div>${rd?`<span class="pill">${esc(c.ruolo)}</span>`:'<span class="pill warn">Ruolo da scegliere</span>'}</div>
       ${open?`<div class="tec-form"><div class="field" style="grid-column:1/-1"><label for="tn_${c.id}">Nome</label><input class="in" id="tn_${c.id}" value="${esc([c.nome,c.cognome].filter(Boolean).join(' '))}" autocomplete="off"></div><div class="field"><label for="tr_${c.id}">Ruolo</label><select class="in" id="tr_${c.id}"><option value="">Scegli…</option>${TEC_R.map(r=>`<option ${c.ruolo===r?'selected':''}>${r}</option>`).join('')}</select></div>
         <div class="field"><label for="tt_${c.id}">Telefono</label><input class="in" id="tt_${c.id}" type="tel" inputmode="tel" value="${esc(c.telefono||'')}" placeholder="+39 …"></div></div>
         <div class="card-actions"><button class="btn small primary" data-cs="tecsave" data-id="${c.id}">Salva</button>${V.tecEdit&&V.tecEdit===c.id?`<button class="btn small" data-cs="teccancel">Annulla</button>`:''}${isDir()?`<button class="btn small ghost" data-cs="edit" data-id="${c.id}">Modifica nome</button>`:''}</div>`
       :`<div class="card-actions">${c.telefono?`<a class="btn small primary" href="${telHref(c.telefono)}">Chiama ${esc(c.telefono)}</a>`:'<span class="muted small">Telefono non inserito</span>'}${canT?`<button class="btn small ghost" data-cs="tecedit" data-id="${c.id}">Modifica</button>`:''}</div>`}</article>`;return;}
     const exp=c.docScadenza&&end&&c.docScadenza<end;const expired=c.docScadenza&&c.docScadenza<today();
-    h+=`<article class="card"><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}</div>${c.ruolo?`<span class="pill">${esc(c.ruolo)}</span>`:''}</div>
+    h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}</div>`:''}</div>${c.ruolo?`<span class="pill">${esc(c.ruolo)}</span>`:''}</div>
       ${c.telefono?`<div><button class="link" data-copy="${esc(c.telefono)}">${esc(c.telefono)}</button></div>`:''}
       <dl class="facts one"><div><dt>Documento</dt><dd>${c.docTipo?esc(c.docTipo):'—'}${c.docNumero?' · '+esc(c.docNumero):''}</dd></div>
       <div><dt>Scadenza</dt><dd>${c.docScadenza?fmtDate(c.docScadenza):'—'} ${expired?'<span class="pill bad">Scaduto</span>':exp?'<span class="pill warn">Scade prima della fine del tour</span>':''}</dd></div></dl>
@@ -2234,8 +2307,8 @@ function castForm(c){
   return `<article class="card edit"><div class="card-head"><h3>${c.isNew?'Nuova persona':'Modifica'}</h3></div>
    <div class="grid2"><div class="field"><label for="cNome">Nome</label><input class="in" id="cNome" value="${esc(c.nome||'')}"></div>
    <div class="field"><label for="cCogn">Cognome</label><input class="in" id="cCogn" value="${esc(c.cognome||'')}"></div>
-   <div class="field"><label for="cRuolo">Ruolo</label><input class="in" id="cRuolo" list="ruoli" value="${esc(c.ruolo||'')}" placeholder="Attore, Attrice o Tecnico"><datalist id="ruoli"><option value="Attore"><option value="Attrice"><option value="Tecnico"></datalist><span class="muted small">Per i tecnici scrivi solo «Tecnico»: fonico o luci lo sceglie il TM.</span></div>
-   <div class="field"><label for="cTour">Tour</label><input class="in" id="cTour" list="tourL" value="${esc(c.tour||curTour())}"><datalist id="tourL">${allTours().map(t=>`<option value="${esc(t)}">`).join('')}</datalist></div>
+   <div class="field"><label for="cRuolo">Ruolo</label><select class="in" id="cRuolo">${[['Attore','Attore'],['Attrice','Attrice'],['Fonico','Fonico'],['Tecnico luci','Tecnico luci'],['Tecnico','Tecnico (ruolo lo sceglie il TM)']].map(([v,l])=>`<option value="${v}" ${(c.ruolo||'Attore')===v?'selected':''}>${l}</option>`).join('')}${c.ruolo&&!['Attore','Attrice','Fonico','Tecnico luci','Tecnico'].includes(c.ruolo)?`<option selected>${esc(c.ruolo)}</option>`:''}</select></div>
+   <div class="field"><label for="cTour">Tour</label><select class="in" id="cTour">${allTours().map(t=>`<option ${t===(c.tour&&c.tour!==ALL?c.tour:allTours()[0])?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
    <div class="field"><label for="cTel">Telefono</label><input class="in" id="cTel" type="tel" value="${esc(c.telefono||'')}"></div>
    <div class="doc-fields grid2" style="grid-column:1/-1" ${isTec(c)?'hidden':''}><div class="field"><label for="cDocT">Documento</label><select class="in" id="cDocT">${DOC_TIPI.map(d=>`<option ${c.docTipo===d?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="field"><label for="cDocN">Numero</label><input class="in" id="cDocN" value="${esc(c.docNumero||'')}" autocomplete="off"></div>
@@ -2245,16 +2318,16 @@ function castForm(c){
    <div class="row-btns"><button class="btn primary" data-cs="save">Salva</button><button class="btn" data-cs="cancel">Annulla</button>
    ${c.isNew?'':(V.confirmDel?`<button class="btn small danger" data-cs="delok">Conferma eliminazione</button>`:`<button class="btn small ghost" data-cs="del">Elimina</button>`)}</div></article>`;
 }
-document.addEventListener('input',e=>{if(V.name==='cast'&&e.target.id==='cRuolo'){const d=document.querySelector('.doc-fields');if(d)d.hidden=isTec({ruolo:e.target.value});}});
+document.addEventListener('change',e=>{if(V.name==='cast'&&e.target.id==='cRuolo'){const d=document.querySelector('.doc-fields');if(d)d.hidden=isTec({ruolo:e.target.value});}});
 function readCast(){const g=id=>document.getElementById(id);const c=V.edit;if(!c||!g('cNome'))return;
-  c.nome=g('cNome').value.trim();c.cognome=g('cCogn').value.trim();c.ruolo=g('cRuolo').value.trim();c.telefono=g('cTel').value.trim();if(g('cTour'))c.tour=g('cTour').value.trim().toUpperCase()||c.tour;
+  c.nome=g('cNome').value.trim();c.cognome=g('cCogn').value.trim();c.ruolo=g('cRuolo').value.trim();c.telefono=g('cTel').value.trim();if(g('cTour'))c.tour=g('cTour').value||c.tour;
   c.docTipo=g('cDocT').value;c.docNumero=g('cDocN').value.trim();c.docScadenza=g('cDocS').value;}
 async function blobSave(id,name){try{if(!S.downloads)throw {code:'unavailable'};const r=await fetch(await blobURL(id));const b=await r.blob();await S.downloads.save({filename:name,data:b});}
   catch(err){if(!(err&&err.code==='declined'))toast('Download non disponibile ('+((err&&err.code)||'errore')+')','bad');}}
 document.addEventListener('click',async e=>{
   if(V.name!=='cast')return;const cp=e.target.closest('[data-copy]');if(cp){copyText(cp.dataset.copy,'Numero copiato');return;}
   const b=e.target.closest('[data-cs]');if(!b)return;const a=b.dataset.cs;
-  if(a==='add'){V.edit={id:uid('c'),isNew:true,tour:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;render();document.getElementById('cNome').focus();}
+  if(a==='add'){V.edit={id:uid('c'),isNew:true,tour:curTour()===ALL?allTours()[0]:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;render();document.getElementById('cNome').focus();}
   else if(a==='edit'){V.edit={...clone(S.c.cast[b.dataset.id]),id:b.dataset.id};V.confirmDel=false;render();}
   else if(a==='cancel'){V.edit=null;render();}
   else if(a==='tecedit'){V.tecEdit=b.dataset.id;render();}
@@ -2617,16 +2690,15 @@ function renderControllo(){
       ${(()=>{const fs=fotoFor(tp);return `<div class="ctl-row"><span class="flabel">Scenografia</span>${fs.length?thumbs(fs.slice(-2)):'<span class="muted small">Nessuna foto per questa data</span>'}</div>`;})()}
       <div class="row-btns"><button class="btn small primary" data-ctl="${tp.id}">Apri la giornata</button><button class="btn small" data-ctlmap="${esc(tr)}">Mappa</button></div></article>`;});
   h+=`</div>`;
-  if(isDir()&&ts.length){h+=`<div class="ctl-table-wrap"><h2 class="alt-sec">Tutti i tour</h2><table class="ctl-table"><thead><tr><th>Tour</th><th>Tour Manager</th><th>Giornata</th><th>Piantine</th><th>Checklist</th><th>Scenografia</th><th>Km stimati</th><th>Da sistemare</th><th></th></tr></thead><tbody>`;
+  if(isDir()&&ts.length){h+=`<div class="ctl-table-wrap"><h2 class="alt-sec">Tutti i tour</h2><table class="ctl-table"><thead><tr><th>Tour</th><th>Tour Manager</th><th>Giornata</th><th>Piantine</th><th>Ultima rappresentazione</th><th>Da sistemare</th><th></th></tr></thead><tbody>`;
     tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;const pk=pickDay(list);const tp=list[pk.i];
       const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);const reps=tp.repliche||[];const okP=reps.filter(r=>pStatus(tp,r).k==='ok').length;
       const past=list.filter(t=>t.data<=td);const last=past[past.length-1];const ck=last?S.c.checklist[last.id]:null;const fs=fotoFor(tp);
       const v=S.c.impostazioni[vKey(tr)]||{};let km='—';if(v.kmIniziali!=null&&v.kmIniziali!==''||(v.letture||[]).length){const save=S.pref.tour;S.pref.tour=tr;const est=kmEstimate();S.pref.tour=save;km=est?est.km.toLocaleString('it-IT'):'—';}
       const iss=list.filter(t=>t.data>=td).reduce((a,t)=>a+dayIssues(t).length,0);
-      h+=`<tr><td><b>${esc(tr)}</b></td><td>${tm?esc(tm.nome):'—'}</td><td>${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</td>
+      h+=`<tr><td><b><span class="dot" style="background:${tourCol(tr)}"></span>${esc(tr)}</b></td><td>${tm?esc(tm.nome):'—'}</td><td>${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</td>
        <td><span class="pill ${okP===reps.length?'ok':'warn'}">${okP}/${reps.length} pronte</span></td>
-       <td>${!last?'<span class="muted small">—</span>':ck&&ck.inviata?`<span class="pill ${ckProblems(ck)?'warn':'ok'}">${ckProblems(ck)?ckProblems(ck)+' segnalazioni':'Tutto ok'}</span>`:'<span class="pill bad">Non inviata</span>'}</td>
-       <td>${fs.length?'<span class="pill ok">Inviata</span>':'<span class="muted small">—</span>'}</td><td>${km}</td>
+       <td>${esc(cap(shortDate(list[list.length-1].data)))} · ${esc(list[list.length-1].citta)}</td>
        <td>${iss?`<span class="pill warn">⚠ ${iss}</span>`:'<span class="muted small">—</span>'}</td><td class="nowrap"><button class="btn small" data-ctl="${tp.id}">Apri</button> <button class="btn small ghost" data-ctlmap="${esc(tr)}">Mappa</button></td></tr>`;});
     h+=`</tbody></table></div>`;}
   app.innerHTML=h;
@@ -2647,34 +2719,43 @@ function triSvg(x,y,sz){const h=sz*0.88,t=y-h/2,bt=y+h/2,l=x-sz/2,r=x+sz/2;const
   return `<g class="it-alert" aria-hidden="true" pointer-events="none"><path d="${tri}" style="fill:#FFFFFF;stroke:#FFFFFF;stroke-width:${f2(sz*0.22)};stroke-linejoin:round"/><path d="${tri}" style="fill:#F2B705;stroke:#8A6400;stroke-width:${f2(sz*0.06)};stroke-linejoin:round"/>
    <path d="M${f2(x)} ${f2(y-h*0.14)}V${f2(y+h*0.14)}" style="fill:none;stroke:#2B2000;stroke-width:${f2(sz*0.11)};stroke-linecap:round"/><path d="M${f2(x)} ${f2(y+h*0.33)}h0.01" style="fill:none;stroke:#2B2000;stroke-width:${f2(sz*0.13)};stroke-linecap:round"/></g>`;}
 function renderMappa(){
-  const list=tourTappe();const td=today();
-  const groups=[];list.forEach((tp,i)=>{if(tp.lat==null||tp.lng==null)return;const g=groups.find(x=>Math.abs(x.lat-tp.lat)<0.02&&Math.abs(x.lng-tp.lng)<0.02);
-    if(g)g.items.push({tp,n:i+1});else groups.push({lat:+tp.lat,lng:+tp.lng,items:[{tp,n:i+1}]});});
-  const pk=list.length?pickDay(list):null;const curId=pk?list[pk.i].id:null;
-  const sel=V.mapSel!=null&&groups[V.mapSel]?V.mapSel:(curId?groups.findIndex(g=>g.items.some(it=>it.tp.id===curId)):-1);
-  const path=list.filter(t=>t.lat!=null).map(t=>proj(+t.lng,+t.lat));
+  const list=tourTappe();const td=today();const ALLM=curTour()===ALL;
+  // tappa in corso e successiva, per ogni tour mostrato
+  const curIds=new Set(),nextIds=new Set(),pairs=[];
+  [...new Set(list.map(t=>t.tour))].forEach(tr=>{const l=list.filter(t=>t.tour===tr);if(!l.length)return;const pk=pickDay(l);const c=l[pk.i];const n=pk.kind==='ultima'?null:l[pk.i+1]||null;
+    curIds.add(c.id);if(n){nextIds.add(n.id);pairs.push([c,n]);}});
+  const groups=[];list.forEach((tp,i)=>{if(tp.lat==null||tp.lng==null)return;const n=ALLM?list.filter(x=>x.tour===tp.tour).indexOf(tp)+1:i+1;
+    const g=groups.find(x=>x.tour===(ALLM?tp.tour:'')&&Math.abs(x.lat-tp.lat)<0.02&&Math.abs(x.lng-tp.lng)<0.02);
+    if(g)g.items.push({tp,n});else groups.push({tour:ALLM?tp.tour:'',lat:+tp.lat,lng:+tp.lng,items:[{tp,n}]});});
+  const curGi=groups.findIndex(g=>g.items.some(it=>curIds.has(it.tp.id)));
+  const sel=V.mapSel!=null&&groups[V.mapSel]?V.mapSel:curGi;
   const regs=new Set(list.map(t=>norm(t.regione)));
   let vb=[0,0,920,1085];const pts=groups.map(g=>proj(g.lng,g.lat));
   if(!V.mapAll&&pts.length){let x0=Math.min(...pts.map(q=>q[0])),x1=Math.max(...pts.map(q=>q[0])),y0=Math.min(...pts.map(q=>q[1])),y1=Math.max(...pts.map(q=>q[1]));
     let w=Math.max(x1-x0+240,420),h=Math.max(y1-y0+240,460);if(w/h<0.85)w=h*0.85;else h=Math.max(h,w/0.85*0.75);
     const cx=(x0+x1)/2,cy=(y0+y1)/2;vb=[cx-w/2,cy-h/2,w,h];}
   const k=vb[2]/920;
-  let svg=`<svg viewBox="${vb.map(f2).join(' ')}" class="it-map" role="img" aria-label="Mappa del percorso della tournée" style="--k:${f2(k)}">`;
+  let svg=`<svg viewBox="${vb.map(f2).join(' ')}" class="it-map" role="img" aria-label="Mappa della tournée" style="--k:${f2(k)}">`;
   Object.entries(IT_REG).forEach(([n,d])=>{svg+=`<path d="${d}" class="it-reg ${regs.has(norm(n))?'on':''}"><title>${esc(n)}</title></path>`;});
-  if(path.length>1)svg+=`<polyline points="${path.map(q=>q.map(f2).join(',')).join(' ')}" class="it-path"/>`;
-  // pallini che non si sovrappongono: se due tappe sono vicine, i pallini si allontanano e una linea sottile indica il punto vero
+  // solo la linea tra la tappa in corso e la successiva
+  pairs.forEach(([a,b])=>{if(a.lat==null||b.lat==null)return;const p1=proj(+a.lng,+a.lat),p2=proj(+b.lng,+b.lat);svg+=`<line x1="${f2(p1[0])}" y1="${f2(p1[1])}" x2="${f2(p2[0])}" y2="${f2(p2[1])}" class="it-path"${ALLM?` style="stroke:${tourCol(a.tour)}"`:''}/>`;});
   const lblOf=g=>{const ns=g.items.map(it=>it.n);if(ns.length===1)return String(ns[0]);const cons=ns.every((v,i)=>!i||v===ns[i-1]+1);return cons?ns[0]+'–'+ns[ns.length-1]:ns.length===2?ns[0]+'·'+ns[1]:ns[0]+'+';};
-  const nodes=groups.map(g=>{const [x,y]=proj(g.lng,g.lat);const lbl=lblOf(g);return {x0:x,y0:y,x,y,lbl,r:vb[2]*(lbl.length>2?0.046:0.036)};});
-  for(let it=0;it<80;it++){let moved=false;for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j];let dx=b.x-a.x,dy=b.y-a.y;let d=Math.hypot(dx,dy);const min=(a.r+b.r)*1.35;
-      if(d<min){if(d<0.01){dx=(j%2?1:-1)*0.5;dy=0.5;d=0.7;}const push=(min-d)/2;a.x-=dx/d*push;a.y-=dy/d*push;b.x+=dx/d*push;b.y+=dy/d*push;moved=true;}}if(!moved)break;}
-  nodes.forEach(n=>{if(Math.hypot(n.x-n.x0,n.y-n.y0)>n.r*0.4)svg+=`<line x1="${f2(n.x0)}" y1="${f2(n.y0)}" x2="${f2(n.x)}" y2="${f2(n.y)}" class="it-lead" style="stroke-width:${f2(n.r*0.08)}"/><circle cx="${f2(n.x0)}" cy="${f2(n.y0)}" r="${f2(n.r*0.16)}" class="it-dot"/>`;});
-  groups.forEach((g,gi)=>{const {x,y,lbl,r}=nodes[gi];const past=g.items.every(it=>it.tp.data<td);const cur=g.items.some(it=>it.tp.id===curId);
-    const iss=g.items.flatMap(it=>dayIssues(it.tp));
-    svg+=`<g class="it-pt ${past?'past':''} ${cur?'cur':''} ${gi===sel?'sel':''}" data-mp="${gi}" tabindex="0" role="button" aria-label="${esc(g.items[0].tp.citta)}${iss.length?': da sistemare, '+esc(iss.join(', ')):''}"><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" style="stroke-width:${f2(r*0.18)}"/><text x="${f2(x)}" y="${f2(y+r*0.35)}" style="font-size:${f2(r*(lbl.length>2?0.7:0.95))}px">${lbl}</text>${iss.length?triSvg(x+r*0.95,y-r*0.95,r*1.05):''}</g>`;});
+  const nodes=groups.map((g,gi)=>{const [x,y]=proj(g.lng,g.lat);const lbl=lblOf(g);const big=gi===sel||g.items.some(it=>curIds.has(it.tp.id)||nextIds.has(it.tp.id));
+    return {x0:x,y0:y,x,y,lbl,big,r:big?vb[2]*(lbl.length>2?0.046:0.036):vb[2]*0.011};});
+  // allontana solo i pallini grandi tra loro e dai puntini
+  for(let it=0;it<80;it++){let moved=false;for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j];if(!a.big&&!b.big)continue;let dx=b.x-a.x,dy=b.y-a.y;let d=Math.hypot(dx,dy);const min=(a.r+b.r)*1.35;
+      if(d<min){if(d<0.01){dx=(j%2?1:-1)*0.5;dy=0.5;d=0.7;}const push=(min-d)/2;const wa=a.big?(b.big?1:0.3):1.7,wb=b.big?(a.big?1:0.3):1.7;a.x-=dx/d*push*wa;a.y-=dy/d*push*wa;b.x+=dx/d*push*wb;b.y+=dy/d*push*wb;moved=true;}}if(!moved)break;}
+  nodes.forEach(n=>{if(n.big&&Math.hypot(n.x-n.x0,n.y-n.y0)>n.r*0.4)svg+=`<line x1="${f2(n.x0)}" y1="${f2(n.y0)}" x2="${f2(n.x)}" y2="${f2(n.y)}" class="it-lead" style="stroke-width:${f2(n.r*0.08)}"/><circle cx="${f2(n.x0)}" cy="${f2(n.y0)}" r="${f2(n.r*0.16)}" class="it-dot"/>`;});
+  // prima i puntini, poi i pallini grandi sopra
+  const order=groups.map((g,gi)=>gi).sort((a,b)=>(nodes[a].big?1:0)-(nodes[b].big?1:0));
+  order.forEach(gi=>{const g=groups[gi];const {x,y,lbl,r,big}=nodes[gi];const past=g.items.every(it=>it.tp.data<td);const cur=g.items.some(it=>curIds.has(it.tp.id));
+    const iss=g.items.flatMap(it=>dayIssues(it.tp));const col=ALLM?tourCol(g.tour):'';const lab=`${esc(g.items[0].tp.citta)}${ALLM?' · '+esc(g.tour):''}${iss.length?': da sistemare, '+esc(iss.join(', ')):''}`;
+    if(!big){svg+=`<g class="it-sm ${past?'past':''} ${iss.length?'iss':''}" data-mp="${gi}" tabindex="0" role="button" aria-label="${lab}"><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r*2.6)}" class="hit"/><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" style="stroke-width:${f2(r*0.45)}${col?`;${past?'fill:'+col+';':''}stroke:${iss.length?'#F2B705':col}`:''}"/></g>`;return;}
+    svg+=`<g class="it-pt ${past?'past':''} ${cur?'cur':''} ${gi===sel?'sel':''}" data-mp="${gi}" tabindex="0" role="button" aria-label="${lab}"><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" style="stroke-width:${f2(r*0.18)}${col&&!cur?`;stroke:${col}${past?';fill:'+col:''}`:''}"/><text x="${f2(x)}" y="${f2(y+r*0.35)}" style="font-size:${f2(r*(lbl.length>2?0.7:0.95))}px${col&&!cur&&!past?';fill:'+col:''}">${lbl}</text>${iss.length?triSvg(x+r*0.95,y-r*0.95,r*1.05):''}</g>`;});
   svg+=`</svg>`;
   const g=groups[sel];
   let prev='';
-  if(g){prev=`<div class="mp-prev"><span class="eyebrow">Tappa ${g.items.map(i=>i.n).join(', ')}</span><h2 class="mp-city">${esc(g.items[0].tp.citta)}</h2>`+g.items.map(({tp})=>{
+  if(g){prev=`<div class="mp-prev"><span class="eyebrow">${ALLM?esc(g.tour)+' · ':''}Tappa ${g.items.map(i=>i.n).join(', ')}</span><h2 class="mp-city">${esc(g.items[0].tp.citta)}</h2>`+g.items.map(({tp})=>{
       const paganti=Object.values(S.c.deals).filter(d=>d.data===tp.data&&norm(d.citta)===norm(tp.citta)&&sameTour(d,tp)&&d.stage!=='Chiuso perso').reduce((a,d)=>a+int(d.studenti),0);
       const iss=dayIssues(tp);
       return `<div class="mp-day"><b>${esc(cap(longDate(tp.data)))}</b>${iss.filter(x=>x!=='Hotel da pagare').length?`<div class="mp-iss">${iss.filter(x=>x!=='Hotel da pagare').map(x=>`<span class="pill warn">⚠ ${esc(x)}</span>`).join('')}</div>`:''}
@@ -2682,12 +2763,12 @@ function renderMappa(){
         <div class="mp-nums"><span><b>${paganti}</b> studenti paganti</span><span><b>${(tp.repliche||[]).length}</b> repliche</span></div>
         <button class="btn small" data-mpgo="${tp.id}">Apri la giornata</button></div>`;}).join('')+`</div>`;}
   const missing=list.filter(t=>t.lat==null);
-  app.innerHTML=`<div class="page-head"><span class="eyebrow">Tour ${esc(curTour())}</span><h1>Mappa della tournée</h1><p class="muted">${list.length} date · le tappe passate sono piene, quella in corso è evidenziata. Tocca un punto per i dettagli.</p></div>
-   <div class="mp-wrap"><div class="mp-map card">${svg}<div class="row-btns" style="justify-content:flex-end"><button class="btn small ghost" data-mpall>${V.mapAll?'Zoom sul tour':'Tutta Italia'}</button></div><div class="mp-leg"><span><i class="lg past"></i>Fatta</span><span><i class="lg cur"></i>In corso o prossima</span><span><i class="lg"></i>Da fare</span><span>${TRI.replace('width="20" height="20"','width="16" height="16"')}Da sistemare</span><span><i class="lg reg"></i>Regioni del tour</span></div><p class="mp-src">Confini regionali: ISTAT (CC BY 4.0)</p></div>${prev||'<div class="mp-prev card"><p class="muted">Tocca una tappa.</p></div>'}</div>
+  app.innerHTML=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Mappa della tournée</h1><p class="muted">${list.length} date · in evidenza la tappa in corso e la successiva. Tocca un puntino per aprire la tappa.</p></div>
+   <div class="mp-wrap"><div class="mp-map card">${svg}<div class="row-btns" style="justify-content:flex-end"><button class="btn small ghost" data-mpall>${V.mapAll?'Zoom sul tour':'Tutta Italia'}</button></div><div class="mp-leg">${ALLM?[...new Set(list.map(t=>t.tour))].map(tr=>`<span><i class="lg" style="background:${tourCol(tr)};border-color:${tourCol(tr)}"></i>${esc(tr)}</span>`).join(''):''}<span><i class="lg past"></i>Fatta</span><span><i class="lg cur"></i>In corso</span><span><i class="lg"></i>Da fare</span><span><i class="lg iss"></i>Da sistemare</span><span><i class="lg reg"></i>Regioni del tour</span></div><p class="mp-src">Confini regionali: ISTAT (CC BY 4.0)</p></div>${prev||'<div class="mp-prev card"><p class="muted">Tocca una tappa.</p></div>'}</div>
    ${missing.length?`<p class="muted small">Senza posizione sulla mappa: ${missing.map(t=>esc(t.citta)).join(', ')}.</p>`:''}`;
 }
 document.addEventListener('click',e=>{if(V.name!=='mappa')return;if(e.target.closest('[data-mpall]')){V.mapAll=!V.mapAll;render();return;}const p=e.target.closest('[data-mp]');if(p){V.mapSel=+p.dataset.mp;render();return;}
-  const b=e.target.closest('[data-mpgo]');if(b)goFrom('oggi',{dayId:b.dataset.mpgo,from:'mappa'});});
+  const b=e.target.closest('[data-mpgo]');if(b){const tp=S.c.tappe[b.dataset.mpgo];if(tp&&S.pref.tour===ALL){S.pref.tour=tp.tour;savePref();}goFrom('oggi',{dayId:b.dataset.mpgo,from:'mappa'});}});
 document.addEventListener('keydown',e=>{if(V.name==='mappa'&&e.target.dataset&&e.target.dataset.mp&&(e.key==='Enter'||e.key===' ')){e.preventDefault();V.mapSel=+e.target.dataset.mp;render();}});
 
 /* ---------- accessi (Direzione) ---------- */
@@ -2704,7 +2785,7 @@ function renderAccessi(){
        <div class="field"><label>Area</label><input class="in" data-af="area" value="${esc(u.area||'')}" placeholder="es. 6"></div>
        <div class="field"><label>Telefono per i TM</label><input class="in" data-af="telefono" type="tel" value="${esc(u.telefono||'')}" placeholder="Vuoto = numero Mater Lingua"></div>
        <div class="field"><label>Link alla chat Google</label><input class="in" data-af="chat" type="url" value="${esc(u.chat||'')}" placeholder="https://mail.google.com/chat/…"></div>`
-     :`<div class="field"><label>Reparto</label><input class="in" data-af="reparto" list="reparti" value="${esc(u.reparto||'')}" placeholder="es. Logistica, Marketing"><datalist id="reparti"><option value="Direzione"><option value="Logistica"><option value="Marketing"><option value="Amministrazione"></datalist></div>`}
+     :`<div class="field"><label>Reparto</label><select class="in" data-af="reparto">${repartiList(u.reparto).map(x=>`<option ${x===(u.reparto||'')?'selected':''} value="${esc(x)}">${esc(x||'— Scegli —')}</option>`).join('')}</select></div>`}
     <div class="field" style="grid-column:1/-1"><label>Nota sul contatto</label><input class="in" data-af="nota" value="${esc(u.nota||'')}" placeholder="es. Non chiamare durante il congedo"></div>
     </div><div class="row-btns">${V.accDel===i?`<button class="btn small danger" data-adelok="${i}">Conferma: togli l’accesso</button>`:`<button class="btn small ghost" data-adel="${i}">Togli l’accesso</button>`}</div></div>`;});
   h+=`</div><div class="row-btns" style="margin-top:14px"><button class="btn" data-aadd>+ Aggiungi persona</button><button class="btn primary" data-asave>Salva gli accessi</button></div>`;
