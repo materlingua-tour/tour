@@ -796,7 +796,7 @@ function renderNav(){
   document.querySelectorAll('.id-box').forEach(b=>{b.querySelector('.id-dept').textContent=u?deptOf(u):'';b.querySelector('.id-name').textContent=u?u.nome||'':'';});
   setPill();
 }
-function go(name,extra){document.body.classList.remove('noscroll');if(V.saveT){clearTimeout(V.saveT);if(V.name==='piantina'&&!V.saved)savePiantina();if(V.name==='check'&&!V.saved)saveCheck();}
+function go(name,extra){document.body.classList.remove('noscroll');if(name!==V.name){V.showArch=false;V.confirmClear=false;}if(V.saveT){clearTimeout(V.saveT);if(V.name==='piantina'&&!V.saved)savePiantina();if(V.name==='check'&&!V.saved)saveCheck();}
   V={name,...(extra||{})};render();window.scrollTo(0,0);}
 const BACK_L={oggi:'Oggi',tournee:'Tournée',controllo:'Controllo',mappa:'Mappa',qr:'QR docenti'};
 function goFrom(name,extra){const back={name:V.name,dayId:V.dayId,qrDay:V.qrDay,y:window.scrollY};go(name,{...(extra||{}),back});}
@@ -1345,22 +1345,23 @@ document.addEventListener('click',e=>{if(V.name!=='tournee')return;if(e.target.c
 /* =================== ELENCHI =================== */
 function renderPiantineList(){
   if(role()==='tm')return renderPiantineTour();
-  const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-  const ps=Object.values(S.c.piantine).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(a.replica||'').localeCompare(b.replica||''));
+  const ts=Object.values(S.c.teatri).filter(t=>!t.archiviato).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const psAll=Object.values(S.c.piantine),nArch=psAll.filter(p=>p.archiviato).length;
+  const ps=psAll.filter(p=>!!p.archiviato===!!V.showArch).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(a.replica||'').localeCompare(b.replica||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Piantine</h1><p class="muted" style="margin:0">Di solito le crei dalla pagina Oggi, partendo dai deal di HubSpot. Qui trovi tutte quelle salvate.</p></div>`;
   if(ts.length)h+=`<div class="newp"><select class="in" id="newpT" aria-label="Teatro">${ts.map(t=>`<option value="${t.id}">${esc(t.nome)}${t.citta?' · '+esc(t.citta):''}</option>`).join('')}</select><button class="btn" data-ls="newp">Nuova piantina libera</button></div>`;
   const tourOfP=p=>{const tp=p.tappaId&&S.c.tappe[p.tappaId];return tp?tp.tour:'';};
   h+=`<div class="t-filters"><input class="in" id="pSearch" type="search" placeholder="Cerca teatro, città, scuola o data (es. 23/11)" value="${esc(V.pq||'')}" aria-label="Cerca piantine">
-   ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option ${V.pt===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>`;
+   ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option ${V.pt===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
-  else if(!ps.length)h+=`<div class="empty"><b>Ancora nessuna piantina.</b></div>`;
+  else if(!ps.length)h+=`<div class="empty"><b>${V.showArch?'Nessuna piantina archiviata.':'Ancora nessuna piantina.'}</b></div>`;
   else h+=`<div class="list">${ps.map(p=>{const t=S.c.teatri[p.teatroId];const tot=(p.scuole||[]).reduce((a,s)=>a+int(s.persone),0);
     const tr=tourOfP(p);
     return `<article class="card p-card" data-s="${esc(norm([t?t.nome:'',t?t.citta:'',fmtDate(p.data),p.data,tr,...(p.scuole||[]).map(s=>s.nome)].join(' ')))}" data-t="${esc(tr)}"${tr?` style="border-left:5px solid ${tourCol(tr)}"`:''}><div class="card-title">${esc(t?t.nome:'Teatro eliminato')}</div>
     <div class="card-meta">${tr?esc(tr)+' · ':''}${fmtDate(p.data)} · replica ${esc(p.replica||'')}${t&&t.citta?' · '+esc(t.citta):''}</div>
     <div class="card-meta">${(p.scuole||[]).length} scuole · ${tot} persone${p.hubspot?' · da HubSpot':''}</div>
     <div class="dots">${(p.scuole||[]).map(s=>`<i style="background:${zcol(s)}" title="${esc(s.nome)}"></i>`).join('')}</div>
-    <div class="card-actions"><button class="btn small" data-ls="openp" data-id="${p.id}" ${t?'':'disabled'}>Apri</button>${delBtn('p',p.id)}</div></article>`;}).join('')}</div>`;
+    <div class="card-actions"><button class="btn small" data-ls="openp" data-id="${p.id}" ${t?'':'disabled'}>Apri</button>${archBtn('p',p)}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;filterPiantine();
 }
 function filterPiantine(){const q=norm(V.pq||''),t=V.pt||'';let n=0;const cs=document.querySelectorAll('.p-card');
@@ -1390,7 +1391,7 @@ document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.ta
    si sistemano a mano, uno dopo l'altro. Le piante diventano lo sfondo della sala da mappare. */
 function bulkTokens(s){return norm(s).replace(/\.(pdf|png|jpe?g|webp|heic)$/,'').replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!['teatro','cinema','cine','auditorium','sala','di','del','della','pianta','piantina','platea','the','de','la','il','pdf'].includes(w));}
 function bulkMatch(name){const tk=new Set(bulkTokens(name));let best=null,bs=0,second=0;
-  Object.values(S.c.teatri).forEach(t=>{const ct=bulkTokens(t.citta||''),nt=bulkTokens(t.nome||'');if(!nt.length)return;
+  Object.values(S.c.teatri).filter(t=>!t.archiviato).forEach(t=>{const ct=bulkTokens(t.citta||''),nt=bulkTokens(t.nome||'');if(!nt.length)return;
     const cityOk=ct.length&&ct.every(w=>tk.has(w));const hit=nt.filter(w=>tk.has(w)).length/nt.length;const sc=(cityOk?1:0)+hit;
     if(sc>bs){second=bs;bs=sc;best=t;}else if(sc>second)second=sc;});
   return bs>=1.5&&bs-second>=0.25?best:null;}
@@ -1398,7 +1399,7 @@ function bulkHTML(){const B_=V.bulk;const ok=B_.items.filter(x=>x.t||x.nuovo),to
   const cur=B_.items[B_.i];const cities=[...new Set(Object.values(S.c.teatri).map(t=>t.citta).filter(Boolean))].sort();
   let s=`<section class="card bulk"><div class="card-head"><h2>Caricamento piante</h2><span class="pill ${todo.length?'warn':'ok'}">${ok.length} riconosciute · ${todo.length} da sistemare</span></div>`;
   if(B_.busy)return s+`<p>${esc(B_.busy)}</p></section>`;
-  if(cur&&!cur.t&&!cur.nuovo&&!cur.salta||V.bulkShow){const it=cur;const tl=Object.values(S.c.teatri).filter(t=>!it.citta||norm(t.citta)===norm(it.citta)).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  if(cur&&!cur.t&&!cur.nuovo&&!cur.salta||V.bulkShow){const it=cur;const tl=Object.values(S.c.teatri).filter(t=>!t.archiviato).filter(t=>!it.citta||norm(t.citta)===norm(it.citta)).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
     s+=`<div class="bulk-car"><span class="muted small">Da sistemare ${B_.items.filter(x=>!x.t&&!x.nuovo).indexOf(it)+1} di ${B_.items.filter(x=>!x.t&&!x.nuovo).length}</span>
       <div class="flabel">Nome originale</div><b class="bulk-orig">${esc(it.path)}</b>
       <div class="grid2"><div class="field"><label for="bkCity">Città</label><input class="in" id="bkCity" list="bkCities" value="${esc(it.citta||'')}"><datalist id="bkCities">${cities.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
@@ -1444,22 +1445,23 @@ document.addEventListener('change',e=>{if(V.name!=='teatri')return;
 function repartiList(cur){const base=['','Direzione','Direzione Operativa','Direzione Artistica','Logistica e Organizzazione Tournée','Amministrazione e Contabilità','Marketing e Comunicazione','Sviluppo Prodotto','Commerciale','Progetto app Tour Manager'];
   users().forEach(u=>{if(u.reparto&&!base.includes(u.reparto))base.push(u.reparto);});if(cur&&!base.includes(cur))base.push(cur);return base;}
 function renderTeatriList(){
-  const ts=Object.values(S.c.teatri).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const tAll=Object.values(S.c.teatri),nArch=tAll.filter(t=>t.archiviato).length;
+  const ts=tAll.filter(t=>!!t.archiviato===!!V.showArch).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. Se una data della tournée ha una sala non ancora mappata, la trovi segnalata nella pagina Oggi.</p></div>
   <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button>${isDir()?`<button class="btn" data-bulk="files">Carica piante in blocco</button><button class="btn ghost" data-bulk="dir">Carica una cartella</button><input type="file" id="bulkF" multiple accept="application/pdf,image/*" hidden><input type="file" id="bulkD" webkitdirectory multiple hidden>`:''}</div>
   ${V.bulk?bulkHTML():''}
   <div class="t-filters"><input class="in" id="tSearch" type="search" placeholder="Cerca teatro o città" value="${esc(V.tq||'')}" aria-label="Cerca teatro o città">
    <select class="in" id="tLang" aria-label="Lingua della tournée"><option value="">Tutte le lingue</option>${[['fr','Francese'],['en','Inglese'],['es','Spagnolo']].map(([k,l])=>`<option value="${k}" ${V.tl===k?'selected':''}>${l}</option>`).join('')}</select></div>
-  <p class="muted small" id="tCount" style="margin:0 0 10px"></p>`;
+  <p class="muted small" id="tCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
-  else if(!ts.length)h+=`<div class="empty"><b>Nessun teatro mappato.</b></div>`;
+  else if(!ts.length)h+=`<div class="empty"><b>${V.showArch?'Nessun teatro archiviato.':'Nessun teatro mappato.'}</b></div>`;
   else h+=`<div class="list">${ts.map(t=>{const files=t.zone.reduce((a,z)=>a+new Set(z.rows.map(r=>r.fila)).size,0);const noFront=t.zone.some(z=>z.rows.length&&!z.front);
     const langs=[...new Set(Object.values(S.c.tappe).filter(tp=>tp.teatroId===t.id||(!tp.teatroId&&norm(tp.teatroNome)===norm(t.nome)&&norm(tp.citta)===norm(t.citta))).map(tp=>tourLang(tp.tour)))].join(' ');
     const nome=/^[\s\-–—]*$/.test(t.nome||'')?'Teatro da definire':t.nome;
     return `<article class="card t-card" data-s="${esc(norm(nome+' '+(t.citta||'')))}" data-l="${esc(langs)}"><div class="card-title">${esc(nome)}</div><div class="card-meta">${esc(t.citta||'Città non indicata')}${langs?' · '+langs.split(' ').map(l=>({fr:'Francese',en:'Inglese',es:'Spagnolo'})[l]||'').filter(Boolean).join(', '):''}</div>
     <div class="card-meta">${t.zone.map(z=>esc(z.nome)).join(' + ')} · ${files} file · ${seatsTot(t)} posti${noFront?' · fronte non segnato':''}</div>
     ${(()=>{const m=memoriaTeatro(t),fs=fotoTeatro(t);return m.length||fs.length?`<details class="mem-d"><summary>Memoria del teatro${m.length?' · '+m.length+' consigli':''}${fs.length?' · '+fs.length+' foto':''}</summary>${memHTML(m)}${fs.length?`<span class="flabel">Foto della scenografia</span>${thumbs(fs.slice(0,8))}`:''}</details>`:'';})()}
-    <div class="card-actions"><button class="btn small" data-ls="editt" data-id="${t.id}">Modifica mappa</button>${delBtn('t',t.id)}</div></article>`;}).join('')}</div>`;
+    <div class="card-actions"><button class="btn small" data-ls="editt" data-id="${t.id}">Modifica mappa</button>${archBtn('t',t)}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;filterTeatri();
 }
 function filterTeatri(){const q=norm(V.tq||''),l=V.tl||'';let n=0;const cs=document.querySelectorAll('.t-card');
@@ -1467,6 +1469,12 @@ function filterTeatri(){const q=norm(V.tq||''),l=V.tl||'';let n=0;const cs=docum
   const el=document.getElementById('tCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+' teatri':n+' teatri su '+cs.length):'';}
 document.addEventListener('input',e=>{if(V.name==='teatri'&&e.target.id==='tSearch'){V.tq=e.target.value;filterTeatri();}});
 document.addEventListener('change',e=>{if(V.name==='teatri'&&e.target.id==='tLang'){V.tl=e.target.value;filterTeatri();}});
+function archToggle(n){return isDir()&&(n||V.showArch)?`<label class="chk small" style="margin:0 0 10px"><input type="checkbox" data-arch-show ${V.showArch?'checked':''}> Mostra solo gli archiviati (${n})</label>`:'';}
+function archBtn(kind,o){if(!isDir())return '';const key=kind+':'+o.id;
+  if(o.archiviato)return `<button class="btn small" data-ls="unarch" data-kind="${kind}" data-id="${o.id}">Ripristina</button>`;
+  return V.confirm===key?`<button class="btn small primary" data-ls="archok" data-kind="${kind}" data-id="${o.id}">Conferma: archivia</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
+  :`<button class="btn small ghost" data-ls="delask" data-kind="${kind}" data-id="${o.id}">Archivia</button>`;}
+document.addEventListener('change',e=>{if(e.target.matches('[data-arch-show]')){V.showArch=e.target.checked;V.confirm=null;render();}});
 function delBtn(kind,id){const key=kind+':'+id;return V.confirm===key?`<button class="btn small danger" data-ls="delok" data-kind="${kind}" data-id="${id}">Conferma eliminazione</button><button class="btn small ghost" data-ls="delno">Annulla</button>`
   :`<button class="btn small ghost" data-ls="delask" data-kind="${kind}" data-id="${id}">Elimina</button>`;}
 document.addEventListener('click',async e=>{
@@ -1477,6 +1485,12 @@ document.addEventListener('click',async e=>{
   else if(a==='openp')openPiantina(b.dataset.id);
   else if(a==='delask'){V.confirm=b.dataset.kind+':'+b.dataset.id;render();}
   else if(a==='delno'){V.confirm=null;render();}
+  else if(a==='archok'||a==='unarch'){const coll=b.dataset.kind==='t'?'teatri':'piantine',o=S.c[coll][b.dataset.id];V.confirm=null;if(!o)return;
+    const on=a==='archok';const d=clone(o);if(on){d.archiviato=true;d.archiviatoIl=new Date().toISOString();}else{delete d.archiviato;delete d.archiviatoIl;}
+    try{await put(coll,o.id,d);S.c[coll][o.id]=coll==='teatri'?normT({...d,id:o.id}):{...d,id:o.id};
+      toast(on?(coll==='teatri'?'Teatro archiviato: lo ritrovi con “Mostra solo gli archiviati”':'Piantina archiviata'):(coll==='teatri'?'Teatro ripristinato':'Piantina ripristinata'));if(!on&&!Object.values(S.c[coll]).some(x=>x.archiviato))V.showArch=false;}
+    catch(err){toast('Operazione non riuscita ('+(err.code||err.message)+')','bad');}
+    render();}
   else if(a==='delok'){const kind=b.dataset.kind,id=b.dataset.id;V.confirm=null;
     try{await del(kind==='t'?'teatri':'piantine',id);toast(kind==='t'?'Teatro eliminato':'Piantina eliminata');}catch(err){toast('Eliminazione non riuscita ('+(err.code||err.message)+')','bad');}
     render();}
@@ -2083,7 +2097,8 @@ function renderSchools(){
   el.innerHTML=`<div class="sec-head"><h3>Scuole</h3><button class="btn small" data-pl="addschool">+ Aggiungi a mano</button></div>
   <div class="schools">${p.scuole.length?p.scuole.map(s=>schoolCard(s)).join(''):`<div class="empty"><b>Nessuna scuola.</b><span class="muted small">${curTappa()?'Importale da HubSpot con il pulsante qui sopra, oppure aggiungile a mano.':'Aggiungi le scuole con il numero di persone, accompagnatori compresi.'}</span></div>`}</div>
   <label class="chk"><input type="checkbox" id="pGap" ${p.opzioni.gap?'checked':''}> Un posto libero tra una scuola e l’altra</label>
-  <div class="row-btns">${V.confirmDist?`<button class="btn danger" data-pl="distok">Sovrascrivo le modifiche a mano?</button><button class="btn ghost" data-pl="distno">Annulla</button>`:`<button class="btn primary" data-pl="dist" ${p.scuole.length?'':'disabled'}>Rigenera piantina</button>`}</div>
+  <div class="row-btns">${V.confirmDist?`<button class="btn danger" data-pl="distok">Sovrascrivo le modifiche a mano?</button><button class="btn ghost" data-pl="distno">Annulla</button>`:`<button class="btn primary" data-pl="dist" ${p.scuole.length?'':'disabled'}>Rigenera piantina</button>${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn ghost" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}`}</div>
+  <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” per ripartire da zero.</p>
   <details class="rules"><summary>Come vengono distribuiti i posti</summary><ol class="guide small">
    <li>Prima le <b>classi con studenti con disabilità</b>, nelle prime file.</li>
    <li>Poi le scuole <b>P1</b>, poi le <b>P2</b>. Se ce ne sono due o più, i posti si dividono in <b>colonne verticali</b>: ognuna ha la sua parte delle file davanti.</li>
@@ -2158,6 +2173,9 @@ app.addEventListener('click',async e=>{
     renderSchools();renderPlTools();drawPl();scheduleSave();return;}
   if(a==='dist'||a==='regen'){if(Object.keys(p.assign).length&&V.manual){V.confirmDist=true;renderSchools();if(a==='regen')document.querySelector('[data-pl="distok"]').scrollIntoView({block:'center',behavior:'smooth'});return;}doDistribute();return;}
   if(a==='distok'){V.confirmDist=false;doDistribute();return;}
+  if(a==='clear'){V.confirmClear=true;renderSchools();return;}
+  if(a==='clearno'){V.confirmClear=false;renderSchools();return;}
+  if(a==='clearok'){V.confirmClear=false;p.assign={};p.esclusi={};V.manual=false;drawPl();renderSchools();renderPlTools();scheduleSave();toast('Disposizione svuotata: premi “Rigenera piantina” per ridistribuire');return;}
   if(a==='distno'){V.confirmDist=false;renderSchools();return;}
   if(a==='pdf'){await exportPDF(b);return;}
 });
