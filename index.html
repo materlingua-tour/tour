@@ -608,6 +608,7 @@ details.rep>summary .pill{white-space:normal}
 .t-iss{list-style:none;margin:4px 0;padding:0;display:flex;flex-direction:column;gap:4px}.t-iss li{display:flex;align-items:flex-start;gap:6px;font-size:13px;font-weight:600}
 .t-iss li svg{width:15px;height:15px;flex:none;margin-top:1px}.t-iss li.bad{color:var(--bad)}.t-iss li.warn{color:var(--warn)}
 .t-card.t-bad{border-color:var(--bad)}.t-card.t-warn{border-color:var(--warn)}
+.ed-area{fill:rgba(25,100,87,.08);stroke:var(--brand);stroke-width:3;stroke-dasharray:10 6;pointer-events:none}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -1975,7 +1976,9 @@ function renderTools(){
   h+=`<button class="btn small" data-ed="undo" ${V.hist.length?'':'disabled'}>Annulla</button><span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="zout" aria-label="Riduci">−</button><button class="btn small" data-ed="zin" aria-label="Ingrandisci">+</button><button class="btn small" data-ed="fs">${V.fs?'Chiudi schermo intero':'Schermo intero'}</button><span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
-  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona file e posti'}</button>`;
+  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona tutta la pianta'}</button><button class="btn small ${V.tool==='areascan'?'primary':''}" data-tool="areascan" ${V.scanning?'disabled':''}>Scansiona un’area</button>`;
+  if(Z().rows.length)h+=`<button class="btn small ${V.tool==='areaclear'?'primary':''}" data-tool="areaclear">Pulisci un’area</button>`;
+  if(V.lastArea&&b.url&&CFG&&!V.scanning)h+=`<button class="btn small" data-ed="scanlast">Scansiona l’area pulita</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
   if(b.url)h+=`<label class="chk" title="Mostra o nasconde la pianta originale; la barra ne regola l’intensità"><input type="checkbox" id="showBg" ${V.showBg?'checked':''} aria-label="Mostra la pianta originale"> Intensità <input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Intensità della pianta originale" style="width:90px;margin-left:4px"></label>`;
   document.getElementById('edTools').innerHTML=h;
@@ -1987,6 +1990,8 @@ function renderHint(){
   else if(V.tool==='palco')m=V.pts.length?'Ora tocca l’<b>altro estremo</b>.':isP?'Tocca i <b>due estremi del bordo del palco</b>, il lato verso il pubblico.':`Tocca i <b>due estremi della balaustra</b> di ${esc(z.nome)}: il lato affacciato sulla sala. Le file più vicine sono quelle davanti.`;
   else if(V.tool==='fila')m=V.draft?'Controlla che i posti combacino con il disegno, poi conferma nel pannello.':V.pts.length?'Ora tocca il centro dell’<b>ultimo posto</b> della fila.':'Tocca il centro del <b>primo posto</b> della fila. Se c’è un corridoio, fai un tratto per lato con la stessa lettera.';
   else if(V.tool==='seleziona')m='Tocca un posto per modificare la sua fila.';
+  else if(V.tool==='areascan')m=V.pts.length?'Ora tocca l’<b>angolo opposto</b> dell’area.':'Tocca un <b>angolo</b> dell’area da scansionare (per esempio la galleria), poi quello opposto. Le file che ci sono già dentro vengono sostituite.';
+  else if(V.tool==='areaclear')m=V.pts.length?'Ora tocca l’<b>angolo opposto</b> dell’area.':'Tocca un <b>angolo</b> dell’area da pulire, poi quello opposto: le file con il centro dentro l’area vengono tolte.';
   else if(V.tool==='blocca')m='Tocca i posti che non esistono più o non si usano mai. Per la console dei tecnici usa invece “Escludi” nella singola piantina.';
   if(!(V.bg[z.id]||{}).url&&!z.rows.length)m='Inizia caricando il PDF o la foto della piantina con il pulsante qui sopra.';
   document.getElementById('edHint').innerHTML=m;
@@ -1995,6 +2000,7 @@ function drawEd(){
   const z=edZone();const G=geom(z);const b=V.bg[Z().id]||{};
   document.getElementById('edCanvas').style.width=(V.zoom*100)+'%';
   document.getElementById('edCanvas').innerHTML=buildSVG(z,G,{showBg:V.showBg,bgUrl:b.url,bgOp:V.bgOp,selRow:V.selRow,pts:V.pts});
+  {const sv=document.querySelector('#edCanvas svg');const ar=V.scanning&&V.area?V.area:V.lastArea;if(sv&&ar){const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',ar.x1);r.setAttribute('y',ar.y1);r.setAttribute('width',ar.x2-ar.x1);r.setAttribute('height',ar.y2-ar.y1);r.setAttribute('class','ed-area');sv.appendChild(r);}}
   centerOnce('edWrap');const n=G.seats.filter(s=>!s.blocked).length;
   document.getElementById('edStats').innerHTML=`<span><b>${esc(z.nome)}</b></span><span><b>${G.lines.length}</b> file</span><span><b>${n}</b> posti utilizzabili</span><span><b>${G.seats.length-n}</b> bloccati</span><span>${Z().front?(z.tipo==='platea'?'Palco segnato':'Balaustra segnata'):`<b>${z.tipo==='platea'?'Palco':'Balaustra'} non segnato</b>: senza, il davanti è il lato in basso`}</span><span>Totale teatro <b>${seatsTot(V.t)}</b> posti</span>`;
 }
@@ -2080,6 +2086,7 @@ app.addEventListener('click',async e=>{
     if(a==='zout'){V.zoom=Math.max(1,V.zoom/1.35);drawEd();return;}
     if(a==='bg'){document.getElementById('bgFile').click();return;}
     if(a==='scan'){scanPianta();return;}
+    if(a==='scanlast'){const ar=V.lastArea;V.lastArea=null;scanPianta(ar);return;}
     if(a==='addzone'){pushHist();const cur=Z();const n=V.t.zone.length;
       const nz={id:uid('z'),nome:n===1?'Galleria':'Zona '+(n+1),tipo:'galleria',w:cur.w,h:cur.h,bg:cur.bg,front:null,rows:[]};
       V.t.zone.push(nz);V.bg[nz.id]={...(V.bg[cur.id]||{})};V.zi=V.t.zone.length-1;resetSel();V.tool='palco';markDirty();
@@ -2110,6 +2117,11 @@ function edCanvasClick(e,svg){
     else if(V.pending.type==='start'){r.x1=p.x;r.y1=p.y;}else{r.x2=p.x;r.y2=p.y;}
     V.pending=null;markDirty();renderTools();renderPanel();drawEd();
     if(V.form){const el=document.getElementById('fFila');if(el&&!el.value)el.focus();}return;}
+  if(V.tool==='areascan'||V.tool==='areaclear'){V.pts.push({x:p.x,y:p.y});
+    if(V.pts.length===2){const [a,b]=V.pts;V.pts=[];const ar={x1:Math.min(a.x,b.x),y1:Math.min(a.y,b.y),x2:Math.max(a.x,b.x),y2:Math.max(a.y,b.y)};
+      if(ar.x2-ar.x1<5||ar.y2-ar.y1<5){toast('Area troppo piccola','warn');renderHint();drawEd();return;}
+      V.area=ar;drawEd();if(V.tool==='areaclear')clearArea(ar);else scanPianta(ar);return;}
+    renderHint();drawEd();return;}
   if(V.tool==='palco'||V.tool==='fila'){
     if(V.draft)return;
     V.pts.push({x:p.x,y:p.y});
@@ -2141,27 +2153,44 @@ async function renderPdfPage(){
   await page.render({canvasContext:ctx,viewport:vp}).promise;await setBgCanvas(c);renderTools();
 }
 /* Scansione automatica con Gemini: propone file e posti sulla pianta caricata; il TM poi corregge */
-async function scanPianta(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
-  if(z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
-  V.scanOk=false;V.scanning=true;renderTools();toast('Scansione in corso: ci vogliono 20-40 secondi…');
-  try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const sc=Math.min(1,1600/Math.max(img.width,img.height));
-    const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
-    const b64=c.toDataURL('image/jpeg',0.85).split(',')[1];
-    let data,error;
-    for(let t=0;t<3;t++){({data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}}));
-      let busy=false;if(error&&error.context){if(error.context.status===546)busy=true;try{const j=await error.context.clone().json();busy=busy||/\b(503|429)\b|high demand|overloaded|quota|in tempo/i.test(j.errore||j.message||'');}catch(_){}}
-      if(!busy)break;if(t<2){toast(`Gemini è molto occupato in questo momento: riprovo da solo (${t+2}/3)…`,'warn');await new Promise(r=>setTimeout(r,6000*(t+1)));}
-      else{error=new Error('Gemini è sovraccarico in questo momento (succede nelle ore di punta): riprova tra qualche minuto');error.context=null;}}
-    if(error){let msg=error.message;try{const ctx=error.context;if(ctx&&ctx.json){const j=await ctx.clone().json();msg=(ctx.status?ctx.status+' · ':'')+(j.errore||j.message||j.msg||JSON.stringify(j));}}catch(_){try{msg=(error.context.status||'')+' · '+(await error.context.text()).slice(0,160);}catch(__){}}throw new Error(msg);}
-    if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');
-    if(!data.file.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
+/* dove sta davvero l'immagine dentro la zona (preserveAspectRatio "meet": può avere bordi) */
+function bgRect(z,iw,ih){const s=Math.min(z.w/iw,z.h/ih);const w=iw*s,hh=ih*s;return {x:(z.w-w)/2,y:(z.h-hh)/2,w,h:hh,s};}
+async function scanCall(canvas){const b64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];let data,error;
+  for(let t=0;t<3;t++){({data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}}));
+    let busy=false;if(error&&error.context){if(error.context.status===546)busy=true;try{const j=await error.context.clone().json();busy=busy||/\b(503|429)\b|high demand|overloaded|quota|in tempo/i.test(j.errore||j.message||'');}catch(_){}}
+    if(!busy)break;if(t<2){toast(`Gemini è molto occupato in questo momento: riprovo da solo (${t+2}/3)…`,'warn');await new Promise(r=>setTimeout(r,6000*(t+1)));}
+    else{error=new Error('Gemini è sovraccarico in questo momento (succede nelle ore di punta): riprova tra qualche minuto');error.context=null;}}
+  if(error){let msg=error.message;try{const ctx=error.context;if(ctx&&ctx.json){const j=await ctx.clone().json();msg=(ctx.status?ctx.status+' · ':'')+(j.errore||j.message||j.msg||JSON.stringify(j));}}catch(_){try{msg=(error.context.status||'')+' · '+(await error.context.text()).slice(0,160);}catch(__){}}throw new Error(msg);}
+  if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');return data;}
+function rowMid(r){return {x:(r.x1+r.x2)/2,y:(r.y1+r.y2)/2};}
+function inRect(p,a){return p.x>=a.x1&&p.x<=a.x2&&p.y>=a.y1&&p.y<=a.y2;}
+/* area = rettangolo in coordinate della zona; senza area = tutta la pianta */
+async function scanPianta(area){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
+  if(!area&&z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
+  V.scanOk=false;V.scanning=true;renderTools();toast(area?'Scansione dell’area in corso…':'Scansione in corso: ci vogliono 20-40 secondi…');
+  try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const br=bgRect(z,img.width,img.height);
+    /* ritaglio in pixel dell'immagine originale */
+    const A=area||{x1:br.x,y1:br.y,x2:br.x+br.w,y2:br.y+br.h};
+    const sx=Math.max(0,(A.x1-br.x)/br.s),sy=Math.max(0,(A.y1-br.y)/br.s),sw=Math.min(img.width,(A.x2-br.x)/br.s)-sx,sh=Math.min(img.height,(A.y2-br.y)/br.s)-sy;
+    if(sw<10||sh<10){toast('Area troppo piccola o fuori dalla pianta','warn');return;}
+    const sc=Math.min(area?4:1,1600/Math.max(sw,sh));const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+    const data=await scanCall(c);
+    if(!data.file.length){toast(area?'Nessuna fila trovata nell’area: prova un’area più stretta o disegnale a mano':'Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
+    /* da coordinate 0–1 del ritaglio a coordinate della zona */
+    const X=v=>f2(br.x+(sx+v*sw)*br.s),Y=v=>f2(br.y+(sy+v*sh)*br.s);
+    const nuove=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:X(f.x1),y1:Y(f.y1),x2:X(f.x2),y2:Y(f.y2),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);return r;});
     pushHist();
-    z.rows=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:f2(f.x1*z.w),y1:f2(f.y1*z.h),x2:f2(f.x2*z.w),y2:f2(f.y2*z.h),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);return r;});
-    if(data.palco&&!z.front)z.front={x1:f2(data.palco.x1*z.w),y1:f2(data.palco.y1*z.h),x2:f2(data.palco.x2*z.w),y2:f2(data.palco.y2*z.h)};
-    markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();
-    toast(`Trovate ${z.rows.length} file · ${z.rows.reduce((a,r)=>a+r.posti.length,0)} posti. Controllale: tocca una fila per correggerla`);}
+    if(area){const prima=z.rows.length;z.rows=z.rows.filter(r=>!inRect(rowMid(r),area));const tolte=prima-z.rows.length;z.rows.push(...nuove);
+      toast(`Area scansionata: ${nuove.length} file · ${nuove.reduce((a,r)=>a+r.posti.length,0)} posti${tolte?` (al posto di ${tolte} file)`:''}. Controllale`);}
+    else{z.rows=nuove;if(data.palco&&!z.front)z.front={x1:X(data.palco.x1),y1:Y(data.palco.y1),x2:X(data.palco.x2),y2:Y(data.palco.y2)};
+      toast(`Trovate ${z.rows.length} file · ${z.rows.reduce((a,r)=>a+r.posti.length,0)} posti. Controllale: tocca una fila per correggerla`);}
+    V.area=null;markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();}
   catch(e){toast('Scansione non riuscita ('+(e.message||e)+')','bad');}
   finally{V.scanning=false;if(V.name==='teatro')renderTools();}}
+function clearArea(area){const z=Z();const n=z.rows.filter(r=>inRect(rowMid(r),area)).length;if(!n){toast('Nessuna fila dentro l’area','warn');return;}
+  pushHist();z.rows=z.rows.filter(r=>!inRect(rowMid(r),area));markDirty();V.lastArea=area;V.tool='seleziona';renderTools();drawEd();
+  toast(`Tolte ${n} file dall’area. Ora puoi disegnarle a mano o scansionare solo quell’area (Annulla per ripristinarle)`);}
 async function setBgCanvas(c){
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));const z=Z();
   V.bg[z.id]={url:URL.createObjectURL(blob),blob};V.showBg=true;
