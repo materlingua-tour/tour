@@ -1840,7 +1840,7 @@ function renderTools(){
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
   if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona file e posti'}</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
-  if(b.url)h+=`<label class="chk"><input type="checkbox" id="showBg" ${V.showBg?'checked':''}> Scansione</label><input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Trasparenza scansione" style="width:90px">`;
+  if(b.url)h+=`<label class="chk"><input type="checkbox" id="showBg" ${V.showBg?'checked':''}> Pianta originale sotto</label><label class="chk small muted" title="Quanto si vede la pianta originale sotto le file">Intensità <input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Intensità della pianta originale" style="width:90px"></label>`;
   document.getElementById('edTools').innerHTML=h;
   renderHint();
 }
@@ -2106,7 +2106,7 @@ function renderPlTools(){
   let h=`<button class="btn small ${V.fs?'primary':''}" data-pl="fs">${V.fs?'Chiudi':'Schermo intero'}</button><button class="chip ${V.tool==='pan'?'on':''}" data-tool="pan">Scorri</button><button class="chip ${V.tool==='erase'?'on':''}" data-tool="erase">Gomma</button><button class="chip ${V.tool==='excl'?'on':''}" data-tool="excl">Escludi posti</button>`;
   p.scuole.forEach(s=>{h+=`<button class="chip ${V.tool===s.id?'on':''}" data-tool="${s.id}" title="Assegna posti a ${esc(s.nome)}"><i style="background:${zcol(s)}"></i><span class="t">${esc(s.nome||'Scuola')}</span></button>`;});
   h+=`<span class="sep"></span><button class="btn small" data-pl="zout" aria-label="Riduci">−</button><button class="btn small" data-pl="zin" aria-label="Ingrandisci">+</button>`;
-  if(z.bg)h+=`<label class="chk"><input type="checkbox" id="plBg" ${V.showBg?'checked':''}> Scansione</label>`;
+  if(z.bg)h+=`<label class="chk"><input type="checkbox" id="plBg" ${V.showBg?'checked':''}> Pianta originale sotto</label>`;
   document.getElementById('plTools').innerHTML=h;
   document.getElementById('plWrap').classList.toggle('painting',V.tool!=='pan');
   const s=p.scuole.find(x=>x.id===V.tool);
