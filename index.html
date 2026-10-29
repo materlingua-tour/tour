@@ -591,6 +591,12 @@ details.rep>summary .pill{white-space:normal}
 .sec.sec-c>:not(.card-head){display:none!important}.sec.sec-c{padding-top:14px;padding-bottom:14px}
 .regen-wrap{display:inline-flex;gap:8px;flex-wrap:wrap}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.prom-box{display:flex;flex-direction:column;gap:8px;padding:14px 16px;margin:0 0 14px;border-radius:16px;background:var(--hl-bg,rgba(255,200,60,.08));border:1px solid var(--warn)}
+.prom-box .eyebrow{display:flex;align-items:center;gap:6px;color:var(--warn)}.prom-box .eyebrow svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.prom-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--line)}.prom-row:first-of-type{border-top:0;padding-top:0}
+.prom-row>span:first-child{flex:1 1 220px;font-weight:600}.prom-row .row-btns{margin:0;flex-wrap:nowrap}
+.prom-dir{margin-bottom:16px;display:flex;flex-direction:column;gap:10px}.prom-g{display:flex;flex-direction:column;gap:0}
+.prom-drow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}.prom-drow .tmain{flex:1 1 240px;min-width:0}.prom-drow .tour-tag{margin:0}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -616,7 +622,7 @@ const PALETTE=['#3B6FB6','#E07B28','#8A5BB0','#C8414B','#D9B22B','#2E9C9A','#D96
 const TIPO_L={platea:'Platea',galleria:'Galleria',palchi:'Palchi'};
 const TIPO_O={platea:0,galleria:1,palchi:2};
 const LVL_L={medie:'Medie',superiori:'Superiori'};
-const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note','presenze'];
+const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note','presenze','promemoria'];
 const CONFIRMED=['Chiuso vinto','Pagamento completato','Fattura inviata'];
 
 const S={mode:'pending',db:null,assets:null,downloads:null,ready:false,c:{teatri:{},piantine:{},tappe:{},deals:{},checklist:{},cast:{},documenti:{},impostazioni:{},foto:{},consigli:{},note:{},presenze:{}},pref:{tour:'',tm:''}};
@@ -786,7 +792,7 @@ function syncFromDeals(p,deals){
 }
 
 /* ---------- navigazione ---------- */
-const IC={
+const IC={bell:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
   mappa:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg>',
   controllo:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="4" width="7" height="4.5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="8.5" rx="1.5"/><rect x="3.5" y="14" width="7" height="6" rx="1.5"/></svg>',
   accessi:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="9" r="3.5"/><path d="M2.5 20c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><path d="M15 10.5h6.5M18.2 7.3v6.4"/></svg>',
@@ -928,6 +934,7 @@ function renderOggi(){
     ${kind==='prossima'&&V.dayId==null?`<p class="muted small" style="margin:4px 0 0">Oggi non ci sono repliche: ti mostro la prossima data.</p>`:''}</div>
     <button class="btn small day-pdf" data-og="offpdf" title="Piantine e scuole in un PDF, da consultare senza rete">Scarica PDF offline</button></div>
   ${rollNow?`<div class="banner roll">${TRI}<span>Prima di uscire prendi il roll-up dal foyer.</span><button class="btn small" data-og="tick" data-k="rollup">Preso</button></div>`:''}`;
+  if(role()==='tm')h+=promBannerHTML();
   h+=`<div class="day-grid${role()==='venditore'?'':' mas'}">`;
   h+=role()==='venditore'?tmHTML(tp):refHTML(tp);
   // Teatro
@@ -1002,7 +1009,7 @@ function renderOggi(){
   app.innerHTML=h;
   if(!vend)applySections(tp,hm,td);
   const firstOpen=V.dayId==null;V.dayId=tp.id;
-  if(firstOpen&&tp.data===td&&!AUTO_SC[tp.id]&&!vend){AUTO_SC[tp.id]=1;const last=reps.length?repEnd(tp,reps[reps.length-1]):'';
+  if(firstOpen&&tp.data===td&&!AUTO_SC[tp.id]&&!vend&&!document.querySelector('.prom-box')){AUTO_SC[tp.id]=1;const last=reps.length?repEnd(tp,reps[reps.length-1]):'';
     const tgt=hm>='19:00'?'c-crono':ck.inviata?'c-viaggi':last&&hm>=last?'c-check':'c-piantine';
     requestAnimationFrame(()=>{const el=document.getElementById(tgt)||document.getElementById('c-viaggi');if(el)window.scrollTo(0,Math.max(0,el.getBoundingClientRect().top+window.scrollY-12));});}
 }
@@ -1011,7 +1018,7 @@ const SEC_K=[['piantine di sala','piantine'],['checklist del teatro','check'],['
 function secOpenAuto(k,tp,hm,td){const reps=tp.repliche||[];const first=reps[0]||'09:00';const last=reps.length?repEnd(tp,reps[reps.length-1]):'13:00';
   if(tp.data!==td)return k==='teatro'||k==='piantine';
   switch(k){case 'teatro':return hm<'13:00';case 'foto':return true;case 'fotorep':return hm>=first&&hm<addMin(last,120);
-    case 'piantine':return hm<last;case 'check':return hm>=addMin(last,-15);case 'pranzo':return hm>='11:30'&&hm<'14:30';
+    case 'piantine':return hm<last;case 'check':return hm>=addMin(last,-15);case 'pranzo':return hm>='13:00'&&hm<'15:00';
     case 'viaggi':return hm>=addMin(last,-15)&&hm<'19:00';case 'hotel':return hm>='14:00'&&hm<'22:00';case 'crono':case 'chiudi':return hm>='18:00';}
   return true;}
 function applySections(tp,hm,td){V.secMan=V.secMan||{};
@@ -2790,9 +2797,54 @@ document.addEventListener('change',async e=>{if(e.target.id!=='impFiles'||!SB)re
 document.addEventListener('click',e=>{if(e.target.closest('[data-glogin]')){if(S.pref.user&&!me())SB.auth.signOut().then(googleLogin);else googleLogin();}});
 
 /* ---------- controllo (Direzione e referente di zona) ---------- */
+/* =================== PROMEMORIA AI TM =================== */
+/* Le cose che deve fare il TM e non ha ancora fatto. Alcune il TM le vede in automatico; la Direzione può mandarle a mano come promemoria (senza mittente). */
+function pendenze(tr){const td=today(),hm=nowHM(),out=[];const lim=addDays(td,3),from=addDays(td,-7);
+  const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&t.data>=from&&t.data<=lim).sort((a,b)=>a.data.localeCompare(b.data));
+  const giorno=tp=>tp.data===td?'di oggi':tp.data===addDays(td,1)?'di domani':tp.data===addDays(td,-1)?'di ieri':'del '+shortDate(tp.data);
+  list.forEach(tp=>{const reps=tp.repliche||[];const first=reps[0]||'';const last=reps.length?repEnd(tp,reps[reps.length-1]):'';const ck=S.c.checklist[tp.id]||{};const c=tp.citta||'';
+    const add=(kind,o)=>out.push({id:tp.id+'_'+kind+(o.rep?'_'+o.rep.replace(':',''):''),kind,tour:tr,tappaId:tp.id,data:tp.data,citta:c,...o});
+    if(!ck.inviata&&(tp.data<td||(tp.data===td&&last&&hm>=last)))add('check',{lvl:'oggi',dir:'Checklist non inviata',tm:`Ricordati di compilare la checklist ${giorno(tp)} (${c})`,auto:tp.data<td||hm>=addMin(last,60)});
+    if(tp.data===td&&first&&hm>=first&&!fotoFor(tp).length)add('foto',{lvl:'oggi',dir:'Foto della scenografia non caricata',tm:`Ricordati di caricare la foto della scenografia (${c})`,auto:true});
+    if(tp.data>=td&&!teatroOf(tp))add('sala',{lvl:tp.data===td?'oggi':'prossimi',dir:'Sala da mappare',tm:`Ricordati di mappare la sala ${tp.teatroNome?'del '+tp.teatroNome+' ':''}per la data ${giorno(tp)} (${c})`,auto:false});
+    else if(tp.data>=td)reps.forEach(r=>{const st=pStatus(tp,r);
+      if(st.k==='stale')add('piantina',{rep:r,lvl:tp.data===td?'oggi':'prossimi',dir:`Piantina ${r}: dati HubSpot cambiati`,tm:`I dati HubSpot della piantina delle ${r} ${giorno(tp)} (${c}) sono cambiati: aggiornala`,auto:tp.data===addDays(td,1)&&hm>='18:00'});
+      else if(st.k==='todo'&&st.ds.length)add('piantina',{rep:r,lvl:tp.data===td?'oggi':'prossimi',dir:`Piantina ${r} da creare (${st.ds.length} scuole su HubSpot)`,tm:`Ricordati di preparare la piantina delle ${r} ${giorno(tp)} (${c})`,auto:tp.data===addDays(td,1)&&hm>='18:00'});});
+    const ho=tp.hotel;if(ho&&tp.data<=td&&!fattureFor(tp).length&&(tp.data<td||hm>='14:00'))add('fattura',{lvl:'admin',dir:`Fattura hotel non allegata · ${ho.nome||'hotel'}${ho.pagamento==='pagato'?'':' (da pagare in struttura)'}`,tm:`Ricordati di allegare la fattura dell’hotel ${ho.nome||''} (${c})`,auto:false});});
+  const v=S.c.impostazioni[vKey(tr)]||{};const rs=(v.letture||[]).map(x=>x.ts).sort();const lastKm=rs.length?rs[rs.length-1].slice(0,10):(v.kmIniTs||'').slice(0,10);
+  if(list.some(t=>t.data>=td)&&(!lastKm||lastKm<addDays(td,-7)))out.push({id:'km_'+norm(tr).replace(/[^a-z0-9]+/g,'_'),kind:'km',tour:tr,lvl:'admin',data:td,citta:'',dir:lastKm?'Km del veicolo non aggiornati da più di 7 giorni':'Km del veicolo mai inseriti',tm:'Ricordati di aggiornare i km del veicolo (foto del contachilometri)',auto:false});
+  return out;}
+function promSent(id){const d=(S.c.promemoria||{})[id];return d&&d.ts?d:null;}
+function promAttivi(){const u=me();if(!u||u.ruolo!=='tm'||!u.tour)return [];const now=Date.now();PROM_HIDE.size;
+  return pendenze(u.tour).filter(x=>{if(PROM_HIDE.has(x.id))return false;const s=promSent(x.id);return x.auto||(s&&now-new Date(s.ts).getTime()<24*3600e3);});}
+const PROM_HIDE=new Set();
+function promBannerHTML(){const ps=promAttivi();if(!ps.length)return '';
+  return `<section class="prom-box" aria-live="polite"><span class="eyebrow">${IC.bell||''}Promemoria</span>${ps.map(x=>`<div class="prom-row"><span>${esc(x.tm)}</span><span class="row-btns"><button class="btn small primary" data-prom="go" data-id="${esc(x.id)}">Vai</button><button class="icon-btn" data-prom="hide" data-id="${esc(x.id)}" aria-label="Nascondi per ora">×</button></span></div>`).join('')}</section>`;}
+function promGo(x){const tp=x.tappaId?S.c.tappe[x.tappaId]:null;
+  if(x.kind==='check'&&tp){openCheck(tp.id,'oggi');return;}
+  if(x.kind==='sala'){go('piantine');return;}
+  if(x.kind==='km'){go('auto');return;}
+  const sec={foto:'foto',piantina:'piantine',fattura:'hotel'}[x.kind];V.secMan=V.secMan||{};
+  go('oggi',{dayId:tp.id});if(sec){V.secMan[tp.id+':'+sec]=true;render();const el=document.querySelector(`section.sec[data-sec="${sec}"]`)||document.getElementById('c-'+sec);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-prom]');if(!b)return;const x=pendenze((me()||{}).tour||'').find(y=>y.id===b.dataset.id);
+  if(b.dataset.prom==='hide'){PROM_HIDE.add(b.dataset.id);render();return;}if(x)promGo(x);});
+function promListHTML(){const ts=tours();const all=[];ts.forEach(tr=>all.push(...pendenze(tr)));
+  const tmOf=tr=>users().find(u=>u.ruolo==='tm'&&u.tour===tr);const now=Date.now();
+  const grp=[['oggi','Oggi'],['prossimi','Prossimi 3 giorni'],['admin','Amministrazione']];
+  let s=`<section class="card prom-dir"><div class="card-head"><h2>Da sistemare</h2><span class="pill ${all.length?'warn':'ok'}">${all.length?all.length+' cose':'Tutto a posto'}</span></div>
+   <p class="muted small" style="margin:0">Cose che deve fare il Tour Manager. Con “Invia promemoria” gli compare un avviso nell’app, senza mittente. Quelle segnate “automatico” le vede già da solo.</p>`;
+  if(!all.length)return s+`<p style="margin:0">Niente da sistemare in questo momento.</p></section>`;
+  grp.forEach(([g,l])=>{const xs=all.filter(x=>x.lvl===g).sort((a,b)=>a.data.localeCompare(b.data)||a.tour.localeCompare(b.tour));if(!xs.length)return;
+    s+=`<div class="prom-g"><span class="tmonth">${l}</span>${xs.map(x=>{const sd=promSent(x.id);const ago=sd?(now-new Date(sd.ts).getTime())/60000:1e9;const tm=tmOf(x.tour);
+      return `<div class="prom-drow">${tTag(x.tour)}<span class="tmain"><b>${esc(x.dir)}</b><span class="muted small">${x.citta?esc(cap(shortDate(x.data)))+' · '+esc(x.citta):''}${tm?(x.citta?' · ':'')+esc(tm.nome):' · TM non assegnato'}${x.auto?' · promemoria automatico attivo':''}${sd?' · promemoria inviato alle '+esc(new Date(sd.ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}))+(new Date(sd.ts).toDateString()!==new Date().toDateString()?' del '+esc(shortDate(sd.ts.slice(0,10))):''):''}</span></span>
+       ${tm?(ago<60?`<span class="pill ok">Inviato</span>`:`<button class="btn small" data-promsend="${esc(x.id)}" data-tour="${esc(x.tour)}">${sd?'Invia di nuovo':'Invia promemoria'}</button>`):''}</div>`;}).join('')}</div>`;});
+  return s+`</section>`;}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-promsend]');if(!b||!isDir())return;const x=pendenze(b.dataset.tour).find(y=>y.id===b.dataset.promsend);if(!x)return;
+  b.disabled=true;const old=promSent(x.id);const d={tour:x.tour,tappaId:x.tappaId||'',kind:x.kind,testo:x.tm,ts:new Date().toISOString(),n:((old&&old.n)||0)+1};
+  try{await put('promemoria',x.id,d);S.c.promemoria=S.c.promemoria||{};S.c.promemoria[x.id]={...d,id:x.id};toast('Promemoria inviato al TM');render();}catch(err){b.disabled=false;toast('Non inviato ('+(err.code||err.message)+')','bad');}});
 function renderControllo(){
   const td=today();const ts=tours();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(me()?deptOf(me()):'')}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div><div class="ctl-grid${isDir()?' has-table':''}">`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(me()?deptOf(me()):'')}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?promListHTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
   const tOrd=ts.map(tr=>{const l=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));return {tr,d:l.length?l[pickDay(l).i].data:'9999'};}).sort((a,b)=>a.d.localeCompare(b.d)||a.tr.localeCompare(b.tr)).map(x=>x.tr);
   tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;
     const pk=pickDay(list);const tp=list[pk.i];const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);
