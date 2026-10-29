@@ -73,11 +73,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 .side .in{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:var(--side-ink)}
 .side select.in option{color:#14201D}
 #navList{display:flex;flex-direction:column;gap:2px}
-.nav-item{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;cursor:pointer;font-weight:600;font-size:16px;text-align:left;color:var(--side-ink)}
+.nav-item{display:flex;align-items:center;gap:12px;min-height:44px;white-space:nowrap;padding:0 14px;border:0;border-radius:999px;background:transparent;cursor:pointer;font-weight:600;font-size:16px;text-align:left;color:var(--side-ink)}
 .nav-item svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .nav-item:hover{background:rgba(255,255,255,.08)}
 .nav-item.on{background:#FFFFFF;color:#133029}
 .nav-item:focus-visible{outline-color:#FFFFFF}
+@media (min-width:901px) and (max-height:980px){.side{gap:12px;padding-top:14px}.nav-item{min-height:38px;font-size:15px}.side .logo{width:110px;height:59px}}
 .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
 .side-foot .in{width:100%}
 .store-pill{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
@@ -153,8 +154,9 @@ h2{text-transform:uppercase;letter-spacing:.03em;font-size:17px;color:var(--bran
 /* OGGI */
 .day-head{flex-direction:row;align-items:flex-start;gap:14px;max-width:none}
 .day-nav{display:flex;gap:6px;padding-top:2px}
-.day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .day-grid .span2{grid-column:span 2}
+.day-grid.mas-on{display:flex;flex-direction:column;gap:14px;align-items:stretch}.day-grid.mas-on>*{width:100%;max-width:none;box-sizing:border-box}.mas-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}.mas-col{display:flex;flex-direction:column;gap:14px;min-width:0}
 @media (max-width:1100px){.day-grid{grid-template-columns:minmax(0,1fr)}.day-grid .span2{grid-column:auto}}
 .timeline{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .timeline>div{display:flex;flex-direction:column;padding:10px 14px;border-radius:10px;background:var(--surface-2);min-width:110px}
@@ -419,7 +421,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .wel-card .in{background:#FFFFFF;color:#14201D;border-color:#D3DDDA}
 .wel-logo{background:#196457!important;width:130px;height:70px}
 .wel-card h1{color:#14201D}
-.wel-google{width:100%}.t-card[hidden],.p-card[hidden]{display:none!important}.bulk{margin:0 0 14px;border:2px solid var(--brand)}.bulk-car{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--hl-bg);border:1px solid var(--hl-bd);margin-bottom:10px}.bulk-orig{overflow-wrap:anywhere}.bulk-ok{margin:6px 0;padding-left:18px;display:grid;gap:4px;max-height:260px;overflow:auto}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch{flex:1 1 240px;min-width:0}.t-filters #tLang{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.wel-google{width:100%}.t-card[hidden],.p-card[hidden]{display:none!important}.bulk{margin:0 0 14px;border:2px solid var(--brand)}.bulk-car{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--hl-bg);border:1px solid var(--hl-bd);margin-bottom:10px}.bulk-orig{overflow-wrap:anywhere}.bulk-ok{margin:6px 0;padding-left:18px;display:grid;gap:4px;max-height:260px;overflow:auto}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch,.t-filters #pSearch{flex:1 1 240px;min-width:0}.t-filters #tLang,.t-filters #pTour{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .wel-sep{display:flex;align-items:center;gap:10px;color:#56645F;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wel-sep::before,.wel-sep::after{content:"";flex:1;height:1px;background:#D3DDDA}
 .wel-list{display:flex;flex-direction:column;gap:8px}
@@ -578,6 +580,12 @@ details.rep>summary .pill{white-space:normal}
 .ztl-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);border-radius:10px;padding:10px 12px}.ztl-row>span{flex:1 1 180px;display:flex;flex-direction:column}.ztl-row .muted{color:var(--hl-ink);opacity:.85}
 .ins-box{background:var(--surface-2,rgba(127,127,127,.08));border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
 .card-head .tour-tag{margin:0;align-self:center}
+.acc-row{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0;font:inherit}
+.acc-row .tmain{flex:1;min-width:0}.acc-row .tmain .small{overflow-wrap:anywhere}.acc-chev{color:var(--muted);font-size:14px;width:16px;text-align:center}
+.acc.open .acc-row{margin-bottom:12px}.acc[hidden],.acc-group[hidden]{display:none!important}.acc-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}.acc-list{gap:0!important}
+.acc-list .card.acc{padding:12px 16px}
+.acc-save{max-width:900px;box-sizing:border-box;position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px;padding:10px 12px 10px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+@media (max-width:900px){.acc-save{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -806,13 +814,19 @@ function goFrom(name,extra){const back={name:V.name,dayId:V.dayId,qrDay:V.qrDay,
 document.addEventListener('click',e=>{const b=e.target.closest('[data-goback]');if(!b||!V.back)return;const bk=V.back;go(bk.name,{dayId:bk.dayId,qrDay:bk.qrDay});window.scrollTo(0,bk.y||0);});
 function addBack(){if(!V.back||['acc','check','piantina','teatro','welcome'].includes(V.name))return;if(app.querySelector('.page-back'))return;
   const dn=app.querySelector('.day-nav');(dn||app).insertAdjacentHTML('afterbegin',`<button class="btn small page-back" data-goback aria-label="Torna a ${esc(BACK_L[V.back.name]||'pagina precedente')}">← ${esc(BACK_L[V.back.name]||'Indietro')}</button>`);}
+/* due colonne indipendenti su schermi larghi: niente buchi tra le schede */
+const MAS_W=1100;let masWide=innerWidth>MAS_W;
+function layoutMas(){if(innerWidth<=MAS_W)return;document.querySelectorAll('.day-grid.mas').forEach(g=>{const items=[...g.children];if(!items.length)return;g.classList.add('mas-on');g.innerHTML='';
+  let row=null,c1,c2;const newRow=()=>{row=document.createElement('div');row.className='mas-row';c1=document.createElement('div');c2=document.createElement('div');c1.className=c2.className='mas-col';row.append(c1,c2);g.appendChild(row);};
+  items.forEach(it=>{if(it.classList.contains('span2')){g.appendChild(it);row=null;return;}if(!row)newRow();(c1.offsetHeight<=c2.offsetHeight?c1:c2).appendChild(it);});});}
+addEventListener('resize',()=>{const w=innerWidth>MAS_W;if(w!==masWide){masWide=w;if(document.querySelector('.day-grid.mas'))render();}});
 function render(){
   if(CFG&&me()&&!me().confermato&&!(V.name==='welcome'&&V.wstep===2))V={name:'welcome',wstep:2,wuser:me().email};
   if(!me()&&V.name!=='welcome')V={name:'welcome'};if(me()&&V.name==='welcome'&&!(CFG&&!me().confermato))V={name:navFor()[0][0]};if(V.name!=='welcome')document.body.classList.remove('welcome');
   const nv=navFor().map(x=>x[0]).concat(['altro','check','teatro','piantina','oggi','welcome','acc']);if(!nv.includes(V.name))V={name:navFor()[0][0]};
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo}[V.name];
-  if(f)f();
+  if(f)f();layoutMas();
   setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
@@ -831,7 +845,7 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${f('email','Email Mater Lingua','email','',`Per cambiarla chiedi alla Direzione.`,true)}
    ${f('telefono','Telefono','tel','es. 333 123 4567',r==='venditore'?'Il TM ti chiama da qui la mattina delle repliche. Se lo lasci vuoto vede il numero Mater Lingua.':r==='tm'?'La Direzione e il referente di zona ti chiamano da qui.':'Per le emergenze dei TM.')}
    ${f('chat','Link alla chat Google','url','https://mail.google.com/chat/…','In Google Chat apri la conversazione o lo spazio con i TM, tocca il nome in alto o ⋮ e scegli “Copia link”. Il TM apre la chat con un tocco.')}
-   ${r==='direzione'?f('reparto','Reparto','text','es. Logistica, Marketing','Compare in alto, sopra il tuo nome.'):''}
+   ${r==='direzione'?`<div class="field"><label for="pf_reparto">Reparto</label><select class="in" id="pf_reparto" data-pf="reparto">${repartiList(u.reparto).map(x=>`<option value="${esc(x)}" ${x===(u.reparto||'')?'selected':''}>${esc(x||'— Nessuno —')}</option>`).join('')}</select><span class="muted small">Compare in alto, sopra il tuo nome.</span></div>`:''}
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
    <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
@@ -908,7 +922,7 @@ function renderOggi(){
     ${kind==='prossima'&&V.dayId==null?`<p class="muted small" style="margin:4px 0 0">Oggi non ci sono repliche: ti mostro la prossima data.</p>`:''}</div>
     <button class="btn small day-pdf" data-og="offpdf" title="Piantine e scuole in un PDF, da consultare senza rete">Scarica PDF offline</button></div>
   ${rollNow?`<div class="banner roll">${TRI}<span>Prima di uscire prendi il roll-up dal foyer.</span><button class="btn small" data-og="tick" data-k="rollup">Preso</button></div>`:''}`;
-  h+=`<div class="day-grid">`;
+  h+=`<div class="day-grid${role()==='venditore'?'':' mas'}">`;
   h+=role()==='venditore'?tmHTML(tp):refHTML(tp);
   // Teatro
   h+=`<section class="card span2"><div class="card-head"><h2>${esc(tp.teatroNome||t?.nome||'Teatro')}</h2>${t?'<span class="pill ok">Sala mappata</span>':'<span class="pill warn">Sala da mappare</span>'}</div>
@@ -956,7 +970,7 @@ function renderOggi(){
   h+=`<section class="card"><div class="card-head"><h2>Pranzo</h2></div>
     ${mem.length||tp.ristoranti?memHTML(mem,{m_rist:tp.ristoranti}):'<p class="muted small" style="margin:0">Nessun ristorante indicato dalla Logistica né consigliato dai TM.</p>'}
     ${V.tipOpen==='pranzo'?tipForm([['m_rist','Ristoranti per il pranzo']],'es. Trattoria da Gino, Via Roma 5: menù pranzo 12 €, chiude alle 14:30'):''}
-    <div class="row-btns">${role()==='tm'&&V.tipOpen!=='pranzo'?'<button class="btn small primary" data-og="tip" data-kind="pranzo">+ Consiglia un ristorante</button>':''}<a class="btn small ghost" href="${mapsSearch('ristoranti',tp.indirizzo)}" target="_blank" rel="noopener">Ristoranti vicino al teatro</a></div></section>`;
+    <div class="row-btns">${role()==='tm'&&V.tipOpen!=='pranzo'?'<button class="btn small primary" data-og="tip" data-kind="pranzo">+ Consiglia un ristorante</button>':''}<a class="btn small" href="${mapsSearch('ristoranti',tp.indirizzo)}" target="_blank" rel="noopener">Ristoranti vicino al teatro</a></div></section>`;
   h+=renderViaggi(tp,nx);
   // Hotel
   const ho=tp.hotel;
@@ -972,7 +986,7 @@ function renderOggi(){
       <div class="row-btns"><a class="btn small" href="${mapsSearch('supermercato',ho.indirizzo)}" target="_blank" rel="noopener">Supermercati vicino all’hotel</a><a class="btn small" href="${mapsSearch('panetteria bar',ho.indirizzo)}" target="_blank" rel="noopener">Panetterie e bar vicino all’hotel</a></div>`:''}
     <p class="muted small" style="margin:0">All’arrivo fotografa le camere e segnala i danni già presenti.</p>
     ${(()=>{const fs=fattureFor(tp);return fs.length?`<span class="flabel">Fattura allegata</span>${thumbs(fs)}`:'';})()}
-    <div class="row-btns">${role()==='tm'?`<label class="btn small ${fattureFor(tp).length?'':'primary'}">${fattureFor(tp).length?'Aggiungi altra foto':'Allega la fattura'}<input type="file" accept="image/*" data-fotofatt hidden></label>`:''}<button class="btn small" data-fatt>Dati per la fattura</button><a class="btn small ghost" href="${mapsSearch('ristoranti',ho.indirizzo)}" target="_blank" rel="noopener">Cena vicino all’hotel</a></div>`;}
+    <div class="row-btns">${role()==='tm'?`<label class="btn small ${fattureFor(tp).length?'':'primary'}">${fattureFor(tp).length?'Aggiungi altra foto':'Allega la fattura'}<input type="file" accept="image/*" data-fotofatt hidden></label>`:''}<button class="btn small" data-fatt>Dati per la fattura</button><a class="btn small" href="${mapsSearch('ristoranti',ho.indirizzo)}" target="_blank" rel="noopener">Cena vicino all’hotel</a></div>`;}
   else h+=`<p class="muted">Nessun hotel indicato nel Calendar.</p>`;
   h+=`</section>`;
   if(!offNext)h+=renderCrono(tp,nx,ck);
@@ -1002,7 +1016,7 @@ function renderViaggi(tp,nx){
       :`<div class="row-btns"><button class="btn small primary" data-og="call">Avvisa l’hotel</button></div>`}</div>`);}
   if(false&&nx&&ho){const f=(nx.repliche||[])[0];legs.push(legHTML('Domani mattina',f?`partenza consigliata ${depTime(nx).dep} · ${shortDate(nx.data)}`:shortDate(nx.data),ho.nome,nx.teatroNome||'Teatro',ho.indirizzo,nx.indirizzo,(nx.viaggio||{}).hotelTeatro));}
   if(!legs.length)return '';
-  return `<section class="card" id="c-viaggi"><div class="card-head"><h2>Spostamenti</h2></div>${legs.join('')}<p class="muted small" style="margin:6px 0 0">Tempi stimati senza traffico: controlla la strada prima di partire.</p><div class="row-btns"><a class="btn small ghost" href="https://www.autostrade.it/it/infoviabilita/traffico-in-real-time" target="_blank" rel="noopener">Traffico in autostrada</a></div></section>`;}
+  return `<section class="card" id="c-viaggi"><div class="card-head"><h2>Spostamenti</h2></div>${legs.join('')}<p class="muted small" style="margin:6px 0 0">Tempi stimati senza traffico: controlla la strada prima di partire.</p><div class="row-btns"><a class="btn small" href="https://www.autostrade.it/it/infoviabilita/traffico-in-real-time" target="_blank" rel="noopener">Traffico in autostrada</a></div></section>`;}
 function tourLang(tour){const n=norm(tour);return n.includes('ingl')||n.includes('engl')?'en':n.includes('franc')||n.includes('fren')?'fr':n.includes('spagn')||n.includes('span')?'es':'it';}
 const CRONO_L={
  en:{loc:'en-GB',hi:(d,c)=>`Hi everyone! Tomorrow, ${d}, we're in ${c}.`,hi2:(d,c)=>`Hi everyone! On ${d} we're in ${c}.`,bf:'breakfast',nobf:'No breakfast at the hotel: please plan ahead.',meet:'meet in the lobby',bags:' with your luggage packed',dep:'departure',arr:t=>`arrival at ${t}`,sc:'Soundcheck',nth:['First show','Second show','Third show','Fourth show'],shows:'Shows',and:'and',bye:'See you tomorrow!'},
@@ -1573,7 +1587,7 @@ function memoria(tp){const out=[];
   return out.sort((a,b)=>b.data.localeCompare(a.data));}
 function memoriaTeatro(t){return memoria({id:'_',teatroId:t.id});}
 function myId(){const u=me();return (u&&u.email)||tmName()||'tm';}
-function officialTips(tp){const o={};if(tp.backstage)o.m_backstage=tp.backstage;if(tp.parcheggio)o.m_park=tp.parcheggio;if(tp.strade||tp.ztl)o.m_strade=tp.strade||tp.ztl;if(tp.contattiUtili)o.m_contatti=tp.contattiUtili;return o;}
+function officialTips(tp){const o={};if(tp.backstage)o.m_backstage=tp.backstage;if(tp.parcheggio)o.m_park=tp.parcheggio;{const s=[tp.strade,tp.ztl].find(x=>typeof x==='string'&&x.trim());if(s)o.m_strade=s;}if(tp.contattiUtili)o.m_contatti=tp.contattiUtili;return o;}
 function memHTML(list,off){off=off||{};const by={};MEM_K.forEach(([k,l])=>{if(off[k])by[l]=[];});list.forEach(m=>(by[m.l]=by[m.l]||[]).push(m));const kOf=l=>(MEM_K.find(x=>x[1]===l)||[])[0];
   return Object.entries(by).map(([l,ms])=>`<div class="mem"><span class="flabel">${esc(l)}</span>${off[kOf(l)]?`<p class="tip-off"><span class="pill ok">Logistica</span> ${esc(off[kOf(l)])}</p>`:''}${ms.slice(0,4).map(m=>{const c=S.c.consigli[m.id]||{};const me_=myId();
     const voted=(c.utile||[]).includes(me_)?'su':(c.inutile||[]).includes(me_)?'giu':'';const canVote=!m.mine;const open=V.tipSel===m.id;
@@ -1845,7 +1859,7 @@ function renderTools(){
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
   if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona file e posti'}</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
-  if(b.url)h+=`<label class="chk" title="Mostra o nasconde la pianta originale; la barra ne regola l’intensità"><input type="checkbox" id="showBg" ${V.showBg?'checked':''} aria-label="Mostra la pianta originale"> Intensità</label><input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Intensità della pianta originale" style="width:90px">`;
+  if(b.url)h+=`<label class="chk" title="Mostra o nasconde la pianta originale; la barra ne regola l’intensità"><input type="checkbox" id="showBg" ${V.showBg?'checked':''} aria-label="Mostra la pianta originale"> Intensità <input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Intensità della pianta originale" style="width:90px;margin-left:4px"></label>`;
   document.getElementById('edTools').innerHTML=h;
   renderHint();
 }
@@ -2165,8 +2179,8 @@ function schoolCard(s){
     <div class="field"><span class="flabel">Con disabilità</span><input class="in" type="number" inputmode="numeric" min="0" data-f="disabili" value="${esc(s.disabili||0)}" aria-label="Studenti con disabilità"></div>
    </div>
    <div class="school-fields two">
-    <div class="field"><span class="flabel">Persone della sua classe</span><input class="in" type="number" inputmode="numeric" min="0" data-f="classeDis" value="${esc(s.classeDis||'')}" placeholder="vuoto = tutta la scuola" aria-label="Persone della classe con studente con disabilità" ${dis?'':'disabled'}></div>
-    <div class="field"><span class="flabel">Note</span><input class="in" data-f="note" value="${esc(s.note||'')}" placeholder="es. richiesta in prenotazione" aria-label="Note"></div>
+    <div class="field"><span class="flabel">Persone della sua classe</span><input class="in" type="number" inputmode="numeric" min="0" data-f="classeDis" value="${esc(s.classeDis||'')}" placeholder="Tutta la scuola" aria-label="Persone della classe con studente con disabilità" ${dis?'':'disabled'}></div>
+    <div class="field"><span class="flabel">Note</span><input class="in" data-f="note" value="${esc(s.note||'')}" placeholder="Facoltative" aria-label="Note"></div>
    </div>
    <div class="status" data-status="${s.id}">${schoolStatus(s)}</div></div>`;
 }
@@ -2838,8 +2852,18 @@ document.addEventListener('keydown',e=>{if(V.name==='mappa'&&e.target.dataset&&e
 function renderAccessi(){
   if(!isDir()){app.innerHTML=`<div class="empty"><b>Sezione riservata alla Direzione.</b></div>`;return;}
   const lista=V.accEdit||clone(users());V.accEdit=lista;const ts=allTours();
-  let h=`<div class="page-head"><span class="eyebrow">Direzione</span><h1>Accessi</h1><p class="muted">Ogni persona entra con la sua email Mater Lingua. Il ruolo decide cosa vede; al Tour Manager si assegna il suo tour.</p></div><div class="acc-list">`;
-  lista.forEach((u,i)=>{h+=`<div class="card acc" data-acc="${i}"><div class="grid2">
+  V.accOpen=V.accOpen||new Set();
+  let h=`<div class="page-head"><span class="eyebrow">Direzione</span><h1>Accessi</h1><p class="muted">Ogni persona entra con la sua email Mater Lingua. Il ruolo decide cosa vede; al Tour Manager si assegna il suo tour.</p></div>
+  <div class="t-filters" style="max-width:900px"><input class="in" id="accQ" type="search" placeholder="Cerca nome, email, tour o regione" value="${esc(V.accQ||'')}" aria-label="Cerca persone" style="flex:1 1 240px"><button class="btn" data-aadd>+ Aggiungi persona</button></div><div class="acc-list">`;
+  const sub=u=>u.ruolo==='tm'?(u.tour||'Tour da assegnare'):u.ruolo==='venditore'?[u.area?'Area '+u.area:'',(u.regioni||[]).join(', ')].filter(Boolean).join(' · ')||'Regioni da assegnare':(u.reparto||'');
+  ['direzione','venditore','tm'].forEach(rl=>{const idx=lista.map((u,i)=>i).filter(i=>(lista[i].ruolo||'tm')===rl);if(!idx.length)return;
+   h+=`<div class="acc-group"><span class="tmonth">${esc(ROLE_L[rl])} · ${idx.length}</span>`;
+   idx.forEach(i=>{const u=lista[i];const open=V.accOpen.has(i);
+    h+=`<div class="card acc ${open?'open':''}" data-acc="${i}" data-s="${esc(norm([u.nome,u.email,u.tour,u.reparto,(u.regioni||[]).join(' '),u.area?'area '+u.area:''].join(' ')))}">
+     <button class="acc-row" data-atog="${i}" aria-expanded="${open}"><span class="tmain"><b>${esc(u.nome||'Nuova persona')}</b><span class="muted small">${esc(u.email||'email da inserire')}${sub(u)?' · '+esc(sub(u)):''}</span></span>
+      ${u.confermato?'<span class="pill ok">Attivo</span>':'<span class="pill">Mai entrato</span>'}${u.nota?'<span class="pill warn" title="'+esc(u.nota)+'">Nota</span>':''}<span class="acc-chev" aria-hidden="true">${open?'▴':'▾'}</span></button>`;
+    if(!open){h+='</div>';return;}
+    h+=`<div class="grid2">
     <div class="field"><label>Nome e cognome</label><input class="in" data-af="nome" value="${esc(u.nome||'')}"></div>
     <div class="field"><label>Email</label><input class="in" data-af="email" type="email" value="${esc(u.email||'')}" placeholder="nome@materlingua.eu"></div>
     <div class="field"><label>Ruolo</label><select class="in" data-af="ruolo">${Object.keys(ROLE_L).map(r=>`<option value="${r}" ${u.ruolo===r?'selected':''}>${ROLE_L[r]}</option>`).join('')}</select></div>
@@ -2851,7 +2875,8 @@ function renderAccessi(){
      :`<div class="field"><label>Reparto</label><select class="in" data-af="reparto">${repartiList(u.reparto).map(x=>`<option ${x===(u.reparto||'')?'selected':''} value="${esc(x)}">${esc(x||'— Scegli —')}</option>`).join('')}</select></div>`}
     <div class="field" style="grid-column:1/-1"><label>Nota sul contatto</label><input class="in" data-af="nota" value="${esc(u.nota||'')}" placeholder="es. Non chiamare durante il congedo"></div>
     </div><div class="row-btns">${V.accDel===i?`<button class="btn small danger" data-adelok="${i}">Conferma: togli l’accesso</button>`:`<button class="btn small ghost" data-adel="${i}">Togli l’accesso</button>`}</div></div>`;});
-  h+=`</div><div class="row-btns" style="margin-top:14px"><button class="btn" data-aadd>+ Aggiungi persona</button><button class="btn primary" data-asave>Salva gli accessi</button></div>`;
+   h+='</div>';});
+  h+=`</div><div class="acc-save"><span class="muted small">${V.accDirty?'Hai modifiche non salvate':'Tocca una persona per modificarla'}</span><button class="btn primary" data-asave>Salva gli accessi</button></div>`;
   const ct=S.c.impostazioni.contatti||{};
   h+=`<section class="card" style="margin-top:16px;max-width:640px"><div class="card-head"><h2>Numero Mater Lingua per i TM</h2></div>
     <p class="muted small" style="margin:0">Il TM lo chiama per il referente di zona quando il referente non ha un numero suo.</p>
@@ -2859,19 +2884,23 @@ function renderAccessi(){
     <div class="field"><label for="numWA">Numero WhatsApp (Rasayel)</label><input class="in" id="numWA" type="tel" value="${esc(ct.numeroWA||'')}" placeholder="se diverso, es. +39 333 000 0000"></div></div>
     <p class="muted small" style="margin:0">Il TM li vede quando il referente di zona non usa ancora l’app. Se il WhatsApp è vuoto si usa il numero da chiamare.</p>
     <div class="row-btns"><button class="btn small primary" data-numml>Salva i numeri</button></div></section>`;
-  app.innerHTML=h+spCard();
+  app.innerHTML=h+spCard();filterAcc();
 }
-document.addEventListener('input',e=>{if(V.name!=='accessi')return;const c=e.target.closest('[data-acc]');const f=e.target.dataset.af;if(!c||!f)return;const u=V.accEdit[+c.dataset.acc];
+function filterAcc(){const q=norm(V.accQ||'');document.querySelectorAll('.acc[data-s]').forEach(c=>{c.hidden=!!q&&!q.split(/\s+/).every(w=>c.dataset.s.includes(w));});
+  document.querySelectorAll('.acc-group').forEach(g=>{g.hidden=![...g.querySelectorAll('.acc')].some(c=>!c.hidden);});}
+document.addEventListener('input',e=>{if(V.name==='accessi'&&e.target.id==='accQ'){V.accQ=e.target.value;filterAcc();}});
+document.addEventListener('input',e=>{if(V.name!=='accessi')return;const c=e.target.closest('[data-acc]');if(c&&e.target.dataset.af&&!V.accDirty){V.accDirty=true;const s=document.querySelector('.acc-save .muted');if(s)s.textContent='Hai modifiche non salvate';}const f=e.target.dataset.af;if(!c||!f)return;const u=V.accEdit[+c.dataset.acc];
   u[f]=f==='regioni'?e.target.value.split(',').map(x=>x.trim()).filter(Boolean):e.target.value;if(f==='ruolo')render();});
 document.addEventListener('change',e=>{if(V.name!=='accessi')return;const c=e.target.closest('[data-acc]');const f=e.target.dataset.af;if(!c||!f||e.target.tagName!=='SELECT')return;V.accEdit[+c.dataset.acc][f]=e.target.value;if(f==='ruolo')render();});
 document.addEventListener('click',async e=>{if(V.name!=='accessi')return;
   if(e.target.closest('[data-numml]')){try{await putImp('contatti',{numeroML:document.getElementById('numML').value.trim(),numeroWA:document.getElementById('numWA').value.trim()});toast('Numeri salvati');}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}return;}
-  if(e.target.closest('[data-aadd]')){V.accEdit.push({nome:'',email:'',ruolo:'tm',tour:''});render();return;}
+  if(e.target.closest('[data-aadd]')){V.accEdit.push({nome:'',email:'',ruolo:'tm',tour:''});V.accOpen.add(V.accEdit.length-1);V.accDirty=true;V.accQ='';render();const el=document.querySelector(`[data-acc="${V.accEdit.length-1}"] [data-af="nome"]`);if(el){el.scrollIntoView({block:'center'});el.focus();}return;}
+  const tg=e.target.closest('[data-atog]');if(tg){const i=+tg.dataset.atog;V.accOpen.has(i)?V.accOpen.delete(i):V.accOpen.add(i);render();return;}
   const d=e.target.closest('[data-adel]');if(d){V.accDel=+d.dataset.adel;render();return;}
-  const k=e.target.closest('[data-adelok]');if(k){V.accEdit.splice(+k.dataset.adelok,1);V.accDel=null;render();return;}
+  const k=e.target.closest('[data-adelok]');if(k){V.accEdit.splice(+k.dataset.adelok,1);V.accDel=null;V.accOpen=new Set();V.accDirty=true;render();return;}
   if(e.target.closest('[data-asave]')){const lista=V.accEdit.filter(u=>u.email).map(u=>({...u,email:u.email.trim().toLowerCase()}));
     if(!lista.some(u=>u.ruolo==='direzione')){toast('Serve almeno una persona della Direzione','bad');return;}
-    try{await put('impostazioni','utenti',{lista});S.c.impostazioni.utenti={lista};V.accEdit=null;toast('Accessi salvati');render();}catch(err){toast('Non salvati ('+(err.code||err.message)+')','bad');}}
+    try{await put('impostazioni','utenti',{lista});S.c.impostazioni.utenti={lista};V.accEdit=null;V.accDirty=false;V.accOpen=new Set();toast('Accessi salvati');render();}catch(err){toast('Non salvati ('+(err.code||err.message)+')','bad');}}
 });
 
 loadPref();applyTheme();
