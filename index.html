@@ -597,6 +597,12 @@ details.rep>summary .pill{white-space:normal}
 .prom-row>span:first-child{flex:1 1 220px;font-weight:600}.prom-row .row-btns{margin:0;flex-wrap:nowrap}
 .prom-dir{margin-bottom:16px;display:flex;flex-direction:column;gap:10px}.prom-g{display:flex;flex-direction:column;gap:0}
 .prom-drow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}.prom-drow .tmain{flex:1 1 240px;min-width:0}.prom-drow .tour-tag{margin:0}
+.qr-st{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;margin:0 0 10px;border:1px solid var(--line)}
+.qr-st>span:nth-child(2){display:flex;flex-direction:column;flex:1 1 200px}.qr-st.warn{border-color:var(--warn);background:var(--hl-bg,transparent)}.qr-st.warn svg{color:var(--warn);flex:none}
+.qr-st.ok{padding:8px 12px}.qr-st.ok .muted{display:none}
+.nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:1}
+.fb-grp{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.fb-msg{padding:12px 16px}.fb-msg.unread{border-color:var(--brand)}
+.fb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-right:8px;vertical-align:middle}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -622,7 +628,7 @@ const PALETTE=['#3B6FB6','#E07B28','#8A5BB0','#C8414B','#D9B22B','#2E9C9A','#D96
 const TIPO_L={platea:'Platea',galleria:'Galleria',palchi:'Palchi'};
 const TIPO_O={platea:0,galleria:1,palchi:2};
 const LVL_L={medie:'Medie',superiori:'Superiori'};
-const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note','presenze','promemoria'];
+const COLLS=['teatri','piantine','tappe','deals','checklist','cast','documenti','impostazioni','foto','consigli','note','presenze','promemoria','segnalazioni'];
 const CONFIRMED=['Chiuso vinto','Pagamento completato','Fattura inviata'];
 
 const S={mode:'pending',db:null,assets:null,downloads:null,ready:false,c:{teatri:{},piantine:{},tappe:{},deals:{},checklist:{},cast:{},documenti:{},impostazioni:{},foto:{},consigli:{},note:{},presenze:{}},pref:{tour:'',tm:''}};
@@ -746,7 +752,7 @@ async function initStore(){
   }else{S.mode='local';loadLocal();S.ready=true;setPill();onData();}
 }
 const LIVE_VIEWS=['oggi','tournee','piantine','teatri','checklist','cast','documenti','altro','qr','welcome','controllo','mappa','acc','auto'];
-function onData(c){if(landingToken()){renderLanding();return;}renderNav();if((V.name==='cast'&&V.edit)||(V.name==='documenti'&&V.up)||(V.name==='oggi'&&V.cronoEdit)||(V.name==='documenti'&&V.fattEdit)||(V.name==='auto'&&(V.vEdit||V.rNew||V.eEdit))||(V.name==='oggi'&&(V.tipOpen||V.noteEdit))||(V.name==='profilo'&&V.profDirty)||((V.name==='altro'||V.name==='accessi')&&V.spEdit))return;if(LIVE_VIEWS.includes(V.name))render();}
+function onData(c){if(landingToken()){renderLanding();return;}if(c==='segnalazioni'||c===undefined)fbNotify();renderNav();if((V.name==='cast'&&V.edit)||(V.name==='documenti'&&V.up)||(V.name==='oggi'&&V.cronoEdit)||(V.name==='documenti'&&V.fattEdit)||(V.name==='auto'&&(V.vEdit||V.rNew||V.eEdit))||(V.name==='oggi'&&(V.tipOpen||V.noteEdit))||(V.name==='profilo'&&V.profDirty)||((V.name==='altro'||V.name==='accessi')&&V.spEdit))return;if(LIVE_VIEWS.includes(V.name))render();}
 
 /* ---------- tournée ---------- */
 function tours(){const u=me();const all=allTours();if(!u)return all;
@@ -792,7 +798,7 @@ function syncFromDeals(p,deals){
 }
 
 /* ---------- navigazione ---------- */
-const IC={bell:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+const IC={feedback:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>',bell:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
   mappa:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg>',
   controllo:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="4" width="7" height="4.5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="8.5" rx="1.5"/><rect x="3.5" y="14" width="7" height="6" rx="1.5"/></svg>',
   accessi:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="9" r="3.5"/><path d="M2.5 20c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><path d="M15 10.5h6.5M18.2 7.3v6.4"/></svg>',
@@ -811,7 +817,7 @@ const PARENT={teatro:'teatri',piantina:'piantine',check:'checklist',acc:'oggi'};
 function renderNav(){
   const act=PARENT[V.name]||V.name;const from=V.from||'';
   const nl=document.getElementById('navList');if(!nl)return;const items=navFor();const others=items.filter(x=>!x[2]).map(x=>x[0]);const cur=from||act;
-  nl.innerHTML=items.map(([k,l,m,sh])=>{const on=cur===k;return `<button class="nav-item ${m?'':'desk-only'} ${on?'on':''}" data-nav="${k}" aria-current="${on?'page':'false'}" aria-label="${esc(l)}">${IC[k]||''}${sh?`<span class="desk-only">${l}</span><span class="mob-only">${sh}</span>`:`<span>${l}</span>`}</button>`;}).join('')
+  nl.innerHTML=items.map(([k,l,m,sh])=>{const on=cur===k;return `<button class="nav-item ${m?'':'desk-only'} ${on?'on':''}" data-nav="${k}" aria-current="${on?'page':'false'}" aria-label="${esc(l.replace(/<[^>]+>/g,'').trim())}">${IC[k]||''}${sh?`<span class="desk-only">${l}</span><span class="mob-only">${sh}</span>`:`<span>${l}</span>`}</button>`;}).join('')
     +`<button class="nav-item mob-only ${others.includes(cur)||cur==='altro'?'on':''}" data-nav="altro">${IC.altro}<span>Altro</span></button>`;
   const ts=tours();const tr=curTour();const u=me();
   document.getElementById('navTour').innerHTML=ts.length&&u&&u.ruolo!=='tm'?`<label class="flabel" for="tourSel">Tour</label><select class="in" id="tourSel">${canAll()&&ALL_VIEWS.includes(V.name)?`<option value="${ALL}" ${tr===ALL?'selected':''}>Tutti i tour</option>`:''}${ts.map(t=>`<option ${t===tr?'selected':''}>${esc(t)}</option>`).join('')}</select>`:(u&&u.tour?`<span class="flabel">Tour</span><b>${esc(u.tour)}</b>`:'');
@@ -837,7 +843,7 @@ function render(){
   if(!me()&&V.name!=='welcome')V={name:'welcome'};if(me()&&V.name==='welcome'&&!(CFG&&!me().confermato))V={name:navFor()[0][0]};if(V.name!=='welcome')document.body.classList.remove('welcome');
   const nv=navFor().map(x=>x[0]).concat(['altro','check','teatro','piantina','oggi','welcome','acc']);if(!nv.includes(V.name))V={name:navFor()[0][0]};
   renderNav();
-  const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo}[V.name];
+  const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo,feedback:renderFeedback}[V.name];
   if(f)f();layoutMas();
   setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
@@ -2131,7 +2137,7 @@ function renderPiantina(){
     <span id="regenWrap" class="regen-wrap">${regenBtnHTML()}</span>
     <button class="btn" data-pl="pdf">Esporta PDF</button></div>
   </div>
-  <div id="hsBar"></div>
+  <div id="hsBar"></div>${p.scuole&&p.scuole.length?`<div id="plQrSt">${qrStHTML(p.id)}</div>`:''}
   <div id="regenBar"></div>
   <div class="ws">
     <div class="stage-col">
@@ -2228,7 +2234,23 @@ function updateRegen(){const p=V.p;const bar=document.getElementById('regenBar')
 function setSaveState(msg){const el=document.getElementById('pState');if(!el)return;el.textContent=msg||(V.saved?(S.mode==='db'?'Salvata':'Salvata su questo dispositivo'):'');}
 function scheduleSave(){V.saved=false;setSaveState('Salvataggio…');clearTimeout(V.saveT);V.saveT=setTimeout(savePiantina,900);}
 async function savePiantina(){const p=V.p;if(!p)return;p.aggiornato=new Date().toISOString();
-  try{await put('piantine',p.id,clone(p));V.saved=true;setSaveState();}catch(err){setSaveState('Non salvata');toast('Salvataggio non riuscito ('+(err.code||err.message)+')','bad');}}
+  try{await put('piantine',p.id,clone(p));V.saved=true;pendSet(p.id,null);setSaveState();qrStRefresh();}catch(err){pendSet(p.id,clone(p));setSaveState('Non salvata');qrStRefresh();toast('Salvataggio non riuscito ('+(err.code||err.message)+'): i QR non sono aggiornati','bad');}}
+/* piantine con modifiche non ancora arrivate all'archivio: i QR dei docenti mostrano ancora la versione vecchia */
+const PEND_K='ml_pend_piantine';
+function pendAll(){try{return JSON.parse(localStorage.getItem(PEND_K)||'{}');}catch(_){return {};}}
+function pendSet(id,p){try{const o=pendAll();if(p)o[id]=p;else delete o[id];localStorage.setItem(PEND_K,JSON.stringify(o));}catch(_){}}
+function pendOf(id){return pendAll()[id]||null;}
+async function pendRetry(id,quiet){const o=pendAll();const ids=id?[id]:Object.keys(o);let ok=0,ko=0;
+  for(const k of ids){const p=o[k];if(!p)continue;try{await put('piantine',k,clone(p));pendSet(k,null);ok++;}catch(_){ko++;}}
+  if(!quiet||ok)toast(ko?'QR non aggiornati: controlla la connessione e riprova':'QR aggiornati',ko?'bad':undefined);
+  if(ok&&(V.name==='qr'||V.name==='piantina'))(V.name==='qr'?render():qrStRefresh());return !ko;}
+addEventListener('online',()=>{if(Object.keys(pendAll()).length)pendRetry(null,true);});
+function qrStHTML(id){return pendOf(id)?`<div class="qr-st warn">${TRI}<span><b>QR non aggiornati</b><span class="muted small">Le ultime modifiche alla piantina non sono state salvate: i docenti vedono ancora i posti di prima.</span></span><button class="btn small primary" data-qrfix="${esc(id)}">Aggiorna QR</button></div>`
+  :`<div class="qr-st ok"><span class="done-tick" aria-hidden="true">✓</span><span><b>QR aggiornati</b><span class="muted small">I docenti vedono l’ultima versione della piantina.</span></span></div>`;}
+function qrStRefresh(){const el=document.getElementById('plQrSt');if(el&&V.p)el.innerHTML=qrStHTML(V.p.id);}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-qrfix]');if(!b)return;b.disabled=true;
+  if(V.name==='piantina'&&V.p&&V.p.id===b.dataset.qrfix){await savePiantina();if(!pendOf(V.p.id))toast('QR aggiornati');b.disabled=false;return;}
+  await pendRetry(b.dataset.qrfix);b.disabled=false;});
 
 function setField(card,el){const s=V.p.scuole.find(x=>x.id===card.dataset.sid);if(!s)return;const f=el.dataset.f;
   s[f]=el.type==='checkbox'?el.checked:el.value;
@@ -2523,8 +2545,47 @@ document.addEventListener('change',e=>{if(V.name!=='documenti'||e.target.id!=='d
 document.addEventListener('input',e=>{if(V.name==='documenti'&&e.target.id==='dq'){V.q=e.target.value;const pos=e.target.selectionStart;render();const el=document.getElementById('dq');el.focus();try{el.setSelectionRange(pos,pos);}catch(_){}}});
 
 /* =================== ALTRO (telefono) =================== */
+/* =================== SUGGERIMENTI ALLO SVILUPPATORE =================== */
+const DEV_EMAIL='matteomongiorgi1@gmail.com';
+function isDev(){const u=me();return !!u&&(u.email||'').toLowerCase()===DEV_EMAIL;}
+function fbUnread(){return Object.values(S.c.segnalazioni||{}).filter(x=>!x.letto).length;}
+function fbLbl(){if(!isDev())return 'Suggerimenti';const n=fbUnread();return 'Segnalazioni'+(n?` <span class="nav-badge">${n}</span>`:'');}
+const FB_ARG=['Oggi / giornata','Tournée','Piantine','Mappatura del teatro','Mappa','Checklist','Teatri','Cast','Documenti','QR docenti','Auto ed emergenze','Controllo','Accessi','Profilo','Accesso e login','Altro'];
+const FB_ROLE=[['direzione','Direzione'],['tm','Tour Manager'],['venditore','Referenti di zona']];
+function renderFeedback(){const u=me();if(!u){app.innerHTML='';return;}
+  if(isDev())return renderFbInbox();
+  const mine=Object.values(S.c.segnalazioni||{}).filter(x=>(x.email||'').toLowerCase()===(u.email||'').toLowerCase()).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+  app.innerHTML=`<div class="page-head"><span class="eyebrow">Account</span><h1>Suggerimenti allo sviluppatore</h1><p class="muted" style="margin:0">Qualcosa non funziona o ti piacerebbe vedere una funzione nuova? Scrivilo qui: arriva direttamente a chi sviluppa l’app.</p></div>
+  <section class="card" style="max-width:640px"><div class="field"><label for="fbArg">Argomento</label><select class="in" id="fbArg"><option value="">— Scegli la sezione dell’app —</option>${FB_ARG.map(a=>`<option ${V.fbArg===a?'selected':''}>${esc(a)}</option>`).join('')}</select></div>
+   <div class="field"><label for="fbTxt">Cosa vorresti dire</label><textarea class="in ta" id="fbTxt" rows="6" placeholder="es. Nella piantina vorrei poter spostare una scuola con un tocco; oppure: il pulsante Aggiorna da HubSpot non risponde">${esc(V.fbTxt||'')}</textarea></div>
+   <div class="row-btns"><button class="btn primary" data-fbsend>Invia</button></div></section>
+  ${mine.length?`<h2 class="alt-sec">Le tue segnalazioni</h2><div class="list" style="max-width:640px">${mine.map(x=>`<article class="card"><div class="card-head"><b>${esc(x.argomento)}</b><span class="muted small">${esc(shortDate((x.ts||'').slice(0,10)))} · ${x.letto?'letta':'inviata'}</span></div><p style="margin:0;white-space:pre-wrap">${esc(x.testo)}</p></article>`).join('')}</div>`:''}`;}
+document.addEventListener('input',e=>{if(V.name!=='feedback')return;if(e.target.id==='fbTxt')V.fbTxt=e.target.value;});
+document.addEventListener('change',e=>{if(V.name!=='feedback')return;if(e.target.id==='fbArg')V.fbArg=e.target.value;});
+document.addEventListener('click',async e=>{if(V.name!=='feedback')return;
+  if(e.target.closest('[data-fbsend]')){const u=me();const arg=document.getElementById('fbArg').value,txt=document.getElementById('fbTxt').value.trim();
+    if(!arg||!txt){toast('Scegli l’argomento e scrivi il messaggio','bad');return;}const b=e.target.closest('[data-fbsend]');b.disabled=true;
+    const d={ruolo:u.ruolo,nome:u.nome||'',email:u.email||'',tour:u.tour||'',argomento:arg,testo:txt,ts:new Date().toISOString(),letto:false};const id=uid('f');
+    try{await put('segnalazioni',id,d);S.c.segnalazioni=S.c.segnalazioni||{};S.c.segnalazioni[id]={...d,id};V.fbTxt='';V.fbArg='';toast('Grazie! Segnalazione inviata');render();}catch(err){b.disabled=false;toast('Non inviata ('+(err.code||err.message)+')','bad');}return;}
+  const o=e.target.closest('[data-fbopen]');if(o&&isDev()){const id=o.dataset.fbopen;V.fbOpen=V.fbOpen===id?null:id;const x=(S.c.segnalazioni||{})[id];
+    if(x&&!x.letto){const d={...x,letto:true,lettoIl:new Date().toISOString()};delete d.id;try{await put('segnalazioni',id,d);S.c.segnalazioni[id]={...d,id};}catch(_){}}render();return;}
+  const r=e.target.closest('[data-fbrole]');if(r){V.fbRole=r.dataset.fbrole;render();}});
+function renderFbInbox(){const all=Object.values(S.c.segnalazioni||{}).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));const rl=V.fbRole||'';
+  let h=`<div class="page-head"><span class="eyebrow">Sviluppatore</span><h1>Segnalazioni</h1><p class="muted" style="margin:0">Idee e problemi inviati da Direzione, Tour Manager e referenti di zona. Tocca un messaggio per leggerlo: diventa “letto”.</p></div>
+   <div class="chips" style="margin-bottom:14px"><button class="chip ${rl?'':'on'}" data-fbrole="">Tutti (${all.length})</button>${FB_ROLE.map(([k,l])=>{const n=all.filter(x=>x.ruolo===k);const u=n.filter(x=>!x.letto).length;return `<button class="chip ${rl===k?'on':''}" data-fbrole="${k}">${l} (${n.length})${u?` <span class="nav-badge">${u}</span>`:''}</button>`;}).join('')}</div>`;
+  if(!all.length){app.innerHTML=h+`<div class="empty"><b>Ancora nessuna segnalazione.</b></div>`;return;}
+  FB_ROLE.filter(([k])=>!rl||rl===k).forEach(([k,l])=>{const xs=all.filter(x=>x.ruolo===k);if(!xs.length)return;
+    h+=`<h2 class="alt-sec">${l}</h2>`;
+    [...new Set(xs.map(x=>x.argomento))].forEach(a=>{const ys=xs.filter(x=>x.argomento===a);
+      h+=`<div class="fb-grp"><span class="tmonth">${esc(a)} · ${ys.length}</span><div class="list" style="max-width:820px">${ys.map(x=>{const op=V.fbOpen===x.id;
+        return `<article class="card fb-msg ${x.letto?'':'unread'}"><button class="acc-row" data-fbopen="${esc(x.id)}" aria-expanded="${op}"><span class="tmain"><b>${x.letto?'':'<i class="fb-dot" aria-label="Da leggere"></i>'}${esc(x.nome||x.email)}</b><span class="muted small">${esc(shortDate((x.ts||'').slice(0,10)))} ${esc((x.ts||'').slice(11,16))}${x.tour?' · '+esc(x.tour):''}${op?'':' · '+esc(x.testo.slice(0,70))+(x.testo.length>70?'…':'')}</span></span><span class="acc-chev" aria-hidden="true">${op?'▴':'▾'}</span></button>
+         ${op?`<p style="margin:10px 0 0;white-space:pre-wrap">${esc(x.testo)}</p><p class="muted small" style="margin:6px 0 0">${esc(x.email)}</p>`:''}</article>`;}).join('')}</div></div>`;});});
+  app.innerHTML=h;}
+let FB_SEEN=null;
+function fbNotify(){if(!isDev())return;const ids=Object.keys(S.c.segnalazioni||{});if(FB_SEEN===null){FB_SEEN=new Set(ids);return;}const nu=ids.filter(i=>!FB_SEEN.has(i));nu.forEach(i=>FB_SEEN.add(i));
+  if(nu.length){const x=S.c.segnalazioni[nu[0]];toast(nu.length>1?nu.length+' nuove segnalazioni':'Nuova segnalazione da '+(x.nome||x.email)+': '+x.argomento);}}
 function renderAltro(){
-  const others=navFor().filter(x=>!x[2]);const u=me();const ACC=['profilo','accessi'];
+  const others=navFor().filter(x=>!x[2]);const u=me();const ACC=['profilo','accessi','feedback'];
   const card=([k,l])=>`<button class="card navcard" data-nav="${k}">${IC[k]||''}<span><b>${l}</b><span class="muted small">${NAV_DESC[k]||''}</span></span></button>`;
   const tour=others.filter(x=>!ACC.includes(x[0])),acc=others.filter(x=>ACC.includes(x[0]));const T=themePref();
   app.innerHTML=`<div class="page-head"><span class="eyebrow">Menu</span><h1>Altro</h1></div>
@@ -2635,7 +2696,7 @@ function renderQrList(){
     h+=`<details class="rep" ${open?'open':''} data-rk="${esc(tp.id+r)}"><summary><span class="rep-time">${esc(r)}</span><span class="rep-lbl">${j+1}ª replica</span><span class="pill">${p?p.scuole.length+' scuole':'piantina da creare'}</span><span class="rep-chev" aria-hidden="true">⌄</span></summary>`;
     if(!p)h+=`<div class="rep-body"><p class="muted small" style="margin:0">Il QR di ogni scuola mostra la sua posizione in sala: prima serve la piantina di questa replica.</p><div class="row-btns"><button class="btn small primary" data-og2="newp" data-rep="${esc(r)}">Crea la piantina</button></div></div>`;
     else if(!p.scuole.length)h+=`<div class="rep-body"><p class="muted small" style="margin:0">Nessuna scuola in questa piantina.</p></div>`;
-    else h+=`<div class="rep-body"><div class="sch-list">${p.scuole.map(s=>{const rs=GT?rangesFor(GT,p.assign,s.id):[];const n=GT?countFor(GT,p.assign,s.id):0;
+    else h+=`<div class="rep-body">${qrStHTML(p.id)}<div class="sch-list">${p.scuole.map(s=>{const rs=GT?rangesFor(GT,p.assign,s.id):[];const n=GT?countFor(GT,p.assign,s.id):0;
       return `<button class="sch" data-qrs="${p.id}~${s.id}" aria-label="QR di ${esc(s.nome)}"><i style="background:${zcol(s)}"></i><span class="tmain"><b>${esc(s.nome||'Scuola')}</b><span class="muted small">${s.docente?'Prof. '+esc(s.docente)+' · ':''}${n} posti${rs.length?' · '+esc(rs.map(x=>'fila '+x.fila).join(', ')):''}</span></span><span class="sch-qr" aria-hidden="true">${IC.qr}</span></button>`;}).join('')}</div></div>`;
     h+=`</details>`;});
   app.innerHTML=h+`</div>`;
@@ -2742,10 +2803,10 @@ function inZone(tp){const u=me();if(!u||u.ruolo!=='venditore')return true;return
 function lockAt(p){if(!p||!p.data)return null;const d=dObj(p.data);d.setHours(6,0,0,0);return d;}
 function plLocked(p){if(role()!=='venditore')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
 function navFor(){const r=role();
-  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze',''],['checklist','Checklist',''],['mappa','Mappa',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
-  if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['profilo','Il mio profilo','']];
-  return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['qr','QR docenti',''],['auto','Auto ed emergenze',''],['accessi','Accessi',''],['profilo','Il mio profilo','']];}
-const NAV_DESC={mappa:'Il percorso della tournée sulla cartina.',teatri:'Le sale mappate, una volta per tutte.',cast:'Persone in tournée e documenti d’identità.',documenti:'SIAE, tagliandi ZTL, fatture hotel, dati per le fatture.',qr:'I codici delle scuole per i docenti.',checklist:'I report di fine giornata.',accessi:'Chi entra nell’app e cosa vede.',auto:'Targa, km, guasti, incidenti e numeri utili.',profilo:'I tuoi dati: nome, telefono, chat Google.',oggi:'La giornata in corso.'};
+  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze',''],['checklist','Checklist',''],['mappa','Mappa',''],['cast','Cast',''],['documenti','Documenti',''],['feedback',fbLbl(),''],['profilo','Il mio profilo','']];
+  if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['feedback',fbLbl(),''],['profilo','Il mio profilo','']];
+  return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['qr','QR docenti',''],['auto','Auto ed emergenze',''],['accessi','Accessi',''],['feedback',fbLbl(),''],['profilo','Il mio profilo','']];}
+const NAV_DESC={feedback:'Idee e problemi da segnalare a chi sviluppa l’app.',mappa:'Il percorso della tournée sulla cartina.',teatri:'Le sale mappate, una volta per tutte.',cast:'Persone in tournée e documenti d’identità.',documenti:'SIAE, tagliandi ZTL, fatture hotel, dati per le fatture.',qr:'I codici delle scuole per i docenti.',checklist:'I report di fine giornata.',accessi:'Chi entra nell’app e cosa vede.',auto:'Targa, km, guasti, incidenti e numeri utili.',profilo:'I tuoi dati: nome, telefono, chat Google.',oggi:'La giornata in corso.'};
 
 /* ---------- benvenuto ---------- */
 function renderWelcome(){
