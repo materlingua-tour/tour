@@ -1590,12 +1590,22 @@ document.addEventListener('change',e=>{if(V.name!=='teatri')return;
 function repartiList(cur){const base=['','Direzione','Direzione Operativa','Direzione Artistica','Logistica e Organizzazione Tournée','Amministrazione e Contabilità','Marketing e Comunicazione','Sviluppo Prodotto','Commerciale','Progetto app Tour Manager'];
   users().forEach(u=>{if(u.reparto&&!base.includes(u.reparto))base.push(u.reparto);});if(cur&&!base.includes(cur))base.push(cur);return base;}
 /* problemi di un teatro, dal più urgente: servono in prima linea nell'archivio */
+/* un teatro arrivato da HubSpot senza pianta che corrisponde a un teatro dell'archivio (creato dal caricamento in blocco o a mano) */
+function gemelloArchivio(t){if(!t.nome||/^[\s\-–—]*$/.test(t.nome))return null;let best=null,bs=0;
+  Object.values(S.c.teatri).forEach(c=>{if(c.id===t.id||c.daHubspot||c.archiviato||!hasPlan(c))return;const sc=Math.max(bulkScore(t.nome+' '+t.citta,c),bulkScore(c.nome+' '+c.citta,t));if(sc>bs){bs=sc;best=c;}});
+  return bs>=1.5?best:null;}
+async function collegaGemello(hsId){const t=normT(clone(S.c.teatri[hsId]));const c=gemelloArchivio(S.c.teatri[hsId]);if(!c){toast('Nessun teatro da collegare','warn');return;}
+  t.zone=clone(c.zone);t.pianteAltre=[...(t.pianteAltre||[]),...clone(c.pianteAltre||[])];t.piantaOriginale=c.piantaOriginale||'';t.collegatoDa=c.id;t.aggiornato=new Date().toISOString();
+  const d=clone(c);d.archiviato=true;d.archiviatoIl=t.aggiornato;d.unitoIn=hsId;delete d.id;const id=t.id;delete t.id;
+  await put('teatri',id,t);S.c.teatri[id]=normT({...t,id});await put('teatri',c.id,d);S.c.teatri[c.id]=normT({...d,id:c.id});toast(`Pianta collegata a “${t.nome}”: il doppione è stato archiviato`);if(V.name==='teatro'){openEditor(id);}else render();}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-twin]');if(!b)return;b.disabled=true;try{await collegaGemello(b.dataset.twin);}catch(err){b.disabled=false;toast('Non collegata ('+(err.code||err.message)+')','bad');}});
 function teatroInfo(t,byT){const td=today();const tps=(byT[t.id]||[]).slice().sort((a,b)=>a.data.localeCompare(b.data));const next=tps.find(x=>x.data>=td);
   const rows=t.zone.reduce((a,z)=>a+z.rows.length,0);const bg=t.zone.some(z=>z.bg);const noFront=t.zone.some(z=>z.rows.length&&!z.front);const iss=[];
+  const twin=!hasPlan(t)&&t.daHubspot?gemelloArchivio(t):null;if(twin)iss.push({k:'bad',l:`La pianta c’è già in archivio come “${twin.nome}” (${twin.citta||''}): collegala`,twin});
   if(/^[\s\-–—]*$/.test(t.nome||'')||/da definire/i.test(t.nome||''))iss.push({k:'bad',l:'Nome del teatro mancante su HubSpot'});
   if(!rows&&next)iss.push({k:'bad',l:`Sala da mappare · prima data ${shortDate(next.data)}`});
   else if(!rows&&bg)iss.push({k:'warn',l:'Pianta caricata, file e posti da disegnare'});
-  else if(!rows&&!bg)iss.push({k:'warn',l:'Manca la pianta'});
+  else if(!rows&&!bg&&!twin)iss.push({k:'warn',l:'Manca la pianta'});
   if(noFront)iss.push({k:'warn',l:'Palco non segnato'});
   if(t.zone.some(z=>z.daControllare))iss.push({k:'warn',l:'Pagine in più della pianta: controlla i nomi delle zone'});
   if((t.pianteAltre||[]).length)iss.push({k:'warn',l:`${t.pianteAltre.length} piante aggiuntive da controllare`});
@@ -1620,6 +1630,7 @@ function renderTeatriList(){
     ${i.iss.length?`<ul class="t-iss">${i.iss.map(x=>`<li class="${x.k}">${TRI}<span>${esc(x.l)}</span></li>`).join('')}</ul>`:''}
     <div class="card-meta">${files?`${t.zone.map(z=>esc(z.nome)).join(' + ')} · ${files} file · ${seatsTot(t)} posti`:'Sala non ancora mappata'}</div>
     ${(()=>{const m=memoriaTeatro(t),fs=fotoTeatro(t);return m.length||fs.length?`<details class="mem-d"><summary>Memoria del teatro${m.length?' · '+m.length+' consigli':''}${fs.length?' · '+fs.length+' foto':''}</summary>${memHTML(m)}${fs.length?`<span class="flabel">Foto della scenografia</span>${thumbs(fs.slice(0,8))}`:''}</details>`:'';})()}
+    ${i.iss.some(x=>x.twin)&&isDir()?`<div class="row-btns"><button class="btn small primary" data-twin="${t.id}">Collega la pianta dell’archivio</button></div>`:''}
     <div class="card-actions"><button class="btn small ${i.urg<2&&!files?'primary':''}" data-ls="editt" data-id="${t.id}">${files?'Modifica mappa':'Mappa la sala'}</button>${archBtn('t',t)}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;filterTeatri();
 }
@@ -1938,6 +1949,7 @@ function renderEditor(){
     <div class="ws-actions"><span class="save-state" id="edState">${V.dirty?'Modifiche non salvate':''}</span>
     <button class="btn primary" data-ed="save">Salva mappa</button></div>
   </div>
+  ${(()=>{const s=S.c.teatri[t.id];const tw=s&&s.daHubspot&&!hasPlan(s)?gemelloArchivio(s):null;return tw?`<div class="banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><span style="flex:1 1 260px">La pianta di questa sala c’è già in archivio come <b>${esc(tw.nome)}</b> (${esc(tw.citta||'')}). Usala invece di ricominciare da zero.</span><button class="btn small primary" data-twin="${t.id}">Usa questa pianta</button></div>`:'';})()}
   <div class="ws">
     <div class="stage-col">
       <div class="tools" id="edZones"></div>
