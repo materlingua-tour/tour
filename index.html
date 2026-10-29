@@ -1899,39 +1899,44 @@ function previewLabels(arr){if(!arr.length)return 'Nessun posto: indica quanti s
 /* ---------- distribuzione ---------- */
 
 /* ---------- distribuzione ---------- */
-/* Ordine: 1) classi con studenti con disabilità  2) P1  3) P2  4) medie  5) superiori.
-   Se in un livello di priorità ci sono 2 o più gruppi, i posti si dividono in colonne verticali:
-   ogni scuola ha la sua porzione delle prime file invece di una fascia orizzontale. */
+/* Ordine delle scuole: 1) scuole con studenti con disabilità  2) P1  3) P2  4) medie  5) superiori.
+   Regole: le scuole stanno una DIETRO l’altra, mai affiancate (ogni fila è di una sola scuola) e una
+   scuola non si divide mai tra platea e galleria. Se la sala non basta si allenta una regola alla volta:
+   prima le scuole possono condividere una fila, solo se il teatro è pieno una scuola si divide tra le zone. */
 function distribute(t,p){
   const GT=geomT(t,p.esclusi);
-  const lines=[];GT.order.forEach(({G})=>G.lines.forEach(l=>lines.push({l,step:G.S/0.84})));
   const free=new Set(Object.values(GT.byK).filter(s=>!s.blocked).map(s=>s.k));
   const lv=s=>s.livello==='superiori'?1:0;
-  const sch=p.scuole.map((s,idx)=>{const n=int(s.persone),dis=int(s.disabili);const cl=int(s.classeDis);return {s,idx,n,dis,cd:dis>0?(cl>0?Math.min(cl,n):n):0,pr:prioOf(s)};});
-  const byIdx=(a,b)=>a.idx-b.idx;
-  const wholeDis=(a,b)=>(((b.dis>0&&!b.cd)?1:0)-((a.dis>0&&!a.cd)?1:0));
-  const tiers=[
-    {vert:true,groups:sch.filter(x=>x.cd>0).sort((a,b)=>lv(a.s)-lv(b.s)||byIdx(a,b)).map(x=>({sid:x.s.id,n:x.cd}))},
-    {vert:true,groups:sch.filter(x=>x.pr==='P1').sort((a,b)=>wholeDis(a,b)||lv(a.s)-lv(b.s)||byIdx(a,b)).map(x=>({sid:x.s.id,n:x.n-x.cd}))},
-    {vert:true,groups:sch.filter(x=>x.pr==='P2').sort((a,b)=>wholeDis(a,b)||lv(a.s)-lv(b.s)||byIdx(a,b)).map(x=>({sid:x.s.id,n:x.n-x.cd}))},
-    {vert:false,groups:sch.filter(x=>!x.pr&&lv(x.s)===0).sort((a,b)=>wholeDis(a,b)||byIdx(a,b)).map(x=>({sid:x.s.id,n:x.n-x.cd}))},
-    {vert:false,groups:sch.filter(x=>!x.pr&&lv(x.s)===1).sort((a,b)=>wholeDis(a,b)||byIdx(a,b)).map(x=>({sid:x.s.id,n:x.n-x.cd}))}];
-  const assign={};let missing=0;const gap=!!(p.opzioni&&p.opzioni.gap);
-  tiers.forEach(tier=>{
-    const groups=tier.groups.filter(g=>g.n>0);if(!groups.length)return;
-    if(tier.vert&&groups.length>=2){
-      const need=groups.reduce((a,g)=>a+g.n,0);const region=[];let have=0;
-      for(let li=0;li<lines.length&&have<need;li++){const {l,step}=lines[li];l.seats.forEach(s=>{if(free.has(s.k)){region.push({s,li,col:Math.round(s.proj/step)});have++;}});}
-      region.sort((a,b)=>(a.col-b.col)||(a.li-b.li));
-      let pos=0;groups.forEach(g=>{for(let c=0;c<g.n;c++){if(pos>=region.length){missing++;continue;}const k=region[pos++].s.k;assign[k]=g.sid;free.delete(k);}});
-    }else{
-      const seq=[];let li=0;lines.forEach(({l})=>{const arr=l.seats.filter(s=>free.has(s.k));if(!arr.length)return;(li++%2?arr.slice().reverse():arr).forEach(s=>seq.push(s));});
-      let pos=0,last=null;
-      groups.forEach(g=>{if(gap&&last&&last!==g.sid&&pos>0&&pos<seq.length)pos++;
-        for(let c=0;c<g.n;c++){if(pos>=seq.length){missing++;continue;}const k=seq[pos++].k;assign[k]=g.sid;free.delete(k);}last=g.sid;});
-    }
-  });
-  p.assign=assign;p.genHash=genHash(p);return missing;
+  const zones=GT.order.map(({G})=>{const m=new Map();G.lines.forEach((l,i)=>{const f=String(l.fila||'').trim()||('#'+i);if(!m.has(f))m.set(f,[]);m.get(f).push(...l.seats.filter(s=>free.has(s.k)));});
+    const rows=[...m.values()].filter(r=>r.length);const all=rows.flat();const c=all.length?all.reduce((a,x)=>a+x.proj,0)/all.length:0;
+    return {centred:rows.map(r=>r.slice().sort((a,b)=>Math.abs(a.proj-c)-Math.abs(b.proj-c))),
+      seq:rows.flatMap((r,i)=>{const o=r.slice().sort((a,b)=>a.proj-b.proj);return i%2?o.reverse():o;})};});
+  const rank=x=>x.dis>0?0:x.pr==='P1'?1:x.pr==='P2'?2:lv(x.s)===0?3:4;
+  const sch=p.scuole.map((s,idx)=>({s,idx,n:int(s.persone),dis:int(s.disabili),pr:prioOf(s)})).filter(x=>x.n>0)
+    .sort((a,b)=>rank(a)-rank(b)||lv(a.s)-lv(b.s)||a.idx-b.idx);
+  const gap=!!(p.opzioni&&p.opzioni.gap);
+  /* 1) una fila per scuola, nessuna scuola divisa */
+  const byRows=()=>{const st=zones.map(()=>0),res={};
+    for(const x of sch){let ok=false;
+      for(let zi=0;zi<zones.length&&!ok;zi++){const rows=zones[zi].centred;let have=0,r=st[zi];while(r<rows.length&&have<x.n){have+=rows[r].length;r++;}
+        if(have<x.n)continue;let left=x.n;for(let i=st[zi];i<r;i++)for(const q of rows[i]){if(!left)break;res[q.k]=x.s.id;left--;}st[zi]=r;ok=true;}
+      if(!ok)return null;}
+    return res;};
+  /* 2) file condivise, ma ogni scuola resta in una sola zona */
+  const shared=()=>{const st=zones.map(()=>0),last=zones.map(()=>null),res={};
+    for(const x of sch){let ok=false;
+      for(let zi=0;zi<zones.length&&!ok;zi++){const sq=zones[zi].seq;let pos=st[zi]+(gap&&last[zi]?1:0);if(sq.length-pos<x.n)continue;
+        for(let c=0;c<x.n;c++)res[sq[pos++].k]=x.s.id;st[zi]=pos;last[zi]=x.s.id;ok=true;}
+      if(!ok)return null;}
+    return res;};
+  /* 3) teatro pieno: si riempie tutto, anche dividendo le scuole */
+  const full=()=>{const sq=zones.flatMap(z=>z.seq),res={};let pos=0,miss=0,last=null;
+    for(const x of sch){if(gap&&last&&pos>0&&pos<sq.length)pos++;for(let c=0;c<x.n;c++){if(pos>=sq.length){miss++;continue;}res[sq[pos++].k]=x.s.id;}last=x.s.id;}
+    return {res,miss};};
+  let assign=byRows(),mode='file',missing=0;
+  if(!assign){assign=shared();mode='condivise';}
+  if(!assign){const f=full();assign=f.res;missing=f.miss;mode='divise';}
+  p.assign=assign;p.distMode=mode;p.genHash=genHash(p);return missing;
 }
 function genHash(p){return JSON.stringify([p.scuole.map(s=>[s.id,int(s.persone),s.livello,prioOf(s),int(s.disabili),int(s.classeDis)]),Object.keys(p.esclusi||{}).sort(),!!(p.opzioni&&p.opzioni.gap)]);}
 function countFor(GT,assign,sid){let n=0;for(const k in assign){const s=GT.byK[k];if(assign[k]===sid&&s&&!s.blocked)n++;}return n;}
@@ -2322,10 +2327,10 @@ function renderSchools(){
   <div class="row-btns">${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}</div>
   <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” in alto per ripartire da zero.</p>
   <details class="rules"><summary>Come vengono distribuiti i posti</summary><ol class="guide small">
-   <li>Prima le <b>classi con studenti con disabilità</b>, nelle prime file.</li>
-   <li>Poi le scuole <b>P1</b>, poi le <b>P2</b>. Se ce ne sono due o più, i posti si dividono in <b>colonne verticali</b>: ognuna ha la sua parte delle file davanti.</li>
-   <li>Poi le <b>medie</b>, poi le <b>superiori</b>, a fasce orizzontali.</li>
-   <li>Se indichi studenti con disabilità ma non la loro classe, si sposta avanti tutta la scuola.</li></ol></details>`;
+   <li>Le scuole stanno <b>una dietro l’altra</b>, mai affiancate: ogni fila è di una sola scuola.</li>
+   <li>Una scuola <b>non si divide</b> tra platea e galleria: se non entra intera va nella zona dopo. Qualche posto libero in platea va bene.</li>
+   <li>Ordine dal davanti: scuole con <b>studenti con disabilità</b>, poi <b>P1</b>, <b>P2</b>, <b>medie</b>, <b>superiori</b>.</li>
+   <li>Solo se la sala è quasi piena due scuole possono condividere una fila; solo se il teatro è pieno una scuola si divide tra le zone. In questi casi l’app te lo segnala.</li></ol></details>`;
 }
 function schoolCard(s){
   const dis=int(s.disabili)>0;const pr=prioOf(s);
@@ -2421,7 +2426,7 @@ function highlightCards(){document.querySelectorAll('.school').forEach(c=>{const
 function regenBtnHTML(){return V.confirmDist?`<button class="btn danger" data-pl="distok">Sovrascrivo le modifiche a mano?</button><button class="btn ghost" data-pl="distno">Annulla</button>`:`<button class="btn" data-pl="regen" id="regenTop">Rigenera piantina</button>`;}
 function regenRefresh(){const w=document.getElementById('regenWrap');if(w)w.innerHTML=regenBtnHTML();updateRegen();}
 function doDistribute(){const p=V.p;const miss=distribute(curT(),p);V.manual=false;drawPl();renderSchools();scheduleSave();
-  toast(miss?`Posti insufficienti: ${miss} persone senza posto`:'Posti distribuiti',miss?'bad':undefined);}
+  toast(miss?`Posti insufficienti: ${miss} persone senza posto`:p.distMode==='divise'?'Teatro pieno: ho dovuto dividere una scuola tra le zone':p.distMode==='condivise'?'Sala quasi piena: alcune scuole condividono una fila':'Posti distribuiti',miss?'bad':p.distMode==='file'?undefined:'warn');}
 
 /* pittura con il dito */
 let painting=false,paintedExcl=false;
@@ -2494,12 +2499,13 @@ async function planPDF(doc,p,t){
     // legenda
     let y=lastBottom+8;const lineH=4.6,areaW=PW-2*M;
     const exN=Object.values(GT.byK).filter(s=>s.excl).length;
-    const items=p.scuole.map(s=>{const rs=rangesFor(GT,p.assign,s.id);const n=countFor(GT,p.assign,s.id);const cd=int(s.disabili)>0?Math.min(int(s.classeDis),int(s.persone)):0;
+    const mkItems=W=>p.scuole.map(s=>{const rs=rangesFor(GT,p.assign,s.id);const n=countFor(GT,p.assign,s.id);const cd=int(s.disabili)>0?Math.min(int(s.classeDis),int(s.persone)):0;
       const meta=`${LVL_L[s.livello]||''} · ${int(s.persone)} persone · ${n} posti${prioOf(s)?' · '+prioOf(s):''}${int(s.disabili)?` · ${int(s.disabili)} con disabilità`+(cd?`, classe di ${cd} davanti`:''):''}`;
-      const lines=[...doc.splitTextToSize(rs.length?rangesText(GT,rs):'Nessun posto assegnato',areaW-8)];if(s.note)lines.push(...doc.splitTextToSize('Note: '+s.note,areaW-8));
+      const lines=[...doc.splitTextToSize(rs.length?rangesText(GT,rs):'Nessun posto assegnato',W-8)];if(s.note)lines.push(...doc.splitTextToSize('Note: '+s.note,W-8));
       return {s,meta,lines};});
+    doc.setFont('helvetica','normal');doc.setFontSize(9);let items=mkItems(areaW);
     const need=items.reduce((a,it)=>a+lineH*(2+it.lines.length)+2,14);
-    if(y+need>PH-M){doc.addPage('a4','portrait');PW=doc.internal.pageSize.getWidth();PH=doc.internal.pageSize.getHeight();y=M+6;}
+    if(y+need>PH-M){doc.addPage('a4','portrait');PW=doc.internal.pageSize.getWidth();PH=doc.internal.pageSize.getHeight();y=M+6;items=mkItems(PW-2*M);}
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor('#17202B');doc.text('Legenda',M,y);
     if(exN){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor('#A85A0C');doc.text(`${exN} posti esclusi per questa data (es. console tecnici)`,M+22,y);}
     y+=6;
