@@ -2147,7 +2147,11 @@ async function scanPianta(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)re
   try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const sc=Math.min(1,1800/Math.max(img.width,img.height));
     const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
     const b64=c.toDataURL('image/jpeg',0.85).split(',')[1];
-    const {data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}});
+    let data,error;
+    for(let t=0;t<3;t++){({data,error}=await SB.functions.invoke('scan-pianta',{body:{image:b64,mime:'image/jpeg'}}));
+      let busy=false;if(error&&error.context){try{const j=await error.context.clone().json();busy=/\b(503|429)\b|high demand|overloaded|quota/i.test(j.errore||'');}catch(_){}}
+      if(!busy)break;if(t<2){toast(`Gemini è molto occupato in questo momento: riprovo da solo (${t+2}/3)…`,'warn');await new Promise(r=>setTimeout(r,6000*(t+1)));}
+      else{error=new Error('Gemini è sovraccarico in questo momento (succede nelle ore di punta): riprova tra qualche minuto');error.context=null;}}
     if(error){let msg=error.message;try{const ctx=error.context;if(ctx&&ctx.json){const j=await ctx.clone().json();msg=(ctx.status?ctx.status+' · ':'')+(j.errore||j.message||j.msg||JSON.stringify(j));}}catch(_){try{msg=(error.context.status||'')+' · '+(await error.context.text()).slice(0,160);}catch(__){}}throw new Error(msg);}
     if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');
     if(!data.file.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
