@@ -422,7 +422,7 @@ body.welcome{background:#244639}body.welcome::before{background:#244639}
 .wel-card .in{background:#FFFFFF;color:#14201D;border-color:#D3DDDA}
 .wel-logo{background:#196457!important;width:130px;height:70px}
 .wel-card h1{color:#14201D}
-.wel-google{width:100%}.t-card[hidden],.p-card[hidden]{display:none!important}.bulk{margin:0 0 14px;border:2px solid var(--brand)}.bulk-car{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--hl-bg);border:1px solid var(--hl-bd);margin-bottom:10px}.bulk-orig{overflow-wrap:anywhere}.bulk-ok{margin:6px 0;padding-left:18px;display:grid;gap:4px;max-height:260px;overflow:auto}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch,.t-filters #pSearch{flex:1 1 240px;min-width:0}.t-filters #tLang,.t-filters #pTour{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.wel-google{width:100%}.t-card[hidden],.p-card[hidden],.pt-day[hidden]{display:none!important}.bulk{margin:0 0 14px;border:2px solid var(--brand)}.bulk-car{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--hl-bg);border:1px solid var(--hl-bd);margin-bottom:10px}.bulk-orig{overflow-wrap:anywhere}.bulk-ok{margin:6px 0;padding-left:18px;display:grid;gap:4px;max-height:260px;overflow:auto}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}.t-filters{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 8px}.t-filters #tSearch,.t-filters #pSearch,.t-filters #ptSearch{flex:1 1 240px;min-width:0}.t-filters #tLang,.t-filters #pTour,.t-filters #ptF{flex:0 1 200px}.wel-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .wel-sep{display:flex;align-items:center;gap:10px;color:#56645F;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wel-sep::before,.wel-sep::after{content:"";flex:1;height:1px;background:#D3DDDA}
 .wel-list{display:flex;flex-direction:column;gap:8px}
@@ -1444,10 +1444,11 @@ document.addEventListener('click',e=>{if(V.name!=='tournee')return;if(e.target.c
 /* =================== ELENCHI =================== */
 function renderPiantineList(){
   if(role()==='tm')return renderPiantineTour();
+  if(isDir()&&V.plTab!=='arch')return renderPiantineTour(true);
   const ts=Object.values(S.c.teatri).filter(t=>!t.archiviato).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   const psAll=Object.values(S.c.piantine),nArch=psAll.filter(p=>p.archiviato).length;
   const ps=psAll.filter(p=>!!p.archiviato===!!V.showArch).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(a.replica||'').localeCompare(b.replica||''));
-  let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Piantine</h1><p class="muted" style="margin:0">Di solito si creano dalla giornata di ogni data (Tournée), con le scuole prese da HubSpot. Qui trovi tutte quelle salvate.</p></div>`;
+  let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Piantine</h1><p class="muted" style="margin:0">Tutte le piantine già salvate. Per crearne una nuova scegli “Per data”.</p></div>${isDir()?plTabs():''}`;
   if(ts.length)h+=`<div class="newp"><select class="in" id="newpT" aria-label="Teatro">${ts.map(t=>`<option value="${t.id}">${esc(t.nome)}${t.citta?' · '+esc(t.citta):''}</option>`).join('')}</select><button class="btn" data-ls="newp">Nuova piantina libera</button></div>`;
   const tourOfP=p=>{const tp=p.tappaId&&S.c.tappe[p.tappaId];return tp?tp.tour:'';};
   h+=`<div class="t-filters"><input class="in" id="pSearch" type="search" placeholder="Cerca teatro, città, scuola o data (es. 23/11)" value="${esc(V.pq||'')}" aria-label="Cerca piantine">
@@ -1468,18 +1469,26 @@ function filterPiantine(){const q=norm(V.pq||''),t=V.pt||'';let n=0;const cs=doc
   const el=document.getElementById('pCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+(cs.length===1?' piantina':' piantine'):n+' su '+cs.length+' piantine'):'';}
 document.addEventListener('input',e=>{if(V.name==='piantine'&&e.target.id==='pSearch'){V.pq=e.target.value;filterPiantine();}});
 document.addEventListener('change',e=>{if(V.name==='piantine'&&e.target.id==='pTour'){V.pt=e.target.value;filterPiantine();}});
-function renderPiantineTour(){
-  const list=tourTappe();const td=today();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Piantine</h1><p class="muted" style="margin:0">Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.</p></div>`;
+function plTabs(){return `<div class="chips" style="margin:4px 0 14px"><button class="chip ${V.plTab!=='arch'?'on':''}" data-pltab="date">Per data</button><button class="chip ${V.plTab==='arch'?'on':''}" data-pltab="arch">Piantine salvate</button></div>`;}
+function filterPt(){const q=norm(V.ptq||''),f=V.ptf||'';let n=0;const cs=document.querySelectorAll('.pt-day');cs.forEach(c=>{const ok=(!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w)))&&(!f||c.dataset.k.includes(f));c.hidden=!ok;if(ok)n++;});const el=document.getElementById('ptCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+(cs.length===1?' data':' date'):n+' su '+cs.length+' date'):'';}
+document.addEventListener('input',e=>{if(V.name==='piantine'&&e.target.id==='ptSearch'){V.ptq=e.target.value;filterPt();}});
+document.addEventListener('change',e=>{if(V.name==='piantine'&&e.target.id==='ptF'){V.ptf=e.target.value;filterPt();}});
+document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.target.closest('[data-pltab]');if(b){V.plTab=b.dataset.pltab;V.ptScrolled=false;render();}});
+function renderPiantineTour(dir){
+  const list=tourTappe();const td=today();const all=curTour()===ALL;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Piantine</h1><p class="muted" style="margin:0">${dir?'Tutte le date, in ordine: puoi creare le piantine in anticipo, con le scuole prese da HubSpot. Se la sala non è ancora mappata, mappala prima: poi vale per tutti i tour.':'Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.'}</p></div>`;
+  if(dir)h+=plTabs()+`<div class="t-filters"><input class="in" id="ptSearch" type="search" placeholder="Cerca teatro, città o data (es. 23/11)" value="${esc(V.ptq||'')}" aria-label="Cerca date"><select class="in" id="ptF" aria-label="Filtro"><option value="">Tutte le date</option><option value="new" ${V.ptf==='new'?'selected':''}>Piantine da creare</option><option value="map" ${V.ptf==='map'?'selected':''}>Sala da mappare</option></select></div><p class="muted small" id="ptCount" style="margin:0 0 10px"></p>`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!list.length)h+=`<div class="empty"><b>Nessuna data in calendario.</b></div>`;
   else h+=`<div class="list">${list.map(tp=>{const t=teatroOf(tp);const past=tp.data<td;
-    return `<article class="card pt-day ${past?'past':''}" id="pd_${esc(tp.id)}"><div class="card-head"><div><div class="card-title">${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</div><div class="card-meta">${esc(tp.teatroNome||'Teatro da definire')}</div></div>
+    const kk=(t?'':'map ')+((tp.repliche||[]).some(r=>!pStatus(tp,r).p)?'new':'');
+    return `<article class="card pt-day ${past?'past':''}" id="pd_${esc(tp.id)}" data-s="${esc(norm([tp.citta,tp.teatroNome,fmtDate(tp.data),tp.data,tp.tour].join(' ')))}" data-k="${kk}"><div class="card-head"><div><div class="card-title">${all?tTag(tp.tour):''}${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</div><div class="card-meta">${esc(tp.teatroNome||'Teatro da definire')}</div></div>
       ${t?'<span class="pill ok">Sala mappata</span>':`<button class="btn small primary" data-pt="map" data-id="${esc(tp.id)}">Mappa la sala</button>`}</div>
       <div class="pt-reps">${(tp.repliche||[]).map(r=>{const st=pStatus(tp,r);return `<div class="pt-rep"><b>${esc(r)}</b><span class="pill ${st.k==='ok'?'ok':st.k==='stale'?'bad':'warn'}">${st.l}</span>
         ${!t?'':st.p?`<button class="btn small ${st.k==='stale'?'primary':''}" data-pt="open" data-id="${esc(tp.id)}" data-rep="${esc(r)}">${st.k==='stale'?'Apri e aggiorna':'Apri'}</button>`:`<button class="btn small primary" data-pt="new" data-id="${esc(tp.id)}" data-rep="${esc(r)}">${st.ds.length?'Crea da HubSpot':'Crea piantina'}</button>`}</div>`;}).join('')||'<span class="muted small">Orari non indicati</span>'}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;
-  if(!V.ptScrolled){V.ptScrolled=true;const nx=list.find(tp=>tp.data>=td);const el=nx&&document.getElementById('pd_'+nx.id);if(el)el.scrollIntoView({block:'start'});}
+  if(dir)filterPt();
+  if(!V.ptScrolled&&!(V.ptq||V.ptf)){V.ptScrolled=true;const nx=list.find(tp=>tp.data>=td);const el=nx&&document.getElementById('pd_'+nx.id);if(el)el.scrollIntoView({block:'start'});}
 }
 document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.target.closest('[data-pt]');if(!b)return;const tp=S.c.tappe[b.dataset.id];if(!tp)return;const a=b.dataset.pt;
   if(a==='map'){const d=teatroDoc(tp);openEditor(d?d.id:null,{nome:tp.teatroNome||'',citta:tp.citta||'',tappaId:tp.id});V.from='piantine';}
