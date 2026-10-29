@@ -603,6 +603,7 @@ details.rep>summary .pill{white-space:normal}
 .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:1}
 .fb-grp{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.fb-msg{padding:12px 16px}.fb-msg.unread{border-color:var(--brand)}
 .fb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-right:8px;vertical-align:middle}
+.bulk-mass{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line);margin-bottom:10px}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -1480,13 +1481,20 @@ document.addEventListener('click',e=>{if(V.name!=='piantine')return;const b=e.ta
 /* ---------- caricamento di massa delle piante (Direzione) ----------
    Dal nome del file (e della cartella) l'app riconosce città e teatro; quelli che non riconosce
    si sistemano a mano, uno dopo l'altro. Le piante diventano lo sfondo della sala da mappare. */
-function bulkTokens(s){return norm(s).replace(/\.(pdf|png|jpe?g|webp|heic)$/,'').replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!['teatro','cinema','cine','auditorium','sala','di','del','della','pianta','piantina','platea','the','de','la','il','pdf'].includes(w));}
+function bulkTokens(s){return norm(s).replace(/\.(pdf|png|jpe?g|webp|heic)$/,'').replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!['teatro','cinema','cine','cineteatro','multisala','uci','cinemas','auditorium','sala','di','del','della','dei','delle','degli','dell','d','e','pianta','piantina','platea','the','de','la','le','il','lo','pdf','jpg','png'].includes(w));}
 function hasPlan(t){return !!t&&(t.zone||[]).some(z=>z.bg||(z.rows||[]).length);}
-function bulkMatch(name){const tk=new Set(bulkTokens(name));let best=null,bs=0,second=0;
-  Object.values(S.c.teatri).filter(t=>!t.archiviato).forEach(t=>{const ct=bulkTokens(t.citta||''),nt=bulkTokens(t.nome||'');if(!nt.length)return;
-    const cityOk=ct.length&&ct.every(w=>tk.has(w));const hit=nt.filter(w=>tk.has(w)).length/nt.length;const sc=(cityOk?1:0)+hit;
-    if(sc>bs){second=bs;bs=sc;best=t;}else if(sc>second)second=sc;});
-  return bs>=1.5&&bs-second>=0.25?best:null;}
+function tokEq(a,b){if(a===b)return true;if(a.length<5||b.length<5)return false;const n=Math.min(a.length,b.length)-1;return Math.abs(a.length-b.length)<=2&&a.slice(0,Math.max(5,n))===b.slice(0,Math.max(5,n));}
+const BULK_NUM={duemila:'2000',mille:'1000'};
+function bulkScore(name,t){const tk=bulkTokens(name).map(w=>BULK_NUM[w]||w);const has=w=>tk.some(x=>tokEq(x,w));
+  const ct=bulkTokens(t.citta||'');const nt=bulkTokens(t.nome||'').map(w=>BULK_NUM[w]||w).filter(w=>!ct.some(c=>tokEq(c,w)));if(!nt.length||!ct.length)return 0;
+  const cs=ct.filter(has).length/ct.length,ns=nt.filter(has).length/nt.length;if(cs<0.5||ns<0.5)return 0;return cs+ns;}
+/* "12 - Teatro Villoresi - Monza/Monza - Villoresi.pdf" → {nome:'Teatro Villoresi', citta:'Monza'} */
+function folderGuess(path){const segs=String(path).split('/');const src=segs.length>1?segs[segs.length-2]:segs[0].replace(/\.[a-z0-9]+$/i,'');
+  const parts=src.replace(/^\s*\d+\s*-\s*/,'').split(/\s+-\s+/).map(s=>s.replace(/_/g,"'").trim()).filter(Boolean);if(parts.length<2)return null;
+  const citta=parts[parts.length-1].replace(/\s*\([A-Z]{2}\)$/,'');return {nome:parts.slice(0,-1).join(' - '),citta};}
+function bulkMatch(name,ret){let best=null,bs=0,second=0;
+  Object.values(S.c.teatri).filter(t=>!t.archiviato).forEach(t=>{const sc=bulkScore(name,t);if(sc>bs){second=bs;bs=sc;best=t;}else if(sc>second)second=sc;});
+  const m=bs>=1.5&&bs-second>=0.25?best:null;return ret?{t:m,sc:bs}:m;}
 function bulkHTML(){const B_=V.bulk;const ok=B_.items.filter(x=>x.t||x.nuovo),todo=B_.items.filter(x=>!x.t&&!x.nuovo&&!x.salta);
   const cur=B_.items[B_.i];const cities=[...new Set(Object.values(S.c.teatri).map(t=>t.citta).filter(Boolean))].sort();
   let s=`<section class="card bulk"><div class="card-head"><h2>Caricamento piante</h2><span class="pill ${todo.length?'warn':'ok'}">${ok.length} riconosciute · ${todo.length} da sistemare</span></div>`;
@@ -1499,12 +1507,17 @@ function bulkHTML(){const B_=V.bulk;const ok=B_.items.filter(x=>x.t||x.nuovo),to
       ${selT&&hasPlan(selT)&&!it.why?`<div class="banner">Questo teatro ha già una pianta: <b>non verrà sostituita</b>. Il file viene salvato come pianta aggiuntiva del teatro.</div>`:''}
       ${it.sel==='__new'?`<div class="banner">Prima controlla se il teatro c’è già con il nome di HubSpot: è lì che sono collegate città, tournée e scuole.</div><div class="field"><label for="bkNew">Nome del nuovo teatro</label><input class="in" id="bkNew" value="${esc(it.nomeNuovo||'')}"></div>`:''}
       <div class="row-btns"><button class="btn small primary" data-bulk="ok">Conferma e vai al prossimo</button><button class="btn small" data-bulk="skip">Salta questo file</button></div></div>`;}
+  const bulkNew=todo.filter(x=>!x.why&&folderGuess(x.path));
+  if(todo.length>1)s+=`<div class="bulk-mass"><span class="muted small">${todo.length} file da sistemare${bulkNew.length?`, di cui ${bulkNew.length} di teatri che nell’app non ci sono ancora (di solito teatri non in calendario quest’anno)`:''}.</span>
+    <div class="row-btns">${bulkNew.length?(V.bulkMassAsk?`<button class="btn small primary" data-bulk="massnew">Sì, crea ${bulkNew.length} teatri con il nome della cartella</button><button class="btn small ghost" data-bulk="massno">Annulla</button>`:`<button class="btn small" data-bulk="massask">Crea come teatri nuovi (${bulkNew.length})</button>`):''}<button class="btn small ghost" data-bulk="massskip">Salta tutti quelli da sistemare</button></div></div>`;
   s+=`<details ${todo.length?'':'open'}><summary>Riconosciute (${ok.length})</summary><ul class="bulk-ok">${ok.map(x=>`<li><span class="muted small">${esc(x.path)}</span> → <b>${esc(x.t?x.t.nome+' · '+(x.t.citta||''):x.nuovo.nome+' · '+x.nuovo.citta+' (nuovo)')}</b>${x.t&&hasPlan(x.t)?' <span class="pill warn">pianta aggiuntiva</span>':''}</li>`).join('')}</ul></details>
    <div class="row-btns"><button class="btn primary" data-bulk="save" ${ok.length?'':'disabled'}>Salva e carica ${ok.length} piante</button><button class="btn ghost" data-bulk="cancel">Annulla</button>${todo.length?'<span class="muted small">Quelle non sistemate restano fuori: puoi ricaricarle dopo.</span>':''}</div></section>`;
   return s;}
-function bulkStart(files){const items=[...files].filter(f=>/pdf|image/.test(f.type)||/\.(pdf|png|jpe?g|webp)$/i.test(f.name)).map(f=>{const path=(f.webkitRelativePath||f.name);const m=bulkMatch(path);
+function bulkStart(files){const items=[...files].filter(f=>/pdf|image/.test(f.type)||/\.(pdf|png|jpe?g|webp)$/i.test(f.name)).map(f=>{const path=(f.webkitRelativePath||f.name);const r=bulkMatch(path,true);const m=r.t;
     if(m&&hasPlan(m))return {f,path,t:null,nuovo:null,salta:false,citta:m.citta||'',sel:m.id,why:`Riconosciuto come “${m.nome}” (${m.citta||''}), ma questo teatro ha già una pianta. Controlla: se confermi, quella attuale resta e il file si aggiunge.`};
-    return {f,path,t:m,nuovo:null,salta:false,citta:m?m.citta:'',sel:''};});
+    return {f,path,t:m,sc:r.sc,nuovo:null,salta:false,citta:m?m.citta:'',sel:''};});
+  const byT={};items.forEach(x=>{if(x.t)(byT[x.t.id]=byT[x.t.id]||[]).push(x);});
+  Object.values(byT).forEach(xs=>{if(xs.length<2)return;xs.sort((a,b)=>b.sc-a.sc);xs.slice(1).forEach(x=>{const t=x.t;x.t=null;x.sel=t.id;x.why=`Anche un altro file (“${xs[0].path}”) corrisponde a “${t.nome}”: scegli il teatro giusto per questo file o saltalo.`;});});
   if(!items.length){toast('Nessun PDF o immagine tra i file scelti','warn');return;}
   V.bulk={items,i:Math.max(0,items.findIndex(x=>!x.t))};const n=items.filter(x=>x.t).length;render();
   toast(`${items.length} file: ${n} riconosciuti${items.length-n?`, ${items.length-n} da sistemare a mano`:''}`,items.length-n?'warn':undefined);}
@@ -1526,6 +1539,10 @@ document.addEventListener('click',e=>{if(V.name!=='teatri')return;const b=e.targ
   if(a==='files')document.getElementById('bulkF').click();else if(a==='dir')document.getElementById('bulkD').click();
   else if(a==='cancel'){V.bulk=null;render();}
   else if(a==='save'){bulkSave();}
+  else if(a==='massask'){V.bulkMassAsk=true;render();}
+  else if(a==='massno'){V.bulkMassAsk=false;render();}
+  else if(a==='massnew'){V.bulkMassAsk=false;V.bulk.items.forEach(x=>{if(!x.t&&!x.nuovo&&!x.salta&&!x.why){const g=folderGuess(x.path);if(g)x.nuovo=g;}});const nx=V.bulk.items.findIndex(x=>!x.t&&!x.nuovo&&!x.salta);V.bulk.i=nx<0?0:nx;render();toast('Teatri nuovi pronti: controlla l’elenco e premi “Salva e carica”');}
+  else if(a==='massskip'){V.bulk.items.forEach(x=>{if(!x.t&&!x.nuovo)x.salta=true;});render();}
   else if(a==='ok'||a==='skip'){const B_=V.bulk;const it=B_.items[B_.i];if(!it)return;
     if(a==='skip')it.salta=true;
     else{const sel=document.getElementById('bkT').value;const city=document.getElementById('bkCity').value.trim();
