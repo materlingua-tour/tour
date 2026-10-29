@@ -604,6 +604,10 @@ details.rep>summary .pill{white-space:normal}
 .fb-grp{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.fb-msg{padding:12px 16px}.fb-msg.unread{border-color:var(--brand)}
 .fb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-right:8px;vertical-align:middle}
 .bulk-mass{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line);margin-bottom:10px}
+.t-tags{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0}.t-tags .tour-tag{margin:0}
+.t-iss{list-style:none;margin:4px 0;padding:0;display:flex;flex-direction:column;gap:4px}.t-iss li{display:flex;align-items:flex-start;gap:6px;font-size:13px;font-weight:600}
+.t-iss li svg{width:15px;height:15px;flex:none;margin-top:1px}.t-iss li.bad{color:var(--bad)}.t-iss li.warn{color:var(--warn)}
+.t-card.t-bad{border-color:var(--bad)}.t-card.t-warn{border-color:var(--warn)}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -1557,28 +1561,42 @@ document.addEventListener('change',e=>{if(V.name!=='teatri')return;
   else if(e.target.id==='bkNew'){it.nomeNuovo=e.target.value;}});
 function repartiList(cur){const base=['','Direzione','Direzione Operativa','Direzione Artistica','Logistica e Organizzazione Tournée','Amministrazione e Contabilità','Marketing e Comunicazione','Sviluppo Prodotto','Commerciale','Progetto app Tour Manager'];
   users().forEach(u=>{if(u.reparto&&!base.includes(u.reparto))base.push(u.reparto);});if(cur&&!base.includes(cur))base.push(cur);return base;}
+/* problemi di un teatro, dal più urgente: servono in prima linea nell'archivio */
+function teatroInfo(t,byT){const td=today();const tps=(byT[t.id]||[]).slice().sort((a,b)=>a.data.localeCompare(b.data));const next=tps.find(x=>x.data>=td);
+  const rows=t.zone.reduce((a,z)=>a+z.rows.length,0);const bg=t.zone.some(z=>z.bg);const noFront=t.zone.some(z=>z.rows.length&&!z.front);const iss=[];
+  if(/^[\s\-–—]*$/.test(t.nome||'')||/da definire/i.test(t.nome||''))iss.push({k:'bad',l:'Nome del teatro mancante su HubSpot'});
+  if(!rows&&next)iss.push({k:'bad',l:`Sala da mappare · prima data ${shortDate(next.data)}`});
+  else if(!rows&&bg)iss.push({k:'warn',l:'Pianta caricata, file e posti da disegnare'});
+  else if(!rows&&!bg)iss.push({k:'warn',l:'Manca la pianta'});
+  if(noFront)iss.push({k:'warn',l:'Palco non segnato'});
+  if((t.pianteAltre||[]).length)iss.push({k:'warn',l:`${t.pianteAltre.length} piante aggiuntive da controllare`});
+  return {tours:[...new Set(tps.map(x=>x.tour))],next,iss,urg:iss.some(x=>x.k==='bad')?0:iss.length?1:2};}
 function renderTeatriList(){
   const tAll=Object.values(S.c.teatri),nArch=tAll.filter(t=>t.archiviato).length;
-  const ts=tAll.filter(t=>!!t.archiviato===!!V.showArch).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-  let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. Se una data della tournée ha una sala non ancora mappata, la trovi segnalata nella pagina Oggi.</p></div>
+  const byT={};const byName={};tAll.forEach(t=>{byName[norm(t.nome)+'|'+norm(t.citta)]=t;});Object.values(S.c.tappe).forEach(tp=>{const t=teatroDoc(tp)||byName[norm(tp.teatroNome)+'|'+norm(tp.citta)];if(t)(byT[t.id]=byT[t.id]||[]).push(tp);});
+  const ts=tAll.filter(t=>!!t.archiviato===!!V.showArch).map(t=>({t,i:teatroInfo(t,byT)})).sort((a,b)=>a.i.urg-b.i.urg||(a.i.next&&b.i.next?a.i.next.data.localeCompare(b.i.next.data):0)||(a.t.nome||'').localeCompare(b.t.nome||''));
+  const nIss=ts.filter(x=>x.i.urg<2).length,nNone=ts.filter(x=>!x.i.tours.length).length;
+  let h=`<div class="page-head"><span class="eyebrow">Archivio</span><h1>Teatri</h1><p class="muted" style="margin:0">Ogni sala si mappa una volta sola e vale per tutti i tour. In cima trovi i teatri con qualcosa da sistemare, a partire dalle prossime date.</p></div>
   <div class="newp"><button class="btn primary" data-ls="newt">Mappa un nuovo teatro</button>${isDir()?`<button class="btn" data-bulk="files">Carica piante in blocco</button><button class="btn ghost" data-bulk="dir">Carica una cartella</button><input type="file" id="bulkF" multiple accept="application/pdf,image/*" hidden><input type="file" id="bulkD" webkitdirectory multiple hidden>`:''}</div>
   ${V.bulk?bulkHTML():''}
   <div class="t-filters"><input class="in" id="tSearch" type="search" placeholder="Cerca teatro o città" value="${esc(V.tq||'')}" aria-label="Cerca teatro o città">
-   <select class="in" id="tLang" aria-label="Lingua della tournée"><option value="">Tutte le lingue</option>${[['fr','Francese'],['en','Inglese'],['es','Spagnolo']].map(([k,l])=>`<option value="${k}" ${V.tl===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <select class="in" id="tLang" aria-label="Quali teatri"><option value="">Tutti i teatri</option><option value="__iss" ${V.tl==='__iss'?'selected':''}>Da sistemare (${nIss})</option>${allTours().map(tr=>`<option value="${esc(tr)}" ${V.tl===tr?'selected':''}>Teatri tour ${esc(tr)}</option>`).join('')}<option value="__none" ${V.tl==='__none'?'selected':''}>Non in calendario (${nNone})</option></select></div>
   <p class="muted small" id="tCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!ts.length)h+=`<div class="empty"><b>${V.showArch?'Nessun teatro archiviato.':'Nessun teatro mappato.'}</b></div>`;
-  else h+=`<div class="list">${ts.map(t=>{const files=t.zone.reduce((a,z)=>a+new Set(z.rows.map(r=>r.fila)).size,0);const noFront=t.zone.some(z=>z.rows.length&&!z.front);
-    const langs=[...new Set(Object.values(S.c.tappe).filter(tp=>tp.teatroId===t.id||(!tp.teatroId&&norm(tp.teatroNome)===norm(t.nome)&&norm(tp.citta)===norm(t.citta))).map(tp=>tourLang(tp.tour)))].join(' ');
+  else h+=`<div class="list">${ts.map(({t,i})=>{const files=t.zone.reduce((a,z)=>a+new Set(z.rows.map(r=>r.fila)).size,0);
     const nome=/^[\s\-–—]*$/.test(t.nome||'')?'Teatro da definire':t.nome;
-    return `<article class="card t-card" data-s="${esc(norm(nome+' '+(t.citta||'')))}" data-l="${esc(langs)}"><div class="card-title">${esc(nome)}</div><div class="card-meta">${esc(t.citta||'Città non indicata')}${langs?' · '+langs.split(' ').map(l=>({fr:'Francese',en:'Inglese',es:'Spagnolo'})[l]||'').filter(Boolean).join(', '):''}</div>
-    <div class="card-meta">${t.zone.map(z=>esc(z.nome)).join(' + ')} · ${files} file · ${seatsTot(t)} posti${noFront?' · fronte non segnato':''}</div>
+    return `<article class="card t-card ${i.urg===0?'t-bad':i.urg===1?'t-warn':''}" data-s="${esc(norm(nome+' '+(t.citta||'')))}" data-tr="${esc(i.tours.join('|'))}" data-iss="${i.urg<2?1:0}"><div class="card-title">${esc(nome)}</div><div class="card-meta">${esc(t.citta?(t.citta===t.citta.toUpperCase()?t.citta.toLowerCase().replace(/(^|[\s'-])\S/g,m=>m.toUpperCase()):t.citta):'Città non indicata')}</div>
+    <div class="t-tags">${i.tours.length?i.tours.map(tTag).join(''):'<span class="pill">Non in calendario</span>'}</div>
+    ${i.iss.length?`<ul class="t-iss">${i.iss.map(x=>`<li class="${x.k}">${TRI}<span>${esc(x.l)}</span></li>`).join('')}</ul>`:''}
+    <div class="card-meta">${files?`${t.zone.map(z=>esc(z.nome)).join(' + ')} · ${files} file · ${seatsTot(t)} posti`:'Sala non ancora mappata'}</div>
     ${(()=>{const m=memoriaTeatro(t),fs=fotoTeatro(t);return m.length||fs.length?`<details class="mem-d"><summary>Memoria del teatro${m.length?' · '+m.length+' consigli':''}${fs.length?' · '+fs.length+' foto':''}</summary>${memHTML(m)}${fs.length?`<span class="flabel">Foto della scenografia</span>${thumbs(fs.slice(0,8))}`:''}</details>`:'';})()}
-    <div class="card-actions"><button class="btn small" data-ls="editt" data-id="${t.id}">Modifica mappa</button>${archBtn('t',t)}</div></article>`;}).join('')}</div>`;
+    <div class="card-actions"><button class="btn small ${i.urg<2&&!files?'primary':''}" data-ls="editt" data-id="${t.id}">${files?'Modifica mappa':'Mappa la sala'}</button>${archBtn('t',t)}</div></article>`;}).join('')}</div>`;
   app.innerHTML=h;filterTeatri();
 }
 function filterTeatri(){const q=norm(V.tq||''),l=V.tl||'';let n=0;const cs=document.querySelectorAll('.t-card');
-  cs.forEach(c=>{const ok=(!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w)))&&(!l||c.dataset.l.split(' ').includes(l));c.hidden=!ok;if(ok)n++;});
+  cs.forEach(c=>{const trs=c.dataset.tr?c.dataset.tr.split('|'):[];const okF=!l||(l==='__iss'?c.dataset.iss==='1':l==='__none'?!trs.length:trs.includes(l));
+    const ok=(!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w)))&&okF;c.hidden=!ok;if(ok)n++;});
   const el=document.getElementById('tCount');if(el)el.textContent=cs.length?(n===cs.length?cs.length+' teatri':n+' teatri su '+cs.length):'';}
 document.addEventListener('input',e=>{if(V.name==='teatri'&&e.target.id==='tSearch'){V.tq=e.target.value;filterTeatri();}});
 document.addEventListener('change',e=>{if(V.name==='teatri'&&e.target.id==='tLang'){V.tl=e.target.value;filterTeatri();}});
