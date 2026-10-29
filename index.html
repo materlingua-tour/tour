@@ -546,8 +546,8 @@ details.rep>summary .pill{white-space:normal}
 .mem-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .tip{display:flex;flex-direction:column;gap:2px;margin-top:4px}
 .tip-t{all:unset;cursor:pointer;font-size:15px;line-height:1.45;color:var(--ink)}
-.tip-t mark{background:linear-gradient(transparent 8%,var(--mark) 8%,var(--mark) 92%,transparent 92%);color:var(--mark-ink);padding:0 3px;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone;font-weight:600}
-.tip.open .tip-t mark{background:#FFD84D}
+.tip-t mark{background:none;color:inherit;padding:0;font-weight:500}.tip{border-left:3px solid var(--brand);padding:2px 0 2px 10px}
+.tip.open{border-left-color:var(--warn)}
 .tip-t:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
 .tip-votes{display:flex;justify-content:space-between;gap:8px;margin-top:6px}.tip-votes .btn{flex:1 1 0;white-space:normal;line-height:1.2;padding:6px 10px;min-height:40px}
 .tip-off{margin:4px 0 2px;font-size:15px;line-height:1.45;font-weight:600}.tip-off .pill{font-size:11px;padding:1px 7px;vertical-align:1px}
@@ -586,6 +586,11 @@ details.rep>summary .pill{white-space:normal}
 .acc-list .card.acc{padding:12px 16px}
 .acc-save{max-width:900px;box-sizing:border-box;position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px;padding:10px 12px 10px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.18)}
 @media (max-width:900px){.acc-save{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}
+.sec{position:relative}.sec>.card-head{cursor:pointer;user-select:none;justify-content:flex-start;padding-right:30px}.sec>.card-head>h2{margin-right:auto}.sec-chev{position:absolute;right:20px;top:24px;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(225deg);transition:transform .15s;flex:none;margin-right:4px}
+.sec.sec-c .sec-chev{transform:rotate(45deg)}
+.sec.sec-c>:not(.card-head){display:none!important}.sec.sec-c{padding-top:14px;padding-bottom:14px}
+.regen-wrap{display:inline-flex;gap:8px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
 </style>
 
@@ -740,8 +745,9 @@ function onData(c){if(landingToken()){renderLanding();return;}renderNav();if((V.
 /* ---------- tournée ---------- */
 function tours(){const u=me();const all=allTours();if(!u)return all;
   if(u.ruolo==='tm')return all.filter(t=>t===u.tour);if(u.ruolo==='venditore')return all.filter(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t)));return all;}
-const ALL='__ALL__',ALL_VIEWS=['tournee','mappa','cast','piantine','auto'];
+const ALL='__ALL__',ALL_VIEWS=['tournee','mappa','cast','piantine','auto','checklist','documenti','qr'];
 const TOUR_COLS={'FRANCESE 1':'#3B6FB6','FRANCESE 2':'#8A5BB0','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
+function tTag(tr){return tr?`<span class="tour-tag" style="--tc:${tourCol(tr)}">${esc(tr)}</span>`:'';}
 function tourCol(tr){return TOUR_COLS[tr]||PALETTE[Math.abs([...String(tr)].reduce((a,c)=>a*31+c.charCodeAt(0),7))%PALETTE.length];}
 function canAll(){const u=me();return !!u&&u.ruolo!=='tm';}
 function curTour(){const ts=tours();if(S.pref.tour===ALL&&canAll()&&ALL_VIEWS.includes(V.name))return ALL;return ts.includes(S.pref.tour)?S.pref.tour:(ts[0]||'');}
@@ -994,11 +1000,29 @@ function renderOggi(){
   }
   h+=`</div>`;
   app.innerHTML=h;
+  if(!vend)applySections(tp,hm,td);
   const firstOpen=V.dayId==null;V.dayId=tp.id;
   if(firstOpen&&tp.data===td&&!AUTO_SC[tp.id]&&!vend){AUTO_SC[tp.id]=1;const last=reps.length?repEnd(tp,reps[reps.length-1]):'';
     const tgt=hm>='19:00'?'c-crono':ck.inviata?'c-viaggi':last&&hm>=last?'c-check':'c-piantine';
     requestAnimationFrame(()=>{const el=document.getElementById(tgt)||document.getElementById('c-viaggi');if(el)window.scrollTo(0,Math.max(0,el.getBoundingClientRect().top+window.scrollY-12));});}
 }
+/* giornata a sezioni: si apre da sola quella che serve in quel momento, le altre restano chiuse (un tocco per aprirle) */
+const SEC_K=[['piantine di sala','piantine'],['checklist del teatro','check'],['pranzo','pranzo'],['spostamenti','viaggi'],['hotel di stanotte','hotel'],['cronoprogramma di domani','crono'],['prima di chiudere la giornata','chiudi'],['foto della scenografia','foto'],['foto delle repliche','fotorep']];
+function secOpenAuto(k,tp,hm,td){const reps=tp.repliche||[];const first=reps[0]||'09:00';const last=reps.length?repEnd(tp,reps[reps.length-1]):'13:00';
+  if(tp.data!==td)return k==='teatro'||k==='piantine';
+  switch(k){case 'teatro':return hm<'13:00';case 'foto':return true;case 'fotorep':return hm>=first&&hm<addMin(last,120);
+    case 'piantine':return hm<last;case 'check':return hm>=addMin(last,-15);case 'pranzo':return hm>='11:30'&&hm<'14:30';
+    case 'viaggi':return hm>=addMin(last,-15)&&hm<'19:00';case 'hotel':return hm>='14:00'&&hm<'22:00';case 'crono':case 'chiudi':return hm>='18:00';}
+  return true;}
+function applySections(tp,hm,td){V.secMan=V.secMan||{};
+  document.querySelectorAll('.day-grid > section.card').forEach(s=>{if(s.classList.contains('ref-card')||s.classList.contains('done-card-row'))return;const head=s.querySelector(':scope > .card-head');if(!head)return;
+    const t=norm((head.querySelector('h2')||{}).textContent||'');let k=s.classList.contains('span2')?'teatro':((SEC_K.find(([l])=>t===l)||[])[1]);if(!k)return;
+    const mk=tp.id+':'+k;const open=mk in V.secMan?V.secMan[mk]:secOpenAuto(k,tp,hm,td);
+    s.dataset.sec=k;s.classList.add('sec');s.classList.toggle('sec-c',!open);head.setAttribute('role','button');head.tabIndex=0;head.setAttribute('aria-expanded',open);
+    if(!head.querySelector('.sec-chev'))head.insertAdjacentHTML('beforeend','<span class="sec-chev" aria-hidden="true"></span>');});}
+function secToggle(head){const s=head.closest('section.sec');if(!s)return;const open=s.classList.contains('sec-c');s.classList.toggle('sec-c',!open);head.setAttribute('aria-expanded',open);V.secMan[V.dayId+':'+s.dataset.sec]=open;}
+document.addEventListener('click',e=>{if(V.name!=='oggi')return;const head=e.target.closest('section.sec > .card-head');if(!head||e.target.closest('button,a,input,label,select'))return;secToggle(head);});
+document.addEventListener('keydown',e=>{if(V.name!=='oggi'||(e.key!=='Enter'&&e.key!==' '))return;const head=e.target.closest&&e.target.closest('section.sec > .card-head');if(head&&e.target===head){e.preventDefault();secToggle(head);}});
 function legHTML(title,when,from,to,fromAddr,toAddr,v){
   return `<div class="leg"><div class="leg-h"><span class="eyebrow">${title}</span>${when?`<span class="muted small">${when}</span>`:''}</div>
    <div class="leg-route"><span>${esc(from)}</span><span class="leg-arrow" aria-hidden="true">→</span><span>${esc(to)}</span></div>
@@ -1609,13 +1633,18 @@ async function ckTipsToMemory(tp,ck){const ws=[];CK.find(x=>x.id==='memoria').q.
     S.c.consigli[id]={...doc,id};ws.push(put('consigli',id,doc));}
   else if(old)ws.push(del('consigli',id));});try{await Promise.all(ws);}catch(e){}}
 function renderChecklistList(){
-  const list=tourTappe();const td=today();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Checklist</h1><p class="muted" style="margin:0">Una per ogni data, da compilare subito dopo l’ultima replica. Quando la invii arriva alla Logistica.</p></div><div class="tlist">`;
-  list.forEach(tp=>{const ck=S.c.checklist[tp.id]||{};const st=ck.inviata?'<span class="pill ok">Inviata</span>':ck.risposte&&Object.keys(ck.risposte).length?'<span class="pill warn">In bozza</span>':tp.data<=td?'<span class="pill bad">Da compilare</span>':'<span class="pill">In programma</span>';
-    h+=`<button class="trow" data-ckl="${tp.id}"><span class="tdate"><b>${dObj(tp.data).getDate()}</b><span>${dObj(tp.data).toLocaleDateString('it-IT',{month:'short'})}</span></span><span class="tmain"><b>${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}</span></span><span class="tmeta">${st}</span></button>`;});
+  const isAll=curTour()===ALL;const td=today();const stOf=tp=>{const ck=S.c.checklist[tp.id]||{};return ck.inviata?'ok':ck.risposte&&Object.keys(ck.risposte).length?'bozza':tp.data<=td?'manca':'prog';};
+  const all=tourTappe();const nMan=all.filter(tp=>stOf(tp)==='manca'||stOf(tp)==='bozza').length;const f=V.ckf||'';
+  const list=all.filter(tp=>!f||(f==='manca'?['manca','bozza'].includes(stOf(tp)):stOf(tp)===f));
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Checklist</h1><p class="muted" style="margin:0">Una per ogni data, da compilare subito dopo l’ultima replica. Quando la invii arriva alla Logistica.</p></div>
+  <div class="chips" style="margin-bottom:12px">${[['','Tutte'],['manca',`Da compilare (${nMan})`],['ok','Inviate'],['prog','In programma']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-ckf="${k}">${l}</button>`).join('')}</div><div class="tlist">`;
+  if(!list.length)h+=`<div class="empty"><b>Nessuna checklist in questo elenco.</b></div>`;
+  let month='';list.forEach(tp=>{const m=dObj(tp.data).toLocaleDateString('it-IT',{month:'long',year:'numeric'});if(isAll&&m!==month){month=m;h+=`<div class="tmonth">${esc(cap(m))}</div>`;}
+    const ck=S.c.checklist[tp.id]||{};const st=ck.inviata?'<span class="pill ok">Inviata</span>':ck.risposte&&Object.keys(ck.risposte).length?'<span class="pill warn">In bozza</span>':tp.data<=td?'<span class="pill bad">Da compilare</span>':'<span class="pill">In programma</span>';
+    h+=`<button class="trow" data-ckl="${tp.id}"${isAll?` style="border-left:5px solid ${tourCol(tp.tour)}"`:''}><span class="tdate"><b>${dObj(tp.data).getDate()}</b><span>${dObj(tp.data).toLocaleDateString('it-IT',{month:'short'})}</span></span><span class="tmain">${isAll?tTag(tp.tour):''}<b>${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}</span></span><span class="tmeta">${st}</span></button>`;});
   app.innerHTML=h+`</div>`;
 }
-document.addEventListener('click',e=>{if(V.name!=='checklist')return;const b=e.target.closest('[data-ckl]');if(b)openCheck(b.dataset.ckl,'checklist');});
+document.addEventListener('click',e=>{if(V.name!=='checklist')return;const fb=e.target.closest('[data-ckf]');if(fb){V.ckf=fb.dataset.ckf;render();return;}const b=e.target.closest('[data-ckl]');if(b)openCheck(b.dataset.ckl,'checklist');});
 function openCheck(tappaId,from){const tp=S.c.tappe[tappaId];if(!tp)return;
   const ck=clone(S.c.checklist[tappaId]||{});ck.tappaId=tappaId;ck.risposte=ck.risposte||{};ck.testi=ck.testi||{};ck.voti=ck.voti||{};
   V={name:'check',ck,tp,from,saved:true};render();window.scrollTo(0,0);}
@@ -2092,7 +2121,7 @@ function renderPiantina(){
     <div class="ws-title"><b>${esc(t.nome)} · replica ${esc(p.replica)}</b><span class="muted small">${tp?esc(cap(longDate(p.data)))+' · '+esc(tp.citta):esc(t.citta||'')}</span></div>
     ${tp?'':`<div class="grow" style="flex:0 1 auto"><input class="in" type="date" id="pData" value="${esc(p.data)}" aria-label="Data"><input class="in" id="pRep" list="repList" value="${esc(p.replica)}" aria-label="Orario replica" style="width:110px"><datalist id="repList"><option value="09:00"><option value="11:30"></datalist></div>`}
     <div class="ws-actions"><span class="save-state" id="pState"></span>
-    <button class="btn" data-pl="regen" id="regenTop">Rigenera piantina</button>
+    <span id="regenWrap" class="regen-wrap">${regenBtnHTML()}</span>
     <button class="btn" data-pl="pdf">Esporta PDF</button></div>
   </div>
   <div id="hsBar"></div>
@@ -2156,8 +2185,8 @@ function renderSchools(){
   el.innerHTML=`<div class="sec-head"><h3>Scuole</h3><button class="btn small" data-pl="addschool">+ Aggiungi a mano</button></div>
   <div class="schools">${p.scuole.length?p.scuole.map(s=>schoolCard(s)).join(''):`<div class="empty"><b>Nessuna scuola.</b><span class="muted small">${curTappa()?'Importale da HubSpot con il pulsante qui sopra, oppure aggiungile a mano.':'Aggiungi le scuole con il numero di persone, accompagnatori compresi.'}</span></div>`}</div>
   <label class="chk"><input type="checkbox" id="pGap" ${p.opzioni.gap?'checked':''}> Un posto libero tra una scuola e l’altra</label>
-  <div class="row-btns">${V.confirmDist?`<button class="btn danger" data-pl="distok">Sovrascrivo le modifiche a mano?</button><button class="btn ghost" data-pl="distno">Annulla</button>`:`<button class="btn primary" data-pl="dist" ${p.scuole.length?'':'disabled'}>Rigenera piantina</button>${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn ghost" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}`}</div>
-  <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” per ripartire da zero.</p>
+  <div class="row-btns">${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}</div>
+  <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” in alto per ripartire da zero.</p>
   <details class="rules"><summary>Come vengono distribuiti i posti</summary><ol class="guide small">
    <li>Prima le <b>classi con studenti con disabilità</b>, nelle prime file.</li>
    <li>Poi le scuole <b>P1</b>, poi le <b>P2</b>. Se ce ne sono due o più, i posti si dividono in <b>colonne verticali</b>: ognuna ha la sua parte delle file davanti.</li>
@@ -2230,15 +2259,17 @@ app.addEventListener('click',async e=>{
   if(a==='del'&&sid){V.confirmDel=sid;renderSchools();return;}
   if(a==='delok'&&sid){p.scuole=p.scuole.filter(s=>s.id!==sid);for(const k in p.assign)if(p.assign[k]===sid)delete p.assign[k];V.confirmDel=null;if(V.tool===sid)V.tool='pan';
     renderSchools();renderPlTools();drawPl();scheduleSave();return;}
-  if(a==='dist'||a==='regen'){if(Object.keys(p.assign).length&&V.manual){V.confirmDist=true;renderSchools();if(a==='regen')document.querySelector('[data-pl="distok"]').scrollIntoView({block:'center',behavior:'smooth'});return;}doDistribute();return;}
-  if(a==='distok'){V.confirmDist=false;doDistribute();return;}
+  if(a==='dist'||a==='regen'){if(!p.scuole.length){toast('Aggiungi prima le scuole','warn');return;}if(Object.keys(p.assign).length&&V.manual){V.confirmDist=true;regenRefresh();return;}doDistribute();return;}
+  if(a==='distok'){V.confirmDist=false;regenRefresh();doDistribute();return;}
   if(a==='clear'){V.confirmClear=true;renderSchools();return;}
   if(a==='clearno'){V.confirmClear=false;renderSchools();return;}
   if(a==='clearok'){V.confirmClear=false;p.assign={};p.esclusi={};V.manual=false;drawPl();renderSchools();renderPlTools();scheduleSave();toast('Disposizione svuotata: premi “Rigenera piantina” per ridistribuire');return;}
-  if(a==='distno'){V.confirmDist=false;renderSchools();return;}
+  if(a==='distno'){V.confirmDist=false;regenRefresh();return;}
   if(a==='pdf'){await exportPDF(b);return;}
 });
 function highlightCards(){document.querySelectorAll('.school').forEach(c=>{const on=c.dataset.sid===V.tool;c.classList.toggle('on',on);const sw=c.querySelector('.swatch');if(sw)sw.classList.toggle('on',on);});}
+function regenBtnHTML(){return V.confirmDist?`<button class="btn danger" data-pl="distok">Sovrascrivo le modifiche a mano?</button><button class="btn ghost" data-pl="distno">Annulla</button>`:`<button class="btn" data-pl="regen" id="regenTop">Rigenera piantina</button>`;}
+function regenRefresh(){const w=document.getElementById('regenWrap');if(w)w.innerHTML=regenBtnHTML();updateRegen();}
 function doDistribute(){const p=V.p;const miss=distribute(curT(),p);V.manual=false;drawPl();renderSchools();scheduleSave();
   toast(miss?`Posti insufficienti: ${miss} persone senza posto`:'Posti distribuiti',miss?'bad':undefined);}
 
@@ -2440,29 +2471,30 @@ const ZTL_DRIVE='https://drive.google.com/drive/folders/1Nf_NRnczjDN12sMIlookC-Y
 const DCAT=['SIAE','Tagliando ZTL','Piantine originali','Hotel e prenotazioni','Altro'];
 function docsFor(tp){return Object.values(S.c.documenti).filter(d=>d.tappaId===tp.id||(d.data&&d.data===tp.data&&d.tour===tp.tour));}
 function renderDocs(){
-  const tr=curTour();const all=Object.values(S.c.documenti).filter(d=>!d.tour||d.tour===tr);const q=norm(V.q||'');
+  const tr=curTour();const isAll=tr===ALL;const all=Object.values(S.c.documenti).filter(d=>isAll||!d.tour||d.tour===tr);const q=norm(V.q||'');
   const list=all.filter(d=>!q||norm(d.titolo+' '+d.categoria+' '+(d.citta||'')).includes(q));const tappe=tourTappe();
-  let h=`<div class="page-head"><span class="eyebrow">Tour ${esc(tr)}</span><h1>Documenti</h1><p class="muted">Tutto quello che prima stava nella cartella Drive del tour: permessi SIAE, tagliandi ZTL, piantine originali, prenotazioni hotel. Se un documento è legato a una data, lo trovi anche nella pagina Oggi.</p></div>
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Documenti</h1><p class="muted">Tutto quello che prima stava nella cartella Drive del tour: permessi SIAE, tagliandi ZTL, piantine originali, prenotazioni hotel. Se un documento è legato a una data, lo trovi anche nella pagina Oggi.</p></div>
   ${role()==='venditore'?'':fattCard()}
   <div class="newp"><input class="in" id="dq" type="search" placeholder="Cerca per città, tipo, nome…" value="${esc(V.q||'')}" aria-label="Cerca documenti" style="flex:1 1 220px;max-width:360px">${role()!=='venditore'?'<button class="btn primary" data-dc="add">+ Carica documento</button>':''}</div>`;
   if(V.up){const u=V.up;h+=`<article class="card edit" style="margin-bottom:16px;max-width:720px"><div class="card-head"><h3>Nuovo documento</h3></div>
     <div class="grid2"><div class="field"><label for="dT">Titolo</label><input class="in" id="dT" value="${esc(u.titolo||'')}" placeholder="es. Permesso SIAE Torino 22 gennaio"></div>
     <div class="field"><label for="dC">Tipo</label><select class="in" id="dC">${DCAT.map(c=>`<option ${u.categoria===c?'selected':''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><label for="dTp">Data della tournée</label><select class="in" id="dTp"><option value="">Vale per tutto il tour</option>${tappe.map(tp=>`<option value="${tp.id}" ${u.tappaId===tp.id?'selected':''}>${fmtDate(tp.data)} · ${esc(tp.citta)}</option>`).join('')}</select></div>
+    <div class="field"><label for="dTp">Data della tournée</label><select class="in" id="dTp"><option value="">Vale per tutto il tour</option>${tappe.map(tp=>`<option value="${tp.id}" ${u.tappaId===tp.id?'selected':''}>${fmtDate(tp.data)} · ${esc(tp.citta)}${isAll?' · '+esc(tp.tour):''}</option>`).join('')}</select></div>
+    ${isAll?`<div class="field"><label for="dTour">Tour (se vale per tutto il tour)</label><select class="in" id="dTour">${allTours().map(t=>`<option ${u.tour===t?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`:''}
     <div class="field"><span class="flabel">File</span><button class="btn small" data-dc="file">${u._blob?'Cambia file':'Scegli file'}</button><span class="muted small" id="dFileName">${esc(u._blobName||'')}</span></div></div>
     <input type="file" id="dFile" hidden>
     <div class="row-btns"><button class="btn primary" data-dc="save">Carica</button><button class="btn" data-dc="cancel">Annulla</button></div></article>`;}
   if(!all.length&&!V.up)h+=`<div class="empty"><b>Nessun documento caricato.</b><span class="muted small">Carica i permessi SIAE di ogni data: il TM li apre dal telefono se il referente del teatro li chiede.</span></div>`;
-  const fts=Object.values(S.c.foto||{}).filter(f=>f.tipo==='fattura'&&f.tour===tr).sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+  const fts=Object.values(S.c.foto||{}).filter(f=>f.tipo==='fattura'&&(isAll||f.tour===tr)).sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
   if(fts.length)h+=`<section class="sec"><h2 style="margin:18px 0 8px">Fatture hotel</h2><div class="doclist">${fts.map(f=>`<div class="docrow"><span class="docic">FOTO</span><span class="tmain"><b>${esc(f.hotel||'Hotel')}</b><span class="muted small">${fmtDate(f.data)} · ${esc(f.citta||'')} · caricata ${esc((f.ts||'').slice(11,16))}${f.tm?' da '+esc(f.tm):''}</span></span><span class="row-btns"><button class="btn small" data-view="${esc(f.asset)}" data-ext="jpg" data-title="Fattura ${esc(f.hotel||'')} ${esc(fmtDate(f.data))}">Apri</button></span></div>`).join('')}</div></section>`;
   DCAT.forEach(cat=>{const ds=list.filter(d=>d.categoria===cat).sort((a,b)=>(a.data||'').localeCompare(b.data||''));if(!ds.length)return;
     h+=`<section class="sec"><h2 style="margin:18px 0 8px">${esc(cat)}</h2><div class="doclist">${ds.map(d=>{const tp=d.tappaId?S.c.tappe[d.tappaId]:null;
-      return `<div class="docrow"><span class="docic">${esc((d.ext||'file').toUpperCase())}</span><span class="tmain"><b>${esc(d.titolo)}</b><span class="muted small">${tp?fmtDate(tp.data)+' · '+esc(tp.citta):'Tutto il tour'}</span></span>
+      return `<div class="docrow"><span class="docic">${esc((d.ext||'file').toUpperCase())}</span><span class="tmain">${isAll?tTag(d.tour):''}<b>${esc(d.titolo)}</b><span class="muted small">${tp?fmtDate(tp.data)+' · '+esc(tp.citta):'Tutto il tour'}</span></span>
        <span class="row-btns"><button class="btn small" data-view="${esc(d.file)}" data-ext="${esc(d.ext||'')}" data-title="${esc(d.titolo)}">Apri</button><button class="btn small ghost" data-dc="dl" data-id="${d.id}">Scarica</button>
        ${V.confirmDel===d.id?`<button class="btn small danger" data-dc="delok" data-id="${d.id}">Conferma</button>`:`<button class="btn small ghost" data-dc="del" data-id="${d.id}" aria-label="Elimina ${esc(d.titolo)}">Elimina</button>`}</span></div>`;}).join('')}</div></section>`;});
   app.innerHTML=h;
 }
-function readDoc(){const g=id=>document.getElementById(id);const u=V.up;if(!u||!g('dT'))return;u.titolo=g('dT').value.trim();u.categoria=g('dC').value;u.tappaId=g('dTp').value;}
+function readDoc(){const g=id=>document.getElementById(id);const u=V.up;if(!u||!g('dT'))return;u.titolo=g('dT').value.trim();u.categoria=g('dC').value;u.tappaId=g('dTp').value;if(g('dTour'))u.tour=g('dTour').value;}
 document.addEventListener('click',async e=>{
   if(V.name!=='documenti')return;const b=e.target.closest('[data-dc]');if(!b)return;const a=b.dataset.dc;
   if(a==='add'){V.up={categoria:'SIAE'};render();document.getElementById('dT').focus();}
@@ -2475,7 +2507,7 @@ document.addEventListener('click',async e=>{
     if(!S.assets){toast('Caricamento file non disponibile in questa vista','bad');return;}
     b.disabled=true;b.textContent='Caricamento…';
     try{const up=await upAsset(u._blob,true);const tp=u.tappaId?S.c.tappe[u.tappaId]:null;
-      const out={titolo:u.titolo,categoria:u.categoria,tour:curTour(),tappaId:u.tappaId||'',data:tp?tp.data:'',citta:tp?tp.citta:'',file:up.id,ext:(u._blobName.split('.').pop()||'').toLowerCase(),caricato:new Date().toISOString(),da:tmName()};
+      const out={titolo:u.titolo,categoria:u.categoria,tour:tp?tp.tour:(curTour()===ALL?(u.tour||allTours()[0]):curTour()),tappaId:u.tappaId||'',data:tp?tp.data:'',citta:tp?tp.citta:'',file:up.id,ext:(u._blobName.split('.').pop()||'').toLowerCase(),caricato:new Date().toISOString(),da:tmName()};
       await put('documenti',uid('d'),out);V.up=null;toast('Documento caricato');render();}
     catch(err){toast('Caricamento non riuscito ('+(err.code||err.message)+')','bad');b.disabled=false;b.textContent='Carica';}}
 });
@@ -2565,6 +2597,7 @@ function qrPng(url,name){return (async()=>{try{if(!S.downloads)throw {code:'unav
   await new Promise((r,j)=>{img.onload=r;img.onerror=j;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '));});
   const c=document.createElement('canvas');c.width=c.height=1200;c.getContext('2d').drawImage(img,0,0,1200,1200);const blob=await new Promise(r=>c.toBlob(r,'image/png'));
   await S.downloads.save({filename:name,data:blob});}catch(err){if(!(err&&err.code==='declined'))toast('Download non disponibile ('+((err&&err.code)||'errore')+')','bad');}})();}
+document.addEventListener('click',e=>{if(V.name!=='qr')return;const b=e.target.closest('[data-qrt]');if(!b)return;S.pref.tour=b.dataset.qrt;try{savePref();}catch(_){}V.qrDay=b.dataset.id;render();window.scrollTo(0,0);});
 function renderQrCard(tp){
   const reps=tp.repliche||[];if(!reps.length)return '';
   const n=reps.reduce((a,r)=>{const p=findP(tp.id,r);return a+(p?p.scuole.length:0);},0);
@@ -2573,6 +2606,12 @@ function renderQrCard(tp){
    <div class="row-btns"><button class="btn small primary" data-nav="qr">Apri i QR di oggi</button></div></section>`;
 }
 function renderQrList(){
+  if(curTour()===ALL){const save=S.pref.tour;let s='';try{tours().forEach(t=>{S.pref.tour=t;const l=tourTappe();if(!l.length)return;const pk=pickDay(l);const tp=l[pk.i];const reps=tp.repliche||[];
+      const ps=reps.map(r=>Object.values(S.c.piantine).find(p=>p.tappaId===tp.id&&p.replica===r)).filter(Boolean);const ns=ps.reduce((a,p)=>a+(p.scuole||[]).length,0);
+      s+=`<section class="card" style="border-left:5px solid ${tourCol(t)}"><div class="card-head">${tTag(t)}<span class="pill">${pk.kind==='oggi'?'Oggi':esc(shortDate(tp.data))}</span></div>
+       <p style="margin:0"><b>${esc(tp.citta)}</b><span class="muted small"> · ${esc(tp.teatroNome||'')}</span></p><p class="muted small" style="margin:0">${reps.length} repliche · ${ns} scuole con codice</p>
+       <div class="row-btns"><button class="btn small" data-qrt="${esc(t)}" data-id="${tp.id}">Apri i QR</button></div></section>`;});}finally{S.pref.tour=save;}
+    app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>QR docenti</h1><p class="muted" style="margin:0">La data di oggi (o la prossima) di ogni tour. Apri un tour per vedere i codici delle scuole.</p></div><div class="day-grid">${s||'<div class="empty"><b>Nessuna data in calendario.</b></div>'}</div>`;return;}
   ensureQr();const list=tourTappe();
   if(!list.length){app.innerHTML=`<div class="page-head"><span class="eyebrow">QR docenti</span><h1>Nessuna data in calendario</h1></div>`;return;}
   let i=V.qrDay?list.findIndex(t=>t.id===V.qrDay):-1;let kind='scelta';if(i<0){const pk=pickDay(list);i=pk.i;kind=pk.kind;}
@@ -2696,7 +2735,7 @@ function inZone(tp){const u=me();if(!u||u.ruolo!=='venditore')return true;return
 function lockAt(p){if(!p||!p.data)return null;const d=dObj(p.data);d.setHours(6,0,0,0);return d;}
 function plLocked(p){if(role()!=='venditore')return false;const l=lockAt(p);return !!l&&new Date()>=l;}
 function navFor(){const r=role();
-  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze','m','Auto'],['piantine','Piantine',''],['checklist','Checklist',''],['mappa','Mappa',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
+  if(r==='tm')return [['oggi','Oggi','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['qr','QR docenti','m','QR'],['auto','Auto ed emergenze',''],['checklist','Checklist',''],['mappa','Mappa',''],['cast','Cast',''],['documenti','Documenti',''],['profilo','Il mio profilo','']];
   if(r==='venditore')return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['profilo','Il mio profilo','']];
   return [['controllo','Controllo','m'],['tournee','Tournée','m'],['piantine','Piantine','m'],['mappa','Mappa','m'],['checklist','Checklist',''],['teatri','Teatri',''],['cast','Cast',''],['documenti','Documenti',''],['qr','QR docenti',''],['auto','Auto ed emergenze',''],['accessi','Accessi',''],['profilo','Il mio profilo','']];}
 const NAV_DESC={mappa:'Il percorso della tournée sulla cartina.',teatri:'Le sale mappate, una volta per tutte.',cast:'Persone in tournée e documenti d’identità.',documenti:'SIAE, tagliandi ZTL, fatture hotel, dati per le fatture.',qr:'I codici delle scuole per i docenti.',checklist:'I report di fine giornata.',accessi:'Chi entra nell’app e cosa vede.',auto:'Targa, km, guasti, incidenti e numeri utili.',profilo:'I tuoi dati: nome, telefono, chat Google.',oggi:'La giornata in corso.'};
