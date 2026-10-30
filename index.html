@@ -2839,7 +2839,7 @@ function docsFor(tp){return Object.values(S.c.documenti).filter(d=>d.tappaId===t
 function renderDocs(){
   const tr=curTour();const isAll=tr===ALL;const all=Object.values(S.c.documenti).filter(d=>isAll||!d.tour||d.tour===tr);const q=norm(V.q||'');
   const list=all.filter(d=>!q||norm(d.titolo+' '+d.categoria+' '+(d.citta||'')).includes(q));const tappe=tourTappe();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Documenti</h1><p class="muted">Tutto quello che prima stava nella cartella Drive del tour: permessi SIAE, tagliandi ZTL, piantine originali, prenotazioni hotel. Se un documento è legato a una data, lo trovi anche nella giornata di quella data.</p></div>
+  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Documenti</h1><p class="muted">Tutto quello che prima stava nella cartella Drive del tour: permessi SIAE, tagliandi ZTL, prenotazioni hotel. Se un documento è legato a una data, lo trovi anche nella giornata di quella data.</p></div>
   ${role()==='venditore'?'':fattCard()}
   <div class="newp"><input class="in" id="dq" type="search" placeholder="Cerca per città, tipo, nome…" value="${esc(V.q||'')}" aria-label="Cerca documenti" style="flex:1 1 220px;max-width:360px">${role()!=='venditore'?'<button class="btn primary" data-dc="add">+ Carica documento</button>':''}</div>`;
   if(V.up){const u=V.up;h+=`<article class="card edit" style="margin-bottom:16px;max-width:720px"><div class="card-head"><h3>Nuovo documento</h3></div>
