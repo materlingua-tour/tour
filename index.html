@@ -2141,15 +2141,18 @@ function renderPanel(){
    <div class="preview" id="fPrev">${previewLabels(r.posti)}</div>
    ${isNew?`<div class="row-btns"><button class="btn primary" data-ed="addrow">Aggiungi fila</button><button class="btn" data-ed="cancelrow">Annulla</button></div>`
    :`<div class="row-btns"><button class="btn primary" data-ed="donerow">Fatto</button><button class="btn" data-ed="duprow">Duplica fila</button></div>
-     <div class="rep-box"><label for="fRep" class="small"><b>Ripeti dietro</b>: crea altre file uguali, con le lettere successive</label><div class="row-btns"><input class="in" id="fRep" type="number" inputmode="numeric" min="1" max="40" value="${esc(V.repN||5)}" aria-label="Quante file" style="width:80px"><button class="btn small" data-ed="reprow">Ripeti</button></div></div>
+     <div class="rep-box"><label for="fRep" class="small"><b>Ripeti dietro</b>: crea altre file uguali, con le lettere successive</label><div class="row-btns"><input class="in" id="fRep" type="number" inputmode="numeric" min="1" max="40" value="${esc(V.repN||5)}" aria-label="Quante file" style="width:80px"><select class="in" id="fAbc" aria-label="Alfabeto delle file" style="width:auto"><option value="auto" ${(V.repAbc||'auto')==='auto'?'selected':''}>Lettere: automatico</option><option value="it" ${V.repAbc==='it'?'selected':''}>Italiano (senza J K W X Y)</option><option value="en" ${V.repAbc==='en'?'selected':''}>Alfabeto completo</option></select><button class="btn small" data-ed="reprow">Ripeti</button></div><span class="muted small" id="fRepPrev">${r.fila?'Creerà: '+esc(repPreview(r,V.repN||5)):'Scrivi prima la lettera di questa fila'}</span></div>
      <div class="row-btns"><button class="btn small" data-ed="movestart">Sposta primo posto</button><button class="btn small" data-ed="moveend">Sposta ultimo posto</button></div>
      <div class="row-btns">${V.confirmRow?`<button class="btn small danger" data-ed="delrowok">Conferma: elimina fila</button><button class="btn small ghost" data-ed="delrowno">Annulla</button>`:`<button class="btn small ghost" data-ed="delrow">Elimina fila</button>`}</div>`}`;
   if(isNew)setTimeout(()=>{const el=document.getElementById(f.fila?'fN':'fFila');if(el&&window.matchMedia('(min-width:981px)').matches)el.focus();},0);
 }
-const FILE_IT='ABCDEFGHILMNOPQRSTUVZ';
-function nextFila(f){f=String(f||'').trim().toUpperCase();if(!f)return '';if(/^\d+$/.test(f))return String(+f+1);
-  if(/^[A-Z]$/.test(f)){const i=FILE_IT.indexOf(f);if(i>=0)return i<FILE_IT.length-1?FILE_IT[i+1]:'AA';return String.fromCharCode(f.charCodeAt(0)+1);}
-  const m=f.match(/^(.*?)(\d+)$/);if(m)return m[1]+(+m[2]+1);const l=f.slice(-1);return f.length>1&&/[A-Z]/.test(l)?f.slice(0,-1)+nextFila(l):f+'2';}
+const FILE_IT='ABCDEFGHILMNOPQRSTUVZ',FILE_EN='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+/* alfabeto delle file: automatico = completo se il teatro usa già J, K, W, X o Y */
+function filaAbc(){const m=V.repAbc||'auto';if(m!=='auto')return m;return (V.t&&V.t.zone||[]).some(z=>(z.rows||[]).some(r=>/^[JKWXY]$/i.test(String(r.fila||'').trim())))?'en':'it';}
+function nextFila(f,abc){f=String(f||'').trim().toUpperCase();if(!f)return '';if(/^\d+$/.test(f))return String(+f+1);const A=(abc||'it')==='en'?FILE_EN:FILE_IT;
+  if(/^[A-Z]$/.test(f)){const i=A.indexOf(f);if(i>=0)return i<A.length-1?A[i+1]:'AA';return String.fromCharCode(f.charCodeAt(0)+1);}
+  const m=f.match(/^(.*?)(\d+)$/);if(m)return m[1]+(+m[2]+1);const l=f.slice(-1);return f.length>1&&/[A-Z]/.test(l)?f.slice(0,-1)+nextFila(l,abc):f+'2';}
+function repPreview(r,n){const abc=filaAbc();let f=r.fila,o=[];for(let i=0;i<n;i++){f=nextFila(f,abc);o.push(f);}return o.join(', ');}
 function suggestRow(a,b){
   const z=Z();const S0=seatSize(z);const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
   let near=null,best=Infinity;z.rows.forEach(r=>{const d=distSeg(mid.x,mid.y,r);const dy=Math.abs((r.y1+r.y2)/2-mid.y);if(dy<S0*0.7&&d<best){best=d;near=r;}});
@@ -2170,6 +2173,9 @@ function markDirty(){V.dirty=true;const s=document.getElementById('edState');if(
 function resetSel(){V.pts=[];V.pending=null;V.draft=null;V.form=null;V.selRow=null;V.confirmRow=false;V.confirmZone=false;}
 function setTool(k){V.tool=k;resetSel();renderTools();renderPanel();drawEd();}
 
+app.addEventListener('input',e=>{if(V.name!=='teatro'||!['fRep','fAbc'].includes(e.target.id))return;V.repN=Math.max(1,Math.min(40,int(document.getElementById('fRep').value)||1));V.repAbc=document.getElementById('fAbc').value;
+  const r=Z().rows.find(x=>x.id===V.selRow);const el=document.getElementById('fRepPrev');if(r&&el)el.textContent=r.fila?'Creerà: '+repPreview(r,V.repN):'Scrivi prima la lettera di questa fila';});
+app.addEventListener('change',e=>{if(V.name==='teatro'&&e.target.id==='fAbc')e.target.dispatchEvent(new Event('input',{bubbles:true}));});
 app.addEventListener('input',e=>{
   if(V.name!=='teatro')return;const id=e.target.id;
   if(id==='tNome'){V.t.nome=e.target.value;markDirty();}
@@ -2232,7 +2238,7 @@ function edCanvasClick(e,svg){
   const z=Z();const p=svgPoint(svg,e);const seatEl=e.target.closest('[data-k]');
   if(V.pending){const r=z.rows.find(x=>x.id===V.pending.rowId);if(!r){V.pending=null;renderHint();return;}pushHist();
     if(V.pending.type==='rep'){const dx=p.x-r.x1,dy=p.y-r.y1;let f=r.fila;const made=[];
-      for(let i=1;i<=V.pending.n;i++){f=nextFila(f);const nr={...clone(r),id:uid('r'),x1:f2(r.x1+dx*i),y1:f2(r.y1+dy*i),x2:f2(r.x2+dx*i),y2:f2(r.y2+dy*i),fila:f,bloccati:[]};delete nr.carrozzina;nr.posti=postiFrom(nr);made.push(nr);}
+      const abc=filaAbc();for(let i=1;i<=V.pending.n;i++){f=nextFila(f,abc);const nr={...clone(r),id:uid('r'),x1:f2(r.x1+dx*i),y1:f2(r.y1+dy*i),x2:f2(r.x2+dx*i),y2:f2(r.y2+dy*i),fila:f,bloccati:[]};delete nr.carrozzina;nr.posti=postiFrom(nr);made.push(nr);}
       z.rows.push(...made);V.selRow=null;V.form=null;V.tool='seleziona';toast(`Create ${made.length} file (${made[0].fila}–${made[made.length-1].fila}): se una ha posti diversi, toccala e correggila`);}
     else if(V.pending.type==='dup'){const dx=p.x-r.x1,dy=p.y-r.y1;const nr={...clone(r),id:uid('r'),x1:p.x,y1:p.y,x2:r.x2+dx,y2:r.y2+dy,fila:'',bloccati:[]};
       z.rows.push(nr);V.selRow=nr.id;V.form={mode:'edit',...rowForm(nr)};toast('Fila duplicata: scrivi la lettera');}
