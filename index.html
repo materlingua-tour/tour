@@ -638,10 +638,14 @@ details.rep>summary .pill{white-space:normal}
 @keyframes spBg{to{opacity:0;visibility:hidden}}
 /* fine tournée: la foto in sovraimpressione che si allontana */
 #ftOv{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(10,24,20,.55);pointer-events:none;animation:ftBg 3.8s ease forwards}
-#ftOv img{max-height:84vh;max-width:88vw;object-fit:contain;animation:ftImg 3.8s cubic-bezier(.3,.1,.3,1) forwards;will-change:transform,opacity}
+#ftOv .ft-card{position:relative;height:min(84vh,680px);aspect-ratio:.66;max-width:88vw;border-radius:28px;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;
+  background:radial-gradient(ellipse 70% 45% at 50% 22%,rgba(255,255,255,.42),rgba(255,255,255,0) 70%),radial-gradient(circle at 15% 85%,rgba(172,160,119,.45),rgba(172,160,119,0) 45%),linear-gradient(165deg,#2E8C79 0%,#196457 52%,#0D352D 100%);
+  box-shadow:0 30px 80px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.15);animation:ftImg 3.8s cubic-bezier(.3,.1,.3,1) forwards;will-change:transform,opacity}
+#ftOv .ft-card::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,.55) 1px,transparent 1.6px) 0 0/22px 22px;opacity:.18;pointer-events:none}
+#ftOv .ft-card img{position:relative;z-index:1;width:94%;height:auto;max-height:96%;object-fit:contain;object-position:bottom;display:block}
 @keyframes ftImg{0%{opacity:0;transform:scale(1.08)}14%{opacity:1;transform:scale(1)}48%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.12)}}
 @keyframes ftBg{0%{opacity:0}10%{opacity:1}55%{opacity:1}100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){#ftOv img{animation:ftBg 3s ease forwards}}
+@media (prefers-reduced-motion:reduce){#ftOv .ft-card{animation:ftBg 3s ease forwards}}
 /* l'app sotto entra sfumando mentre il logo esce */
 html.splashing .shell{animation:appIn 1.1s cubic-bezier(.3,.1,.3,1) 1.15s both}
 @keyframes appIn{from{opacity:0}to{opacity:1}}
@@ -2971,8 +2975,13 @@ function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{
    L'app non scrive mai sul Drive direttamente: passa dalla funzione "drive-archivio", che sul Drive
    può solo aggiungere/aggiornare file (mai cancellare). */
 const ARCH_FN='drive-archivio';
-function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. ${canPulizia()?' A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.':''}</p><div class="row-btns">${canPulizia()?'<button class="btn small primary" data-pulizia>Pulizia di fine tournée</button>':''}<button class="btn small" data-archtest>Prova il collegamento</button></div></section>`;}
+function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. ${canPulizia()?' A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.':''}</p><div class="row-btns">${canPulizia()?'<button class="btn small primary" data-pulizia>Pulizia di fine tournée</button>':''}<button class="btn small" data-archtest>Prova il collegamento</button></div>${ftCard()}</section>`;}
 /* svuotare l'app a fine tournée: solo Clivia. Lo sviluppatore vede la scheda solo per provare il collegamento */
+function ftCard(){if((S.pref.user||'').toLowerCase()!==DEV_EMAIL)return '';const has=!!(S.c.impostazioni.fineTournee||{}).asset;
+  return `<p class="muted small" style="margin:8px 0 0">Foto di fine tournée (la vede solo Clivia dopo la pulizia): ${has?'<b>caricata</b>':'non ancora caricata'}.</p><div class="row-btns"><label class="btn small">${has?'Cambia la foto':'Carica la foto'}<input type="file" accept="image/png,image/webp,image/jpeg" data-ftup hidden></label></div>`;}
+document.addEventListener('change',async e=>{if(!e.target.matches||!e.target.matches('[data-ftup]'))return;const f=e.target.files[0];if(!f)return;
+  try{toast('Carico la foto…');const up=await upAsset(f,true);await put('impostazioni','fineTournee',{asset:up.id,ts:new Date().toISOString()});S.c.impostazioni.fineTournee={asset:up.id,id:'fineTournee'};toast('Foto salvata nell’archivio privato');render();}
+  catch(err){toast('Foto non caricata ('+(err.code||err.message||'errore')+')','bad');}});
 function canPulizia(){return (S.pref.user||'').toLowerCase()==='clivia.lachkar@materlingua.eu';}
 function canArch(){return canPulizia()||(S.pref.user||'').toLowerCase()===DEV_EMAIL;}
 function hstr(x){let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
@@ -3029,8 +3038,11 @@ async function archCatchup(){if(S.mode!=='supa'||!navigator.onLine||!(isDir()||r
 /* pulizia di fine tournée (solo Clivia e sviluppatore) */
 const PZ_C=[['piantine','Piantine'],['checklist','Checklist'],['scen','Foto della scenografia'],['rep','Foto delle repliche'],['km','Foto del contachilometri']];
 let PZ=null;
-function fineTournee(){if(!canPulizia())return;const o=document.createElement('div');o.id='ftOv';o.setAttribute('aria-hidden','true');o.innerHTML='<img src="fine-tournee.png" alt="">';document.body.appendChild(o);setTimeout(()=>o.remove(),3900);}
-function openPulizia(){if(!canPulizia())return;try{new Image().src='fine-tournee.png';}catch(_){}const ts=allTours();const t0=curTour()!==ALL&&ts.includes(curTour())?curTour():ts[0]||'';PZ={tour:t0,st:null,busy:false,conf:false};
+/* la foto sta nell'archivio privato: si carica solo per chi ha fatto l'accesso, e si mostra solo a Clivia */
+let FT_URL='';
+async function ftPreload(){FT_URL='';const a=(S.c.impostazioni.fineTournee||{}).asset;if(!a)return;try{FT_URL=await blobURL(a);const im=new Image();im.src=FT_URL;}catch(_){}}
+function fineTournee(){if(!canPulizia()||!FT_URL)return;const o=document.createElement('div');o.id='ftOv';o.setAttribute('aria-hidden','true');o.innerHTML=`<div class="ft-card"><img src="${esc(FT_URL)}" alt=""></div>`;document.body.appendChild(o);setTimeout(()=>o.remove(),3900);}
+function openPulizia(){if(!canPulizia())return;ftPreload();const ts=allTours();const t0=curTour()!==ALL&&ts.includes(curTour())?curTour():ts[0]||'';PZ={tour:t0,st:null,busy:false,conf:false};
   const ov=document.createElement('div');ov.className='done-ov';ov.id='pzOv';
   ov.innerHTML=`<div class="pz-card" role="dialog" aria-modal="true" aria-labelledby="pzT"><div class="card-head"><h2 id="pzT">Pulizia di fine tournée</h2><button class="btn small ghost" data-pz="x" aria-label="Chiudi">✕</button></div>
     <div class="field"><label for="pzTour">Tournée</label><select class="in" id="pzTour">${ts.map(t=>`<option ${t===t0?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
