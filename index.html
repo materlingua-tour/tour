@@ -631,8 +631,17 @@ details.rep>summary .pill{white-space:normal}
 .ed-empty{min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center}.ed-empty p{margin:0;max-width:280px}
 .ed-area{fill:rgba(25,100,87,.08);stroke:var(--brand);stroke-width:3;stroke-dasharray:10 6;pointer-events:none}
 .tour-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-bottom:3px;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent)}
+#splash{position:fixed;inset:0;z-index:9999;background:#196457;display:flex;align-items:center;justify-content:center;pointer-events:none;animation:spBg .7s ease-in 1.45s forwards}
+#splash .logo{background:#FFFFFF!important;width:min(56vw,280px);height:calc(min(56vw,280px) * .54);animation:spIn .55s cubic-bezier(.2,.7,.3,1) both,spOut 1s cubic-bezier(.55,0,.8,.2) 1.15s forwards;will-change:transform,opacity}
+@keyframes spIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes spOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(9)}}
+@keyframes spBg{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#splash{animation:spBg .4s ease .6s forwards}#splash .logo{animation:none}}
 </style>
 
+<div id="splash" aria-hidden="true"><span class="logo"></span></div>
+<script>(function(){var s=document.getElementById('splash');if(!s)return;if(/^#(qr|sala)-/.test(location.hash)){s.remove();return;}
+/* solo alla prima apertura della giornata */var d=new Date(),k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(),v=null;try{v=localStorage.getItem('ml_splash');localStorage.setItem('ml_splash',k);}catch(e){}if(v===k){s.remove();return;}setTimeout(function(){if(s.parentNode)s.remove();},2400);})();</script>
 <div class="shell">
   <nav class="side" aria-label="Menu">
     <span class="logo" role="img" aria-label="Mater Lingua"></span>
