@@ -690,7 +690,7 @@ function normT(t){t=clone(t);
     delete t.rows;delete t.stage;delete t.bg;delete t.w;delete t.h;}
   t.zone.forEach(z=>{z.rows=z.rows||[];z.w=z.w||1000;z.h=z.h||1000;});return t;}
 function seatsTot(t){return t.zone.reduce((a,z)=>a+z.rows.reduce((b,r)=>b+r.posti.length-(r.bloccati||[]).length,0),0);}
-function prioOf(s){if(s.priorita===true)return 'P1';return s.priorita==='P1'||s.priorita==='P2'?s.priorita:'';}
+function prioOf(s){if(s.priorita===true)return 'P1';return ['P1','P2','P3'].includes(s.priorita)?s.priorita:'';}
 
 /* ---------- archivio ---------- */
 const LS='piantine-sala-v2',PREF='piantine-sala-pref';
@@ -812,7 +812,7 @@ function hotelPill(h){if(!h)return '';return h.pagamento==='pagato'?'<span class
 
 /* ---------- import HubSpot ---------- */
 function nextColor(p){const used=new Set(p.scuole.map(s=>s.c));let c=0;while(used.has(c)&&c<PALETTE.length)c++;return c>=PALETTE.length?p.scuole.length:c;}
-function dealToSchool(d){const note=d.note||'';const pr=/\bP1\b/i.test(note)?'P1':/\bP2\b/i.test(note)?'P2':'';
+function dealToSchool(d){const note=d.note||'';const pr=/\bP1\b/i.test(note)?'P1':/\bP2\b/i.test(note)?'P2':/\bP3\b/i.test(note)?'P3':'';
   return {dealId:d.id,nome:d.scuola||d.dealname||'Scuola',docente:d.docente||'',telDocente:d.telefonoDocente||'',refScuola:d.referente||'',telRef:d.telefonoReferente||'',persone:int(d.studenti)+int(d.accompagnatori),livello:d.grado==='superiori'?'superiori':'medie',disabili:int(d.disabili),priorita:pr,note,stage:d.stage||''};}
 function syncFromDeals(p,deals){
   const active=deals.filter(d=>d.stage!=='Chiuso perso');let added=0,updated=0,removed=0;
@@ -1920,7 +1920,7 @@ function previewLabels(arr){if(!arr.length)return 'Nessun posto: indica quanti s
 
 /* ---------- distribuzione ---------- */
 /* Distribuzione automatica dei posti.
-   Ordine dal palco: P1, P2, medie, superiori (a parità, l’ordine dell’elenco). L’ordine si rispetta sempre.
+   Ordine dal palco: P1, P2, P3, medie, superiori (a parità, l’ordine dell’elenco; tra due P1 la più piccola). L’ordine si rispetta sempre.
    - Le scuole stanno una DIETRO l’altra: ogni fila è di una sola scuola.
    - Si riempie prima la platea. Se una scuola non ci sta intera: se in platea restano almeno 2 file la
      scuola si divide (davanti in platea, il resto in galleria); se resta 1 fila sola va tutta in galleria
@@ -1936,9 +1936,9 @@ function distribute(t,p){
   const zones=GT.order.map(({z,G})=>{const m=new Map(),lc=new Map();G.lines.forEach((l,i)=>{const f=String(l.fila||'').trim()||('#'+i);if(!m.has(f)){m.set(f,[]);lc.set(f,[]);}m.get(f).push(...l.seats.filter(s=>free.has(s.k)));lc.get(f).push(l);});
     const keys=[...m.keys()].filter(f=>m.get(f).length);const all=keys.flatMap(f=>m.get(f));const c=all.length?all.reduce((a,x)=>a+x.proj,0)/all.length:0;
     return {nome:z.nome,pl:(z.tipo||'platea')==='platea',c,rows:keys.map(f=>({fila:f,seats:m.get(f).slice().sort((a,b)=>a.proj-b.proj),lines:lc.get(f)}))};});
-  const rank=x=>x.pr==='P1'?0:x.pr==='P2'?1:lv(x.s)===0?2:3;
+  const rank=x=>x.pr==='P1'?0:x.pr==='P2'?1:x.pr==='P3'?2:lv(x.s)===0?3:4;
   const sch0=p.scuole.map((s,idx)=>({s,idx,n:int(s.persone),dis:int(s.disabili),pr:prioOf(s)})).filter(x=>x.n>0)
-    .sort((a,b)=>rank(a)-rank(b)||lv(a.s)-lv(b.s)||a.idx-b.idx);
+    .sort((a,b)=>rank(a)-rank(b)||(a.pr==='P1'&&b.pr==='P1'?a.n-b.n:0)||lv(a.s)-lv(b.s)||a.idx-b.idx);
   const near=(arr,c)=>arr.slice().sort((a,b)=>Math.abs(a.proj-c)-Math.abs(b.proj-c));
   /* posto carrozzina: la scuola con disabilità si mette attorno a quel posto */
   let anchor=null;const isCarr=k=>!!carr[k]||!!(GT.byK[k]&&GT.byK[k].carr);const ck=Object.keys(carr).find(k=>free.has(k))||Object.values(GT.byK).filter(q=>q.carr&&free.has(q.k)).map(q=>q.k)[0];
@@ -2379,7 +2379,7 @@ function drawPl(){
   refreshStatuses();renderNote();centerOnce('plWrap');
 }
 function renderNote(){const el=document.getElementById('plNote');if(!el)return;const p=V.p;const nc=Object.keys(p.carrozzina||{}).length+(V.GT?Object.values(V.GT.byK).filter(q=>q.carr).length:0);
-  el.innerHTML=(p.distNote?`<div class="banner" style="margin:8px 0">${esc(p.distNote)}</div>`:'')+(nc?`<p class="muted small" style="margin:6px 0">♿ ${nc===1?'1 posto carrozzina segnato':nc+' posti carrozzina segnati'}: la scuola con studenti con disabilità si dispone attorno.</p>`:'');}
+  const c1=p1Conflict(p.scuole,S.c.teatri[p.teatroId]);el.innerHTML=(c1?`<div class="banner warn" style="margin:8px 0">${c1.length} scuole con P1 in questa replica: ordine provvisorio (davanti la più piccola). Il referente di zona deve scegliere chi va davanti, correggendo la priorità su HubSpot.</div>`:'')+(p.distNote?`<div class="banner" style="margin:8px 0">${esc(p.distNote)}</div>`:'')+(nc?`<p class="muted small" style="margin:6px 0">♿ ${nc===1?'1 posto carrozzina segnato':nc+' posti carrozzina segnati'}: la scuola con studenti con disabilità si dispone attorno.</p>`:'');}
 function updateStats(){
   const p=V.p,GT=V.GT;if(!GT)return;const all=Object.values(GT.byK);const cap=all.filter(s=>!s.blocked).length;const ex=all.filter(s=>s.excl).length;
   const tot=p.scuole.reduce((a,s)=>a+int(s.persone),0);let used=0;for(const k in p.assign){const s=GT.byK[k];if(s&&!s.blocked)used++;}
@@ -2399,7 +2399,7 @@ function renderSchools(){
   <div class="row-btns">${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}</div>
   <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” in alto per ripartire da zero.</p>
   <details class="rules"><summary>Come vengono distribuiti i posti</summary><ol class="guide small">
-   <li>Ordine dal palco: <b>P1</b>, <b>P2</b>, <b>medie</b>, <b>superiori</b>. L’ordine si rispetta sempre.</li>
+   <li>Ordine dal palco: <b>P1</b>, <b>P2</b>, <b>P3</b>, <b>medie</b>, <b>superiori</b>. L’ordine si rispetta sempre. Le priorità arrivano dalle note del deal su HubSpot: si correggono lì.</li>
    <li>Le scuole stanno <b>una dietro l’altra</b>, mai affiancate: ogni fila è di una sola scuola.</li>
    <li>Si riempie prima la <b>platea</b>. Se una scuola non ci sta intera e restano almeno 2 file, si divide: davanti in platea, il resto in galleria. Se resta 1 fila sola, va tutta in galleria e la piantina indica i posti liberi in platea.</li>
    <li>Se la platea ha <b>due blocchi separati</b> dal corridoio, ogni scuola sta in <b>un blocco solo</b>, in colonna: la scuola successiva va nel blocco dove si arriva più avanti al palco.</li>
@@ -2417,7 +2417,7 @@ function schoolCard(s){
    <div class="school-fields">
     <div class="field"><span class="flabel">Persone</span><input class="in" type="number" inputmode="numeric" min="0" data-f="persone" value="${esc(s.persone)}" aria-label="Persone"></div>
     <div class="field"><span class="flabel">Livello</span><select class="in" data-f="livello" aria-label="Livello"><option value="medie" ${s.livello==='medie'?'selected':''}>Medie</option><option value="superiori" ${s.livello==='superiori'?'selected':''}>Superiori</option></select></div>
-    <div class="field"><span class="flabel">Priorità</span><select class="in" data-f="priorita" aria-label="Priorità"><option value="" ${!pr?'selected':''}>Nessuna</option><option value="P1" ${pr==='P1'?'selected':''}>P1</option><option value="P2" ${pr==='P2'?'selected':''}>P2</option></select></div>
+    <div class="field"><span class="flabel">Priorità</span><select class="in" data-f="priorita" aria-label="Priorità"><option value="" ${!pr?'selected':''}>Nessuna</option><option value="P1" ${pr==='P1'?'selected':''}>P1</option><option value="P2" ${pr==='P2'?'selected':''}>P2</option><option value="P3" ${pr==='P3'?'selected':''}>P3</option></select></div>
     <div class="field"><span class="flabel">Con disabilità</span><input class="in" type="number" inputmode="numeric" min="0" data-f="disabili" value="${esc(s.disabili||0)}" aria-label="Studenti con disabilità"></div>
    </div>
    <div class="school-fields" style="grid-template-columns:1fr">
@@ -2581,7 +2581,7 @@ async function planPDF(doc,p,t){
       const lines=[...doc.splitTextToSize(rs.length?rangesText(GT,rs):'Nessun posto assegnato',W-8)];if(s.note)lines.push(...doc.splitTextToSize('Note: '+s.note,W-8));
       return {s,meta,lines};});
     doc.setFont('helvetica','normal');doc.setFontSize(9);let items=mkItems(areaW);
-    const extra=[];if(Object.keys(p.carrozzina||{}).length||Object.values(GT.byK).some(q=>q.carr))extra.push('Riquadro blu con pallino bianco: posto per chi è in carrozzina.');if(p.distNote)extra.push(p.distNote);
+    const extra=[];if(Object.keys(p.carrozzina||{}).length||Object.values(GT.byK).some(q=>q.carr))extra.push('Riquadro blu con pallino bianco: posto per chi è in carrozzina.');if(p.distNote)extra.push(p.distNote);if(p1Conflict(p.scuole,t))extra.push('Ordine P1 da confermare dal referente di zona.');
     const need=items.reduce((a,it)=>a+lineH*(2+it.lines.length)+2,14+extra.length*lineH*3);
     if(y+need>PH-M){doc.addPage('a4','portrait');PW=doc.internal.pageSize.getWidth();PH=doc.internal.pageSize.getHeight();y=M+6;items=mkItems(PW-2*M);}
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor('#17202B');doc.text('Legenda',M,y);
@@ -3224,6 +3224,22 @@ async function hsLearn(){if(S.mode!=='supa'||!isDir())return;const claimed=new S
   for(const tp of Object.values(S.c.tappe||{})){if(n>=10)break;const h=tp.hsTeatro;if(!h||!h.id||tp.hsTeatroDiversi||claimed.has(h.id))continue;const t=teatroOf(tp);
     if(!t||t.hsTeatroId||t.archiviato||nomeSim(h.nome,t.nome)<0.5)continue;const d=clone(S.c.teatri[t.id]);delete d.id;d.hsTeatroId=h.id;
     try{await put('teatri',t.id,d);claimed.add(h.id);n++;}catch(_){break;}}}
+
+/* più scuole P1 nella stessa replica: è un errore del referente, che decide chi va davanti (su HubSpot).
+   Con una platea a due blocchi due P1 stanno entrambe davanti (una per blocco): lì non è un problema. */
+function twoBlocks(t){if(!t)return false;try{const GT=geomT(t,{});const z=GT.order.find(x=>(x.z.tipo||'platea')==='platea'&&x.G.lines.length);if(!z)return false;
+  const first=z.G.lines[0];const f=first.fila;const seats=z.G.lines.filter(l=>l.fila===f).flatMap(l=>l.seats).filter(q=>!q.blocked).map(q=>q.proj).sort((a,b)=>a-b);
+  if(seats.length<4)return false;const d=seats.slice(1).map((v,i)=>v-seats[i]);const md=d.slice().sort((a,b)=>a-b)[Math.floor(d.length/2)];const g=d.map((v,i)=>[v,i]).filter(([v])=>v>md*1.8);
+  if(g.length!==1)return false;const l=g[0][1]+1;return Math.min(l,seats.length-l)/seats.length>=0.3;}catch(_){return false;}}
+function p1Conflict(scuole,t){const ps=(scuole||[]).filter(s=>prioOf(s)==='P1'&&int(s.persone)>0);if(ps.length<2)return null;if(ps.length===2&&twoBlocks(teatroOf({teatroId:t&&t.id})||null))return null;return ps;}
+function p1List(){const td=today(),lim=addDays(td,60),out=[];
+  Object.values(S.c.tappe||{}).filter(tp=>!tp.rimossa&&tp.data>=td&&tp.data<=lim&&inZone(tp)).sort((a,b)=>a.data.localeCompare(b.data)).forEach(tp=>{
+    (tp.repliche||[]).forEach(r=>{const p=findP(tp.id,r);const sc=p?p.scuole:dealsFor(tp,r).filter(d=>d.stage!=='Chiuso perso').map(dealToSchool);const c=p1Conflict(sc,teatroOf(tp));if(c)out.push({tp,r,c});});});
+  return out;}
+function p1HTML(){const xs=p1List();if(!xs.length)return '';const ref=role()==='venditore';
+  return `<section class="card prom-dir"><div class="card-head"><h2>Priorità da sistemare</h2><span class="pill warn">${xs.length} ${xs.length===1?'replica':'repliche'}</span></div>
+   <p class="muted small" style="margin:0">${ref?'In queste repliche più scuole hanno P1. Scegli quale va davanti e correggi le altre in P2 o P3 nelle note del deal su HubSpot: l’app si aggiorna da sola.':'Repliche con più scuole P1: deve sistemarle il referente di zona, correggendo la priorità su HubSpot. Fino ad allora la piantina mette davanti la scuola più piccola.'}</p>
+   ${xs.map(x=>`<div class="prom-drow">${tTag(x.tp.tour)}<span class="tmain"><b>${esc(x.c.map(s=>s.nome||'Scuola').join(' · '))}</b><span class="muted small">${esc(cap(shortDate(x.tp.data)))} · ${esc(x.tp.citta||'')} · replica ${esc(x.r)}</span></span></div>`).join('')}</section>`;}
 function promSent(id){const d=(S.c.promemoria||{})[id];return d&&d.ts?d:null;}
 function promAttivi(){const u=me();if(!u||u.ruolo!=='tm'||!u.tour)return [];const now=Date.now();PROM_HIDE.size;
   return pendenze(u.tour).filter(x=>{if(PROM_HIDE.has(x.id))return false;const s=promSent(x.id);return x.auto||(s&&now-new Date(s.ts).getTime()<24*3600e3);});}
@@ -3254,7 +3270,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-prom
   try{await put('promemoria',x.id,d);S.c.promemoria=S.c.promemoria||{};S.c.promemoria[x.id]={...d,id:x.id};toast('Promemoria inviato al TM');render();}catch(err){b.disabled=false;toast('Non inviato ('+(err.code||err.message)+')','bad');}});
 function renderControllo(){
   const td=today();const ts=tours();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(cap(new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})))}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?promListHTML()+hsTeatriHTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(cap(new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})))}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?promListHTML()+hsTeatriHTML():''}${isDir()||role()==='venditore'?p1HTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
   const tOrd=ts.map(tr=>{const l=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));return {tr,d:l.length?l[pickDay(l).i].data:'9999'};}).sort((a,b)=>a.d.localeCompare(b.d)||a.tr.localeCompare(b.tr)).map(x=>x.tr);
   tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;
     const pk=pickDay(list);const tp=list[pk.i];const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);
