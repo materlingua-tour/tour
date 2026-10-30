@@ -644,7 +644,7 @@ details.rep>summary .pill{white-space:normal}
       <span id="storePill" class="store-pill">Collegamento…</span>
     </div>
   </nav>
-  <main><div class="main-in"><div class="mtop"><span class="logo" role="img" aria-label="Mater Lingua"></span><div class="id-box mtop-id"><span class="id-dept"></span><span class="id-name"></span></div></div><div id="app"></div><p class="credit">powered by Matteo Mongiorgi</p></div></main>
+  <main><div class="main-in"><div class="mtop"><span class="logo" role="img" aria-label="Mater Lingua"></span><div class="id-box mtop-id"><span class="id-dept"></span><span class="id-name"></span></div></div><div id="app"></div><p class="credit">designed by Matteo Mongiorgi</p></div></main>
 </div>
 
 <script>
@@ -910,7 +910,7 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
    <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
-  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${themeCard()}${canPulizia()?archCard():''}</div>`;
+  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${themeCard()}${canArch()?archCard():''}</div>`;
   app.innerHTML=h;}
 document.addEventListener('input',e=>{if(V.name==='profilo'&&e.target.dataset.pf)V.profDirty=true;});
 document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.closest('[data-pfsave]'))return;const u=me();if(!u)return;
@@ -2933,7 +2933,7 @@ function renderAltro(){
   app.innerHTML=`<div class="page-head"><span class="eyebrow">Menu</span><h1>Altro</h1></div>
   <h2 class="alt-sec">Tournée</h2><div class="list">${tour.map(card).join('')}</div>
   <h2 class="alt-sec">Account</h2><div class="list">${acc.map(card).join('')}</div>
-  ${canPulizia()?`<div style="margin-top:16px">${archCard()}</div>`:''}
+  ${canArch()?`<div style="margin-top:16px">${archCard()}</div>`:''}
   <div class="alt-cols">
   <section class="card"><div class="card-head"><h2>Come leggere i colori</h2></div>
    <ul class="legend-list"><li><i style="background:var(--ok)"></i>Verde: fatto, pronto, pagato</li><li><i style="background:var(--warn)"></i>Arancio: da fare</li><li><i style="background:#F2B705"></i>Giallo: attenzione o consiglio da leggere</li><li><i style="background:#3B6FB6"></i>Azzurro: nota del referente di zona</li><li><i style="background:var(--bad)"></i>Rosso: problema o dati cambiati</li></ul></section>
@@ -2953,8 +2953,10 @@ function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{
    L'app non scrive mai sul Drive direttamente: passa dalla funzione "drive-archivio", che sul Drive
    può solo aggiungere/aggiornare file (mai cancellare). */
 const ARCH_FN='drive-archivio';
-function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button><button class="btn small" data-archtest>Prova il collegamento</button></div></section>`;}
-function canPulizia(){return ['clivia.lachkar@materlingua.eu',DEV_EMAIL].includes((S.pref.user||'').toLowerCase());}
+function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. ${canPulizia()?' A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.':''}</p><div class="row-btns">${canPulizia()?'<button class="btn small primary" data-pulizia>Pulizia di fine tournée</button>':''}<button class="btn small" data-archtest>Prova il collegamento</button></div></section>`;}
+/* svuotare l'app a fine tournée: solo Clivia. Lo sviluppatore vede la scheda solo per provare il collegamento */
+function canPulizia(){return (S.pref.user||'').toLowerCase()==='clivia.lachkar@materlingua.eu';}
+function canArch(){return canPulizia()||(S.pref.user||'').toLowerCase()===DEV_EMAIL;}
 function hstr(x){let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
 const ARCH_K='ml_arch';let ARCH_H=null;
 function archGet(){if(ARCH_H)return ARCH_H;try{ARCH_H=JSON.parse(localStorage.getItem(ARCH_K)||'{}');}catch(_){ARCH_H={};}return ARCH_H;}
