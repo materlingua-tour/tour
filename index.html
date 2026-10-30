@@ -229,7 +229,7 @@ span.tick{cursor:default;border-style:dashed}
 .chip i{width:14px;height:14px;border-radius:4px;flex:none}
 .chip.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .sep{width:1px;height:28px;background:var(--line);margin:0 4px}
-.hint{font-size:15px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:8px 12px}
+.hint{min-height:calc(2.9em + 18px);display:flex;align-items:center;font-size:15px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:8px 12px}
 .hs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:12px}
 .hs.alert{border-color:var(--bad)}
 .hs-logo{font-weight:800;font-size:14px;color:#2D0E05;background:#FF7A59;border-radius:6px;padding:2px 8px}
@@ -529,6 +529,8 @@ details.rep>summary .pill{white-space:normal}
 .done-roll{display:flex;align-items:center;gap:12px;text-align:left;background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-bd);border-radius:14px;padding:14px 16px;font-size:17px;font-weight:700;line-height:1.35;margin-top:6px;width:100%}
 .done-roll .tri{flex:none}
 .done-btn{width:100%;min-height:50px;font-size:17px;margin-top:6px}
+.canvas-wrap.moving{touch-action:none}
+.canvas-wrap.moving #edCanvas svg{cursor:move}
 .rep-box{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px dashed var(--line);border-radius:10px;margin-top:4px}
 .altre-box{flex-basis:100%;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .altre-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
@@ -593,6 +595,9 @@ details.rep>summary .pill{white-space:normal}
 .ins-box{background:var(--surface-2,rgba(127,127,127,.08));border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tour-tag{color:color-mix(in srgb,var(--tc) 55%,#fff)}}
 :root[data-theme="dark"] .tour-tag{color:color-mix(in srgb,var(--tc) 55%,#fff)}
+.lg-d{display:none!important}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body:not(.landing) .lg-l{display:none!important}:root:not([data-theme="light"]) body:not(.landing) .lg-d{display:block!important}}
+:root[data-theme="dark"] body:not(.landing) .lg-l{display:none!important}:root[data-theme="dark"] body:not(.landing) .lg-d{display:block!important}
 .card-head .tour-tag{margin:0;align-self:center}
 .acc-row{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0;font:inherit}
 .acc-row .tmain{flex:1;min-width:0}.acc-row .tmain .small{overflow-wrap:anywhere}.acc-chev{color:var(--muted);font-size:14px;width:16px;text-align:center}
@@ -794,10 +799,12 @@ function tours(){const u=me();const all=allTours();if(!u)return all;
   if(u.ruolo==='tm')return all.filter(t=>t===u.tour);if(u.ruolo==='venditore')return all.filter(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t)));return all;}
 const ALL='__ALL__',ALL_VIEWS=['tournee','mappa','cast','piantine','auto','checklist','documenti','qr'];
 const TOUR_COLS={'FRANCESE 1':'#1F4FEA','FRANCESE 2':'#0B6E78','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
-function tTag(tr){return tr?`<span class="tour-tag" style="--tc:${tourCol(tr)}">${esc(tr)}</span>`:'';}
+function tourShort(tr){const t=String(tr||'').toUpperCase().trim();let m=t.match(/^FRANCESE\s*(.*)$/);if(m)return ('FRA '+m[1]).trim();if(t.startsWith('INGLESE'))return 'ING'+t.slice(7);if(t.startsWith('SPAGNOLO'))return 'SPA'+t.slice(8);return tr;}
+function tTag(tr){return tr?`<span class="tour-tag" style="--tc:${tourCol(tr)}" title="${esc(tr)}">${esc(tourShort(tr))}</span>`:'';}
 function tourCol(tr){return TOUR_COLS[tr]||PALETTE[Math.abs([...String(tr)].reduce((a,c)=>a*31+c.charCodeAt(0),7))%PALETTE.length];}
 function canAll(){const u=me();return !!u&&u.ruolo!=='tm';}
 function curTour(){const ts=tours();if(S.pref.tour===ALL&&canAll()&&ALL_VIEWS.includes(V.name))return ALL;return ts.includes(S.pref.tour)?S.pref.tour:(ts[0]||'');}
+document.addEventListener('click',e=>{if(!e.target.closest('[data-alltours]'))return;S.pref.tour=ALL;try{savePref();}catch(_){}V.qrDay=null;V.vEdit=false;V.vChange=false;V.rNew=false;render();window.scrollTo(0,0);});
 function tourLbl(){const t=curTour();return t===ALL?'Tutti i tour':'Tour '+t;}
 function tourTappe(){const tr=curTour();return Object.values(S.c.tappe).filter(t=>(tr===ALL||t.tour===tr)&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));}
 function pickDay(list){const td=today();let i=list.findIndex(t=>t.data===td);if(i>=0)return {i,kind:'oggi'};
@@ -1224,7 +1231,7 @@ function showOfTp(tp){const base=showOf(tp.tour);const t=(tp.spettacolo||'').tri
   const sp=S.c.impostazioni.spettacoli||{};const lg=Object.keys(SHOW_DEF).find(k=>norm(({...SHOW_DEF[k],...(sp[k]||{})}).titolo)===norm(t));
   return lg?{...SHOW_DEF[lg],...(sp[lg]||{}),lg}:{titolo:t,lg:''};}
 function showHTML(tour,cls){const sh=typeof tour==='object'?showOfTp(tour):showOf(tour);if(!sh.titolo&&!sh.logo)return '';
-  return `<div class="${cls||'show'}">${sh.logo?`<img src="${esc(B(sh.logo))}" alt="${esc(sh.titolo||'Spettacolo')}">`:`<span class="show-t">${esc(sh.titolo)}<sup>™</sup></span>`}</div>`;}
+  return `<div class="${cls||'show'}">${sh.logo?`<img class="${sh.logoDark?'lg-l':''}" src="${esc(B(sh.logo))}" alt="${esc(sh.titolo||'Spettacolo')}">${sh.logoDark?`<img class="lg-d" src="${esc(B(sh.logoDark))}" alt="${esc(sh.titolo||'Spettacolo')}">`:''}`:`<span class="show-t">${esc(sh.titolo)}<sup>™</sup></span>`}</div>`;}
 
 /* ---------- accoglienza scuole ---------- */
 function accOf(p){return (p&&p.accoglienza)||{};}
@@ -1332,7 +1339,7 @@ function autoOverview(){const save=S.pref.tour;let s='';
 function renderAuto(){
   if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}${role()==='direzione'?flottaCard(true):''}</div>`;return;}
   const v=vData();const veh=vehOf(v);const tg=veh?veh.targa:v.targa;const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
-  let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
+  let h=`<div class="page-head">${canAll()?'<button class="btn small page-back" data-alltours>← Tutti i tour</button>':''}<span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
   h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>${veh&&!V.vEdit?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}`;
   if(V.vEdit)h+=`${flotta().length?`<div class="field"><label for="vVeh">Veicolo del tour</label><select class="in" id="vVeh"><option value="">— Scegli —</option>${flotta().map(x=>`<option value="${esc(x.id)}" ${x.id===v.veicoloId?'selected':''}>${esc(vehLbl(x))}</option>`).join('')}</select></div>`:`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>`}
      <div class="field"><label for="vKm0">Km alla consegna</label><input class="in" id="vKm0" type="number" inputmode="numeric" value="${esc(v.kmIniziali??'')}"></div>
@@ -1340,7 +1347,9 @@ function renderAuto(){
   else h+=`<div class="km-big"><b>${est?est.km.toLocaleString('it-IT'):'—'}</b><span>km stimati adesso</span></div>
      <p class="muted small" style="margin:0">${est?`Ultimo dato: ${est.base.km.toLocaleString('it-IT')} km${est.base.ts?' il '+esc(shortDate(est.base.ts.slice(0,10)))+' alle '+esc(est.base.ts.slice(11,16)):''}${est.base.foto?' (con foto)':''} + ${est.done.length} tratti percorsi. Mancano circa ${est.toEnd.toLocaleString('it-IT')} km a fine tour.`:'Inserisci i km alla consegna dell’auto: da lì l’app somma i tratti della tournée.'}</p>
      <p class="muted small" style="margin:0">Il tratto hotel→teatro si aggiunge all’inizio della 1ª replica, quello teatro→hotel alle 20:00.</p>
-     ${canV?`<div class="row-btns"><button class="btn small primary" data-au="rnew">Correggi i km</button><button class="btn small" data-au="vedit">${tg?'Cambia veicolo o km iniziali':'Scegli il veicolo e i km'}</button></div>`:''}`;
+     ${canV?`<div class="row-btns"><button class="btn small primary" data-au="rnew">Correggi i km</button><button class="btn small" data-au="vedit">${tg?'Correggi veicolo o km iniziali':'Scegli il veicolo e i km'}</button>${tg?'<button class="btn small" data-au="vchange">Cambio veicolo</button>':''}</div>`:''}`;
+  if(V.vChange)h+=vChangeForm(v,est);
+  if((v.storico||[]).length)h+=`<details class="km-hist"><summary>Veicoli precedenti (${v.storico.length})</summary>${v.storico.slice().reverse().map(x=>`<div class="km-row"><b>${esc(x.targa||'—')}</b><span class="small">${esc(x.modello||'')} · dal ${esc(shortDate(String(x.dal||'').slice(0,10)||today()))} al ${esc(shortDate(String(x.al||'').slice(0,10)||today()))}</span><span class="muted small">${x.kmFinali!=null&&x.kmFinali!==''?(+x.kmFinali).toLocaleString('it-IT')+' km alla riconsegna':''}${(x.letture||[]).length?' · '+x.letture.length+' letture':''}</span></div>`).join('')}</details>`;
   if(V.rNew)h+=`<div class="km-form"><div class="field"><label for="rKm">Km sul contachilometri</label><input class="in" id="rKm" type="number" inputmode="numeric" value="${est?est.km:''}"></div>
      <div class="field"><label for="rFoto">Foto del contachilometri</label><input class="in" id="rFoto" type="file" accept="image/*"></div>
      <div class="row-btns"><button class="btn small primary" data-au="rsave">Salva lettura</button><button class="btn small" data-au="rcancel">Annulla</button></div></div>`;
@@ -1357,7 +1366,7 @@ function renderAuto(){
     <p class="muted small" style="margin:0">Metti in sicurezza le persone, chiama il 112 se ci sono feriti, compila la constatazione amichevole (CAI), fotografa i mezzi e avvisa la Direzione.</p></div>
    <div class="emg"><span class="flabel">Salute</span><div class="row-btns"><a class="btn small" href="${mapsSearch('farmacia di turno')}" target="_blank" rel="noopener">Farmacia di turno</a><a class="btn small" href="${mapsSearch('guardia medica')}" target="_blank" rel="noopener">Guardia medica</a><a class="btn small" href="${mapsSearch('pronto soccorso')}" target="_blank" rel="noopener">Pronto soccorso</a></div></div>
    <p class="muted small" style="margin:0">Le ricerche si aprono in Google Maps vicino a dove sei.</p></section>`;
-  h+=`${isDir?flottaCard():''}<section class="card"><div class="card-head"><h2>Numeri utili</h2>${isDir&&!V.eEdit?'<button class="btn small" data-au="eedit">Modifica</button>':''}</div>`;
+  h+=`<section class="card"><div class="card-head"><h2>Numeri utili</h2>${isDir&&!V.eEdit?'<button class="btn small" data-au="eedit">Modifica</button>':''}</div>`;
   if(V.eEdit)h+=`<div class="field"><label for="eAssN">Assicurazione: compagnia</label><input class="in" id="eAssN" value="${esc(ass.nome||'')}"></div>
      <div class="field"><label for="eAssT">Assicurazione: numero per i sinistri</label><input class="in" id="eAssT" type="tel" value="${esc(ass.tel||'')}"></div>
      <div class="field"><label for="eNum">Altri numeri, uno per riga (Nome: numero)</label><textarea class="in ta" id="eNum" rows="6">${esc((E.numeri||[]).map(n=>n.nome+': '+n.tel).join('\n'))}</textarea></div>
@@ -1365,7 +1374,7 @@ function renderAuto(){
   else h+=`<div class="doclist">${(E.numeri||[]).map(n=>`<div class="docrow"><span class="tmain"><b>${esc(n.nome)}</b><span class="muted small">${esc(n.tel)}</span></span><a class="btn small" href="${telHref(n.tel)}">Chiama</a></div>`).join('')||'<p class="muted small">Nessun numero.</p>'}</div>`;
   app.innerHTML=h+`</section></div>`;
 }
-function flottaCard(wide){const fl=flotta();const ed=V.fEdit;let s=`<section class="card"${wide?' style="grid-column:1/-1"':''}><div class="card-head"><h2>Parco veicoli</h2>${ed?'':'<button class="btn small" data-au="fnew">+ Veicolo</button>'}</div>`;
+function flottaCard(wide){const fl=flotta();const ed=V.fEdit;let s=`<section class="card"${wide?' style="grid-column:1/-1"':''}><div class="card-head"><h2>Flotta aziendale</h2>${ed?'':'<button class="btn small" data-au="fnew">+ Veicolo</button>'}</div>`;
   const used=id=>tours().filter(t=>(S.c.impostazioni[vKey(t)]||{}).veicoloId===id);
   if(ed){const x=ed==='new'?{}:fl.find(y=>y.id===ed)||{};const F=(id,l,val,ph)=>`<div class="field"><label for="${id}">${l}</label><input class="in" id="${id}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
     s+=`<div class="grid2">${F('fMod','Modello',x.modello,'Fiat Talento')}${F('fTarga','Targa',x.targa,'AB123CD')}${F('fComp','Compagnia assicurativa',x.compagnia)}${F('fPol','Numero di polizza',x.polizza)}${F('fAss','Assistenza stradale (numero)',x.assistenza)}${F('fSin','Sinistri / incidente (numero)',x.sinistri)}</div>
@@ -1374,11 +1383,25 @@ function flottaCard(wide){const fl=flotta();const ed=V.fEdit;let s=`<section cla
      <div class="row-btns"><button class="btn small primary" data-au="fsave" data-id="${esc(ed)}">Salva</button><button class="btn small" data-au="fcancel">Annulla</button></div>`;}
   else s+=fl.length?`<div class="doclist">${fl.map(x=>{const u=used(x.id);return `<div class="docrow"><span class="tmain"><b>${esc(vehLbl(x))}</b><span class="muted small">${esc(x.compagnia||'Assicurazione da inserire')}${x.polizza?' · polizza '+esc(x.polizza):''}${u.length?' · '+esc(u.join(', ')):' · non assegnato'}</span></span><button class="btn small" data-au="fedit" data-id="${esc(x.id)}">Modifica</button></div>`;}).join('')}</div>`:'<p class="muted small" style="margin:0">Nessun veicolo. Aggiungili qui, poi assegnali a ogni tour con “Scegli il veicolo”.</p>';
   return s+'</section>';}
+function vChangeForm(v,est){return `<div class="km-form"><p class="small" style="margin:0"><b>Cambio veicolo</b>: il veicolo attuale e le sue letture restano nello storico; si riparte da zero con il nuovo.</p>
+  <div class="field"><label for="cKmOld">Km del veicolo che lasci (${esc(v.targa||'')})</label><input class="in" id="cKmOld" type="number" inputmode="numeric" value="${est?est.km:''}"><span class="muted small">Facoltativo: diventa l’ultima lettura del vecchio veicolo.</span></div>
+  ${flotta().length?`<div class="field"><label for="cVeh">Nuovo veicolo</label><select class="in" id="cVeh"><option value="">— Scegli —</option>${flotta().filter(x=>x.id!==v.veicoloId).map(x=>`<option value="${esc(x.id)}">${esc(vehLbl(x))}</option>`).join('')}<option value="__altro">Altro (scrivo la targa)</option></select></div>`:''}
+  <div class="field"><label for="cTarga">Targa del nuovo veicolo</label><input class="in" id="cTarga" placeholder="${flotta().length?'Solo se non è nella flotta':'es. AB123CD'}" autocomplete="off"></div>
+  <div class="field"><label for="cKm">Km del nuovo veicolo alla consegna</label><input class="in" id="cKm" type="number" inputmode="numeric"></div>
+  <div class="row-btns"><button class="btn small primary" data-au="csave">Conferma il cambio</button><button class="btn small" data-au="ccancel">Annulla</button></div></div>`;}
 async function putImp(key,o){const cur=clone(S.c.impostazioni[key]||{});const out={...cur,...o};delete out.id;S.c.impostazioni[key]={...out,id:key};await put('impostazioni',key,out);}
 document.addEventListener('click',async e=>{if(V.name!=='auto')return;const b=e.target.closest('[data-au]');if(!b)return;const a=b.dataset.au;const y=window.scrollY;const re=()=>{render();window.scrollTo(0,y);};
   try{
   if(a==='opent'){S.pref.tour=b.dataset.t;try{savePref&&savePref();}catch(_){}render();window.scrollTo(0,0);return;}
-  if(a==='vedit'){V.vEdit=true;V.rNew=false;re();}
+  if(a==='vedit'){V.vEdit=true;V.rNew=false;V.vChange=false;re();}
+  else if(a==='vchange'){V.vChange=true;V.vEdit=false;V.rNew=false;re();}
+  else if(a==='ccancel'){V.vChange=false;re();}
+  else if(a==='csave'){const v=vData();const g=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};const vid=g('cVeh');const sel=vid&&vid!=='__altro'?flotta().find(x=>x.id===vid):null;
+    const targa=sel?sel.targa:g('cTarga').toUpperCase();const km=g('cKm');const kmOld=g('cKmOld');
+    if(!targa){toast('Scegli il nuovo veicolo o scrivi la targa','warn');return;}if(km===''){toast('Scrivi i km del nuovo veicolo','warn');return;}
+    const old=vehOf(v);const now=nowStamp();const lett=[...(v.letture||[])];if(kmOld!=='')lett.push({km:int(kmOld),ts:now,tm:tmName(),finale:true});
+    const storico=[...(v.storico||[]),{veicoloId:v.veicoloId||'',targa:v.targa||'',modello:old?old.modello||'':'',kmIniziali:v.kmIniziali??'',kmIniTs:v.kmIniTs||'',dal:v.kmIniTs||'',al:now,kmFinali:kmOld===''?'':int(kmOld),letture:lett}];
+    await putImp(vKey(),{veicoloId:sel?sel.id:'',targa,kmIniziali:int(km),kmIniTs:now,letture:[],storico});V.vChange=false;toast(`Cambio fatto: ora il tour usa ${targa}`);re();}
   else if(a==='fnew'){V.fEdit='new';re();}
   else if(a==='fedit'){V.fEdit=b.dataset.id;re();}
   else if(a==='fcancel'){V.fEdit=null;re();}
@@ -1479,7 +1502,7 @@ function renderPiantineList(){
   if(ts.length)h+=`<div class="newp"><select class="in" id="newpT" aria-label="Teatro">${ts.map(t=>`<option value="${t.id}">${esc(t.nome)}${t.citta?' · '+esc(t.citta):''}</option>`).join('')}</select><button class="btn" data-ls="newp">Nuova piantina libera</button></div>`;
   const tourOfP=p=>{const tp=p.tappaId&&S.c.tappe[p.tappaId];return tp?tp.tour:'';};
   h+=`<div class="t-filters"><input class="in" id="pSearch" type="search" placeholder="Cerca teatro, città, scuola o data (es. 23/11)" value="${esc(V.pq||'')}" aria-label="Cerca piantine">
-   ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option ${V.pt===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
+   ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option value="${esc(t)}" ${V.pt===t?'selected':''}>${esc(tourShort(t))}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
   if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
   else if(!ps.length)h+=`<div class="empty"><b>${V.showArch?'Nessuna piantina archiviata.':'Ancora nessuna piantina.'}</b></div>`;
   else h+=`<div class="list">${ps.map(p=>{const t=S.c.teatri[p.teatroId];const tot=(p.scuole||[]).reduce((a,s)=>a+int(s.persone),0);
@@ -1842,12 +1865,15 @@ document.addEventListener('input',e=>{
 function spacing(z){const sp=[];(z.rows||[]).forEach(r=>{const n=r.posti.length;if(n>1)sp.push(Math.hypot(r.x2-r.x1,r.y2-r.y1)/(n-1));});
   if(!sp.length)return 0;sp.sort((a,b)=>a-b);return sp[Math.floor(sp.length/2)];}
 function seatSize(z){const sp=spacing(z);return sp?Math.max(4,sp*0.84):Math.max(12,z.w/45);}
+/* posizione del posto lungo la fila: retta, o arco se la fila è curva (curva = freccia dell'arco / lunghezza) */
+function rowPt(r,tt){const dx=r.x2-r.x1,dy=r.y2-r.y1,L=Math.hypot(dx,dy)||1,c=(+r.curva||0)*L;const nx=-dy/L,ny=dx/L;const o=4*c*tt*(1-tt),d=4*c*(1-2*tt);
+  return {x:r.x1+dx*tt+nx*o,y:r.y1+dy*tt+ny*o,ang:normAng(Math.atan2(dy+ny*d,dx+nx*d)*180/Math.PI)};}
 function geom(z,excl){
   const S0=seatSize(z);const st=z.front||{x1:0,y1:z.h,x2:z.w,y2:z.h};
   let ux=st.x2-st.x1,uy=st.y2-st.y1;const L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
   const seats=[];
-  (z.rows||[]).forEach(r=>{const n=r.posti.length;const ang=normAng(Math.atan2(r.y2-r.y1,r.x2-r.x1)*180/Math.PI);const bl=r.bloccati||[];
-    for(let i=0;i<n;i++){const tt=n===1?0:i/(n-1);const x=r.x1+(r.x2-r.x1)*tt,y=r.y1+(r.y2-r.y1)*tt;const k=r.id+'~'+i;
+  (z.rows||[]).forEach(r=>{const n=r.posti.length;const ang0=normAng(Math.atan2(r.y2-r.y1,r.x2-r.x1)*180/Math.PI);const bl=r.bloccati||[];
+    for(let i=0;i<n;i++){const tt=n===1?0:i/(n-1);const P=rowPt(r,tt);const x=P.x,y=P.y,ang=+r.curva?P.ang:ang0;const k=r.id+'~'+i;
       const fixed=bl.includes(i),ex=!fixed&&!!(excl&&excl[k]);
       seats.push({k,r,i,label:r.posti[i],x,y,ang,fixed,excl:ex,blocked:fixed||ex,carr:!fixed&&(r.carrozzina||[]).includes(i),proj:(x-st.x1)*ux+(y-st.y1)*uy,dist:distSeg(x,y,st)});}});
   const g={};
@@ -1902,7 +1928,7 @@ function buildSVG(z,G,o){
 }
 function seatSVG(x,S0,o){
   const sid=o.assign&&!x.blocked?o.assign[x.k]:null;const c=sid&&o.colorOf?o.colorOf[sid]:null;
-  const sel=o.selRow&&x.r.id===o.selRow;const h=S0/2;
+  const sel=(o.selRow&&x.r.id===o.selRow)||(o.selSet&&o.selSet.has(x.r.id));const h=S0/2;
   const fill=x.fixed?'fill:var(--blocked)':x.excl?'fill:var(--warn-soft)':(c?'fill:'+c:'fill:var(--seat)');
   const stroke=sel?'stroke:var(--accent)':x.excl?'stroke:var(--warn)':(c?'stroke:rgba(0,0,0,.25)':'stroke:var(--seat-stroke)');
   const sw=f2(sel?S0*0.13:S0*0.05);
@@ -2078,15 +2104,14 @@ async function altreAct(kind,i){const t=V.t;const x=(t.pianteAltre||[])[i];if(!x
 app.addEventListener('click',e=>{if(V.name!=='teatro')return;const b=e.target.closest('[data-altre]');if(b)altreAct(b.dataset.altre,+b.dataset.i);});
 function renderTools(){
   const z=Z();const fr=z.tipo==='platea'?'Palco':'Balaustra';
-  const T=[['palco',fr],['fila','Fila'],['seleziona','Modifica'],['blocca','Blocca posto'],['carr','♿ Posto carrozzina']];
+  const T=[['palco',fr],['fila','Fila'],['seleziona','Modifica'],['sposta','Sposta file'],['blocca','Blocca posto'],['carr','♿ Posto carrozzina']];
   const b=V.bg[z.id]||{};
   let h=`<div class="seg ed-seg" role="group" aria-label="Strumento">${T.map(([k,l])=>`<button data-tool="${k}" class="${V.tool===k?'on':''}">${l}</button>`).join('')}</div>`;
-  h+=`<button class="btn small" data-ed="undo" ${V.hist.length?'':'disabled'}>Annulla</button><span class="sep"></span>`;
+  h+=`<button class="btn small" data-ed="undo" ${V.hist.length?'':'disabled'} title="Torna indietro di un passo">↶ Indietro</button><button class="btn small" data-ed="redo" ${(V.fut||[]).length?'':'disabled'} title="Rifà il passo annullato">↷ Avanti</button><span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="zout" aria-label="Riduci">−</button><button class="btn small" data-ed="zin" aria-label="Ingrandisci">+</button><button class="btn small" data-ed="fs">${V.fs?'Chiudi schermo intero':'Schermo intero'}</button>${Z().rows.length?'<button class="btn small" data-ed="fit">Centra sui posti</button>':''}<span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
-  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona tutta la pianta'}</button><button class="btn small" data-ed="scanfine" ${V.scanning?'disabled':''} title="Divide la pianta in fasce e le scansiona una per volta: più lenta, ma legge meglio le piante grandi o in verticale">Scansione precisa</button><button class="btn small ${V.tool==='areascan'?'primary':''}" data-tool="areascan" ${V.scanning?'disabled':''}>Scansiona un’area</button>`;
+  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona tutta la pianta'}</button>`;
   if(Z().rows.length)h+=`<button class="btn small ${V.tool==='areaclear'?'primary':''}" data-tool="areaclear">Pulisci un’area</button>`;
-  if(V.lastArea&&b.url&&CFG&&!V.scanning)h+=`<button class="btn small" data-ed="scanlast">Scansiona l’area pulita</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
   if(b.url)h+=`<label class="chk" title="Mostra o nasconde la pianta originale; la barra ne regola l’intensità"><input type="checkbox" id="showBg" ${V.showBg?'checked':''} aria-label="Mostra la pianta originale"> Intensità <input type="range" id="bgOp" min="0.1" max="1" step="0.05" value="${V.bgOp}" aria-label="Intensità della pianta originale" style="width:90px;margin-left:4px"></label>`;
   document.getElementById('edTools').innerHTML=h;
@@ -2094,10 +2119,11 @@ function renderTools(){
 }
 function renderHint(){
   const z=Z();const isP=z.tipo==='platea';let m='';
-  if(V.pending)m=V.pending.type==='rep'?`Tocca il <b>primo posto della fila subito dietro</b>: ne creo ${V.pending.n} con la stessa distanza e le lettere successive.`:V.pending.type==='dup'?'Tocca dove va il <b>primo posto</b> della nuova fila: sarà uguale a quella selezionata.':V.pending.type==='start'?'Tocca la nuova posizione del <b>primo posto</b>.':'Tocca la nuova posizione dell’<b>ultimo posto</b>.';
+  if(V.pending)m=V.pending.type==='split'?'Tocca il <b>corridoio</b> nella fila: diventa due tratti con la stessa lettera.':V.pending.type==='rep'?`Tocca il <b>primo posto della fila subito dietro</b>: ne creo ${V.pending.n} con la stessa distanza e le lettere successive.`:V.pending.type==='dup'?'Tocca dove va il <b>primo posto</b> della nuova fila: sarà uguale a quella selezionata.':V.pending.type==='start'?'Tocca la nuova posizione del <b>primo posto</b>.':'Tocca la nuova posizione dell’<b>ultimo posto</b>.';
   else if(V.tool==='palco')m=V.pts.length?'Ora tocca l’<b>altro estremo</b>.':isP?'Tocca i <b>due estremi del bordo del palco</b>, il lato verso il pubblico.':`Tocca i <b>due estremi della balaustra</b> di ${esc(z.nome)}: il lato affacciato sulla sala. Le file più vicine sono quelle davanti.`;
   else if(V.tool==='fila')m=V.draft?'Controlla che i posti combacino con il disegno, poi conferma nel pannello.':V.pts.length?'Ora tocca il centro dell’<b>ultimo posto</b> della fila.':'Tocca il centro del <b>primo posto</b> della fila. Se c’è un corridoio, fai un tratto per lato con la stessa lettera.';
   else if(V.tool==='seleziona')m='Tocca un posto per modificare la sua fila.';
+  else if(V.tool==='sposta')m=(V.moveSel&&V.moveSel.size)?`<b>${V.moveSel.size} ${V.moveSel.size===1?'fila selezionata':'file selezionate'}</b>: trascinale, oppure usa le frecce della tastiera (con Maiuscolo vai più veloce). Tocca fuori per deselezionare.`:'Trascina una fila per spostarla. Per spostarne tante insieme, trascina sul vuoto per disegnare un riquadro attorno.';
   else if(V.tool==='areascan')m=V.pts.length?'Ora tocca l’<b>angolo opposto</b> dell’area.':'Tocca un <b>angolo</b> dell’area da scansionare (per esempio la galleria), poi quello opposto. Le file che ci sono già dentro vengono sostituite.';
   else if(V.tool==='areaclear')m=V.pts.length?'Ora tocca l’<b>angolo opposto</b> dell’area.':'Tocca un <b>angolo</b> dell’area da pulire, poi quello opposto: le file con il centro dentro l’area vengono tolte.';
   else if(V.tool==='carr')m='Tocca il posto per chi è in carrozzina (tocca di nuovo per toglierlo). Vale per tutte le date: la scuola con studenti con disabilità si dispone attorno a quel posto.';
@@ -2107,9 +2133,9 @@ function renderHint(){
 }
 function drawEd(){
   const z=edZone();const G=geom(z);const b=V.bg[Z().id]||{};
-  document.getElementById('edCanvas').style.width=(V.zoom*100)+'%';
-  document.getElementById('edCanvas').innerHTML=(!b.url&&!z.rows.length)?`<div class="ed-empty"><button class="btn primary" data-ed="bg">Carica la piantina (PDF o foto)</button><p class="muted small">Va bene anche una foto fatta col telefono, purché dritta e leggibile.</p></div>`:buildSVG(z,G,{showBg:V.showBg,bgUrl:b.url,bgOp:V.bgOp,selRow:V.selRow,pts:V.pts});
-  {const sv=document.querySelector('#edCanvas svg');const ar=V.scanning&&V.area?V.area:V.lastArea;if(sv&&ar){const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',ar.x1);r.setAttribute('y',ar.y1);r.setAttribute('width',ar.x2-ar.x1);r.setAttribute('height',ar.y2-ar.y1);r.setAttribute('class','ed-area');sv.appendChild(r);}}
+  document.getElementById('edCanvas').style.width=(V.zoom*100)+'%';{const w=document.getElementById('edWrap');if(w)w.classList.toggle('moving',V.tool==='sposta');}
+  document.getElementById('edCanvas').innerHTML=(!b.url&&!z.rows.length)?`<div class="ed-empty"><button class="btn primary" data-ed="bg">Carica la piantina (PDF o foto)</button><p class="muted small">Va bene anche una foto fatta col telefono, purché dritta e leggibile.</p></div>`:buildSVG(z,G,{showBg:V.showBg,bgUrl:b.url,bgOp:V.bgOp,selRow:V.selRow,selSet:V.tool==='sposta'?V.moveSel:null,pts:V.pts});
+  {const sv=document.querySelector('#edCanvas svg');const ar=V.tool==='areaclear'&&V.pts.length?null:(V.selRect||null);if(sv&&ar){const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',ar.x1);r.setAttribute('y',ar.y1);r.setAttribute('width',ar.x2-ar.x1);r.setAttribute('height',ar.y2-ar.y1);r.setAttribute('class','ed-area');sv.appendChild(r);}}
   centerOnce('edWrap');const n=G.seats.filter(s=>!s.blocked).length;
   document.getElementById('edStats').innerHTML=`<span><b>${esc(z.nome)}</b></span><span><b>${G.lines.length}</b> file</span><span><b>${n}</b> posti utilizzabili</span><span><b>${G.seats.length-n}</b> bloccati</span><span>${Z().front?(z.tipo==='platea'?'Palco segnato':'Balaustra segnata'):`<b>${z.tipo==='platea'?'Palco':'Balaustra'} non segnato</b>: senza, il davanti è il lato in basso`}</span><span>Totale teatro <b>${seatsTot(V.t)}</b> posti</span>`;
 }
@@ -2124,10 +2150,13 @@ function renderPanel(){
       ${V.t.zone.length>1?(V.confirmZone?`<div class="row-btns"><button class="btn small danger" data-ed="delzoneok">Conferma: elimina ${esc(z.nome)}</button><button class="btn small ghost" data-ed="delzoneno">Annulla</button></div>`:`<div class="row-btns"><button class="btn small ghost" data-ed="delzone">Elimina questa zona</button></div>`):''}
       <h3>Come mappare la sala</h3><ol class="guide">
       <li><b>Carica la piantina</b> in PDF o in foto.</li>
-      <li><b>Scansiona tutta la pianta</b>: l’app prova a riconoscere da sola file e posti. Controlla il risultato: se un blocco è sbagliato usa “Pulisci un’area” e rifallo a mano o con “Scansiona l’area pulita”. Se va bene, premi “Salva mappa”.</li>
+      <li><b>Scansiona tutta la pianta</b>: l’app prova a riconoscere da sola file, corridoi e file curve. Controlla il risultato: se un blocco è sbagliato usa “Pulisci un’area” e rifallo a mano. Se le file sono giuste ma un po’ spostate, usa <b>Sposta file</b>. Se va bene, premi “Salva mappa”.</li>
       <li><b>A mano</b>, <b>Palco</b>: tocca i due estremi del bordo del palco. Serve a capire quali file sono davanti.</li>
       <li><b>Fila</b>: tocca il primo e l’ultimo posto, poi scrivi lettera e numero di posti. Dalla seconda fila il numero viene proposto in automatico.</li>
-      <li>Con un <b>corridoio</b> centrale fai due tratti con la stessa lettera, scegliendo il primo numero di ogni tratto.</li>
+      <li>Con un <b>corridoio</b> centrale fai due tratti con la stessa lettera, oppure fai la fila intera e poi, in Modifica, usa <b>Dividi al corridoio</b>.</li>
+      <li><b>File curve</b>: in Modifica tocca la fila e usa la barra <b>Curvatura</b>; “Stessa curva a tutte le file” la copia sulle altre.</li>
+      <li><b>Ripeti dietro</b>: fatta una fila, creane altre uguali dietro con le lettere successive.</li>
+      <li><b>Sposta file</b>: trascina una fila, o disegna un riquadro e trascina tutte quelle dentro. Le frecce della tastiera le spostano di poco.</li>
       <li>Posti come <b>1A</b> o <b>26B</b>: usa “Etichette personalizzate”, per esempio <i>1A, 1-13</i>.</li>
       <li><b>Galleria</b>: “+ Aggiungi zona”. Se è sulla stessa scansione, la zona nuova la riusa: mappa solo le file della galleria. Se è su un’altra pagina o file, caricala con “Cambia piantina”.</li>
       <li><b>♿ Posto carrozzina</b>: se il teatro ha posti per chi è in carrozzina, segnali qui. Valgono per tutte le date.</li>
@@ -2145,6 +2174,8 @@ function renderPanel(){
    :`<div class="row-btns"><button class="btn primary" data-ed="donerow">Fatto</button><button class="btn" data-ed="duprow">Duplica fila</button></div>
      <div class="rep-box"><label for="fRep" class="small"><b>Ripeti dietro</b>: crea altre file uguali, con le lettere successive</label><div class="row-btns"><input class="in" id="fRep" type="number" inputmode="numeric" min="1" max="40" value="${esc(V.repN||5)}" aria-label="Quante file" style="width:80px"><select class="in" id="fAbc" aria-label="Alfabeto delle file" style="width:auto"><option value="auto" ${(V.repAbc||'auto')==='auto'?'selected':''}>Lettere: automatico</option><option value="it" ${V.repAbc==='it'?'selected':''}>Italiano (senza J K W X Y)</option><option value="en" ${V.repAbc==='en'?'selected':''}>Alfabeto completo</option></select><button class="btn small" data-ed="reprow">Ripeti</button></div><span class="muted small" id="fRepPrev">${r.fila?'Creerà: '+esc(repPreview(r,V.repN||5)):'Scrivi prima la lettera di questa fila'}</span></div>
      <div class="row-btns"><button class="btn small" data-ed="movestart">Sposta primo posto</button><button class="btn small" data-ed="moveend">Sposta ultimo posto</button></div>
+     <div class="field"><label for="fCurva">Curvatura della fila</label><input id="fCurva" type="range" min="-0.35" max="0.35" step="0.005" value="${esc(+r.curva||0)}" aria-label="Curvatura della fila"><div class="row-btns"><button class="btn small" data-ed="curva0">Dritta</button><button class="btn small" data-ed="curvall">Stessa curva a tutte le file</button></div></div>
+     <div class="row-btns"><button class="btn small" data-ed="splitrow" title="Per le file con un corridoio in mezzo: tocca il corridoio e la fila diventa due tratti">Dividi al corridoio</button></div>
      <div class="row-btns">${V.confirmRow?`<button class="btn small danger" data-ed="delrowok">Conferma: elimina fila</button><button class="btn small ghost" data-ed="delrowno">Annulla</button>`:`<button class="btn small ghost" data-ed="delrow">Elimina fila</button>`}</div>`}`;
   if(isNew)setTimeout(()=>{const el=document.getElementById(f.fila?'fN':'fFila');if(el&&window.matchMedia('(min-width:981px)').matches)el.focus();},0);
 }
@@ -2170,11 +2201,12 @@ function readForm(){const g=id=>document.getElementById(id);if(!g('fFila'))retur
   r.bloccati=(r.bloccati||[]).filter(i=>i<r.posti.length);if(r.carrozzina)r.carrozzina=r.carrozzina.filter(i=>i<r.posti.length);
   const pv=g('fPrev');if(pv)pv.innerHTML=previewLabels(r.posti);
   if(!V.draft)markDirty();drawEd();}
-function pushHist(){V.hist.push(JSON.stringify({t:V.t,zi:V.zi}));if(V.hist.length>40)V.hist.shift();}
+function pushHist(){V.hist.push(JSON.stringify({t:V.t,zi:V.zi}));if(V.hist.length>60)V.hist.shift();V.fut=[];}
 function markDirty(){V.dirty=true;const s=document.getElementById('edState');if(s)s.textContent='Modifiche non salvate';}
-function resetSel(){V.pts=[];V.pending=null;V.draft=null;V.form=null;V.selRow=null;V.confirmRow=false;V.confirmZone=false;}
+function resetSel(){V.moveSel=null;V.selRect=null;V.pts=[];V.pending=null;V.draft=null;V.form=null;V.selRow=null;V.confirmRow=false;V.confirmZone=false;}
 function setTool(k){V.tool=k;resetSel();renderTools();renderPanel();drawEd();}
 
+app.addEventListener('input',e=>{if(V.name!=='teatro'||e.target.id!=='fCurva')return;const r=Z().rows.find(x=>x.id===V.selRow);if(!r)return;if(!V.curvaHist){pushHist();V.curvaHist=true;setTimeout(()=>{V.curvaHist=false;},1500);}r.curva=+e.target.value;markDirty();drawEd();});
 app.addEventListener('input',e=>{if(V.name!=='teatro'||!['fRep','fAbc'].includes(e.target.id))return;V.repN=Math.max(1,Math.min(40,int(document.getElementById('fRep').value)||1));V.repAbc=document.getElementById('fAbc').value;
   const r=Z().rows.find(x=>x.id===V.selRow);const el=document.getElementById('fRepPrev');if(r&&el)el.textContent=r.fila?'Creerà: '+repPreview(r,V.repN):'Scrivi prima la lettera di questa fila';});
 app.addEventListener('change',e=>{if(V.name==='teatro'&&e.target.id==='fAbc')e.target.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -2202,10 +2234,10 @@ app.addEventListener('click',async e=>{
     if(a==='back'){if(V.dirty&&!V.leaveOk){V.leaveOk=true;b.textContent='Esci senza salvare?';b.classList.add('danger');setTimeout(()=>{if(b.isConnected){V.leaveOk=false;b.textContent='← Indietro';b.classList.remove('danger');}},4000);return;}
       go(V.linkTappa?'oggi':'teatri',V.linkTappa?{dayId:V.linkTappa}:{});return;}
     if(a==='save'){await saveTeatro(b);return;}
-    if(a==='scanfine'){scanPiantaFine();return;}
     if(a==='altre'){V.showAltre=!V.showAltre;renderZones();return;}
     if(a==='fit'){fitSeats(true);return;}
-    if(a==='undo'){if(!V.hist.length)return;const h=JSON.parse(V.hist.pop());V.t=h.t;V.zi=Math.min(h.zi,V.t.zone.length-1);resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();return;}
+    if(a==='redo'){if(!(V.fut||[]).length)return;V.hist.push(JSON.stringify({t:V.t,zi:V.zi}));const h=JSON.parse(V.fut.pop());V.t=h.t;V.zi=Math.min(h.zi,V.t.zone.length-1);resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();return;}
+    if(a==='undo'){if(!V.hist.length)return;V.fut=V.fut||[];V.fut.push(JSON.stringify({t:V.t,zi:V.zi}));const h=JSON.parse(V.hist.pop());V.t=h.t;V.zi=Math.min(h.zi,V.t.zone.length-1);resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();return;}
     if(a==='fs'){V.fs=!V.fs;document.querySelector('.stage-col').classList.toggle('fs',V.fs);document.body.classList.toggle('noscroll',V.fs);renderTools();return;}
     if(a==='zin'){V.zoom=Math.min(5,V.zoom*1.35);drawEd();return;}
     if(a==='zout'){V.zoom=Math.max(1,V.zoom/1.35);drawEd();return;}
@@ -2221,12 +2253,15 @@ app.addEventListener('click',async e=>{
     if(a==='delzoneok'){pushHist();V.t.zone.splice(V.zi,1);V.zi=0;resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();toast('Zona eliminata');return;}
     if(a==='addrow'){readForm();const d=V.draft;if(!d.fila){toast('Scrivi la lettera della fila','bad');document.getElementById('fFila').focus();return;}
       if(!d.posti.length){toast('Indica quanti posti ha la fila','bad');document.getElementById('fN').focus();return;}
-      pushHist();z.rows.push(d);resetSel();markDirty();toast(`Fila ${d.fila} aggiunta · ${d.posti.length} posti`);renderTools();renderPanel();drawEd();return;}
+      pushHist();z.rows.push(d);resetSel();V.selRow=d.id;V.form={mode:'edit',...rowForm(d)};markDirty();toast(`Fila ${d.fila} aggiunta · ${d.posti.length} posti. Puoi ripeterla dietro dal pannello`);renderTools();renderPanel();drawEd();return;}
     if(a==='cancelrow'){resetSel();renderPanel();renderHint();drawEd();return;}
     if(a==='donerow'){resetSel();renderPanel();drawEd();return;}
     if(a==='duprow'){V.pending={type:'dup',rowId:V.selRow};renderHint();return;}
     if(a==='reprow'){const n=Math.max(1,Math.min(40,int(document.getElementById('fRep').value)));V.repN=n;V.pending={type:'rep',rowId:V.selRow,n};renderHint();return;}
     if(a==='movestart'){V.pending={type:'start',rowId:V.selRow};renderHint();return;}
+    if(a==='splitrow'){V.pending={type:'split',rowId:V.selRow};renderHint();return;}
+    if(a==='curva0'&&r){pushHist();r.curva=0;markDirty();renderPanel();drawEd();return;}
+    if(a==='curvall'&&r){pushHist();const c=+r.curva||0;z.rows.forEach(x=>{x.curva=c;});markDirty();drawEd();toast(c?'Stessa curva applicata a tutte le file della zona':'Tutte le file della zona sono dritte');return;}
     if(a==='moveend'){V.pending={type:'end',rowId:V.selRow};renderHint();return;}
     if(a==='delrow'){V.confirmRow=true;renderPanel();return;}
     if(a==='delrowno'){V.confirmRow=false;renderPanel();return;}
@@ -2238,7 +2273,14 @@ app.addEventListener('click',async e=>{
 function edCanvasClick(e,svg){
   const z=Z();const p=svgPoint(svg,e);const seatEl=e.target.closest('[data-k]');
   if(V.pending){const r=z.rows.find(x=>x.id===V.pending.rowId);if(!r){V.pending=null;renderHint();return;}pushHist();
-    if(V.pending.type==='rep'){const dx=p.x-r.x1,dy=p.y-r.y1;let f=r.fila;const made=[];
+    if(V.pending.type==='split'){const n=r.posti.length;const dx=r.x2-r.x1,dy=r.y2-r.y1,L2=dx*dx+dy*dy||1;const t=((p.x-r.x1)*dx+(p.y-r.y1)*dy)/L2;const k=Math.round(t*(n-1)+0.5);
+      if(n<2||k<1||k>=n){V.hist.pop();toast('Tocca un punto tra due posti della fila','warn');V.pending=null;renderHint();return;}
+      const P=i=>rowPt(r,n===1?0:i/(n-1));const a1=P(0),b1=P(k-1),a2=P(k),b2=P(n-1);const lab=r.posti.slice();const remap=(arr,lo,hi)=>(arr||[]).filter(i=>i>=lo&&i<hi).map(i=>i-lo);
+      const r1={...clone(r),x1:f2(a1.x),y1:f2(a1.y),x2:f2(b1.x),y2:f2(b1.y),n:k,primo:'',spec:lab.slice(0,k).join(','),bloccati:remap(r.bloccati,0,k),curva:0};
+      const r2={...clone(r),id:uid('r'),x1:f2(a2.x),y1:f2(a2.y),x2:f2(b2.x),y2:f2(b2.y),n:n-k,primo:'',spec:lab.slice(k).join(','),bloccati:remap(r.bloccati,k,n),curva:0};
+      if(r.carrozzina){r1.carrozzina=remap(r.carrozzina,0,k);r2.carrozzina=remap(r.carrozzina,k,n);}
+      r1.posti=postiFrom(r1);r2.posti=postiFrom(r2);Object.assign(r,r1);z.rows.push(r2);V.selRow=null;V.form=null;toast(`Fila ${r.fila||''} divisa in due tratti: ${k} + ${n-k} posti`);}
+    else if(V.pending.type==='rep'){const dx=p.x-r.x1,dy=p.y-r.y1;let f=r.fila;const made=[];
       const abc=filaAbc();for(let i=1;i<=V.pending.n;i++){f=nextFila(f,abc);const nr={...clone(r),id:uid('r'),x1:f2(r.x1+dx*i),y1:f2(r.y1+dy*i),x2:f2(r.x2+dx*i),y2:f2(r.y2+dy*i),fila:f,bloccati:[]};delete nr.carrozzina;nr.posti=postiFrom(nr);made.push(nr);}
       z.rows.push(...made);V.selRow=null;V.form=null;V.tool='seleziona';toast(`Create ${made.length} file (${made[0].fila}–${made[made.length-1].fila}): se una ha posti diversi, toccala e correggila`);}
     else if(V.pending.type==='dup'){const dx=p.x-r.x1,dy=p.y-r.y1;const nr={...clone(r),id:uid('r'),x1:p.x,y1:p.y,x2:r.x2+dx,y2:r.y2+dy,fila:'',bloccati:[]};
@@ -2246,6 +2288,7 @@ function edCanvasClick(e,svg){
     else if(V.pending.type==='start'){r.x1=p.x;r.y1=p.y;}else{r.x2=p.x;r.y2=p.y;}
     V.pending=null;markDirty();renderTools();renderPanel();drawEd();
     if(V.form){const el=document.getElementById('fFila');if(el&&!el.value)el.focus();}return;}
+  if(V.tool==='sposta')return;
   if(V.tool==='areascan'||V.tool==='areaclear'){V.pts.push({x:p.x,y:p.y});
     if(V.pts.length===2){const [a,b]=V.pts;V.pts=[];const ar={x1:Math.min(a.x,b.x),y1:Math.min(a.y,b.y),x2:Math.max(a.x,b.x),y2:Math.max(a.y,b.y)};
       if(ar.x2-ar.x1<5||ar.y2-ar.y1<5){toast('Area troppo piccola','warn');renderHint();drawEd();return;}
@@ -2266,6 +2309,27 @@ function edCanvasClick(e,svg){
   if(V.tool==='carr'&&seatEl){const [rid,i]=seatEl.dataset.k.split('~');const r=z.rows.find(x=>x.id===rid);if(!r)return;const idx=+i;if((r.bloccati||[]).includes(idx))return;pushHist();
     r.carrozzina=r.carrozzina||[];r.carrozzina=r.carrozzina.includes(idx)?r.carrozzina.filter(x=>x!==idx):[...r.carrozzina,idx];markDirty();drawEd();}
 }
+/* Sposta file: trascina una fila, o un riquadro di file, per rimetterle sopra la pianta */
+let MV=null;
+app.addEventListener('pointerdown',e=>{if(V.name!=='teatro'||V.tool!=='sposta'||V.pending)return;const svg=e.target.closest('#edCanvas svg');if(!svg)return;e.preventDefault();
+  const z=Z();const p=svgPoint(svg,e);const seatEl=e.target.closest('[data-k]');try{svg.setPointerCapture(e.pointerId);}catch(_){}
+  if(seatEl){const rid=seatEl.dataset.k.split('~')[0];if(!V.moveSel||!V.moveSel.has(rid))V.moveSel=new Set([rid]);
+    MV={mode:'drag',svg,p0:p,orig:z.rows.filter(r=>V.moveSel.has(r.id)).map(r=>({r,x1:r.x1,y1:r.y1,x2:r.x2,y2:r.y2})),moved:false};drawEd();renderHint();}
+  else{MV={mode:'rect',svg,p0:p};V.selRect={x1:p.x,y1:p.y,x2:p.x,y2:p.y};}});
+app.addEventListener('pointermove',e=>{if(!MV||V.name!=='teatro')return;const p=svgPoint(MV.svg,e);
+  if(MV.mode==='drag'){const dx=p.x-MV.p0.x,dy=p.y-MV.p0.y;if(!MV.moved&&Math.hypot(dx,dy)<1.5)return;if(!MV.moved){pushHist();MV.moved=true;}
+    MV.orig.forEach(o=>{o.r.x1=f2(o.x1+dx);o.r.y1=f2(o.y1+dy);o.r.x2=f2(o.x2+dx);o.r.y2=f2(o.y2+dy);});}
+  else V.selRect={x1:Math.min(MV.p0.x,p.x),y1:Math.min(MV.p0.y,p.y),x2:Math.max(MV.p0.x,p.x),y2:Math.max(MV.p0.y,p.y)};
+  if(!MV.raf)MV.raf=requestAnimationFrame(()=>{if(MV)MV.raf=0;drawEd();MV&&(MV.svg=document.querySelector('#edCanvas svg'));});});
+function endMove(){if(!MV)return;const m=MV;MV=null;
+  if(m.mode==='drag'){if(m.moved){markDirty();renderTools();}}
+  else{const R=V.selRect;V.selRect=null;if(R&&R.x2-R.x1>2&&R.y2-R.y1>2){const ids=Z().rows.filter(r=>inRect(rowMid(r),R)).map(r=>r.id);V.moveSel=ids.length?new Set(ids):null;}else V.moveSel=null;}
+  drawEd();renderHint();}
+app.addEventListener('pointerup',endMove);app.addEventListener('pointercancel',endMove);
+document.addEventListener('keydown',e=>{if(V.name!=='teatro'||V.tool!=='sposta'||!V.moveSel||!V.moveSel.size)return;if(/^(INPUT|SELECT|TEXTAREA)$/.test((e.target.tagName||'')))return;
+  const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(!d)return;e.preventDefault();const st=e.shiftKey?6:1;
+  if(!V.kbMove){pushHist();V.kbMove=true;}clearTimeout(V.kbT);V.kbT=setTimeout(()=>{V.kbMove=false;},1200);
+  Z().rows.forEach(r=>{if(V.moveSel.has(r.id)){r.x1=f2(r.x1+d[0]*st);r.x2=f2(r.x2+d[0]*st);r.y1=f2(r.y1+d[1]*st);r.y2=f2(r.y2+d[1]*st);}});markDirty();renderTools();drawEd();});
 async function loadBackground(file){
   try{toast('Carico la piantina…');
     if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
@@ -2293,32 +2357,9 @@ async function scanCall(canvas){const b64=canvas.toDataURL('image/jpeg',0.85).sp
     else{error=new Error('Gemini è sovraccarico in questo momento (succede nelle ore di punta): riprova tra qualche minuto');error.context=null;}}
   if(error){let msg=error.message;try{const ctx=error.context;if(ctx&&ctx.json){const j=await ctx.clone().json();msg=(ctx.status?ctx.status+' · ':'')+(j.errore||j.message||j.msg||JSON.stringify(j));}}catch(_){try{msg=(error.context.status||'')+' · '+(await error.context.text()).slice(0,160);}catch(__){}}throw new Error(msg);}
   if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');return data;}
-function rowMid(r){return {x:(r.x1+r.x2)/2,y:(r.y1+r.y2)/2};}
+function rowMid(r){const P=rowPt(r,.5);return {x:P.x,y:P.y};}
 function inRect(p,a){return p.x>=a.x1&&p.x<=a.x2&&p.y>=a.y1&&p.y<=a.y2;}
 /* area = rettangolo in coordinate della zona; senza area = tutta la pianta */
-/* scansione a fasce orizzontali: le file sono orizzontali, quindi una fascia non le taglia;
-   ogni fila si tiene solo dalla fascia in cui cade il suo centro (niente doppioni nelle sovrapposizioni) */
-async function scanPiantaFine(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
-  if(z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione precisa','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
-  V.scanOk=false;V.scanning=true;renderTools();
-  try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const br=bgRect(z,img.width,img.height);
-    const nb=Math.max(2,Math.min(5,Math.round(img.height/img.width*2)));const band=img.height/nb,ov=band*0.18;const nuove=[];let palco=null;
-    for(let i=0;i<nb;i++){toast(`Scansione precisa: fascia ${i+1} di ${nb}…`);
-      const sy=Math.max(0,i*band-ov),ey=Math.min(img.height,(i+1)*band+ov),sh=ey-sy,sw=img.width;
-      const sc=Math.min(3,1600/Math.max(sw,sh));const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
-      const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(img,0,sy,sw,sh,0,0,c.width,c.height);
-      let data;try{data=await scanCall(c);}catch(e){toast(`Fascia ${i+1} non riuscita: continuo con le altre`,'warn');continue;}
-      const core0=i*band,core1=(i+1)*band;
-      (data.file||[]).forEach(f=>{const my=sy+((f.y1+f.y2)/2)*sh;if(my<core0||my>=core1)return;
-        const X=v=>f2(br.x+v*sw*br.s),Y=v=>f2(br.y+(sy+v*sh)*br.s);
-        const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:X(f.x1),y1:Y(f.y1),x2:X(f.x2),y2:Y(f.y2),bloccati:[],primo:'',n:f.n,spec:(f.posti||[]).length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);nuove.push(r);});
-      if(!palco&&data.palco)palco={x1:f2(br.x+data.palco.x1*sw*br.s),y1:f2(br.y+(sy+data.palco.y1*sh)*br.s),x2:f2(br.x+data.palco.x2*sw*br.s),y2:f2(br.y+(sy+data.palco.y2*sh)*br.s)};}
-    if(!nuove.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
-    pushHist();z.rows=nuove;if(palco&&!z.front)z.front=palco;
-    markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();
-    toast(`Trovate ${nuove.length} file · ${nuove.reduce((a,r)=>a+r.posti.length,0)} posti. Controllale: tocca una fila per correggerla`);}
-  catch(e){toast('Scansione non riuscita ('+(e.message||e)+')','bad');}
-  finally{V.scanning=false;if(V.name==='teatro')renderTools();}}
 async function scanPianta(area){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
   if(!area&&z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
   V.scanOk=false;V.scanning=true;renderTools();toast(area?'Scansione dell’area in corso…':'Scansione in corso: ci vogliono 20-40 secondi…');
@@ -2333,7 +2374,7 @@ async function scanPianta(area){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!S
     if(!data.file.length){toast(area?'Nessuna fila trovata nell’area: prova un’area più stretta o disegnale a mano':'Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
     /* da coordinate 0–1 del ritaglio a coordinate della zona */
     const X=v=>f2(br.x+(sx+v*sw)*br.s),Y=v=>f2(br.y+(sy+v*sh)*br.s);
-    const nuove=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:X(f.x1),y1:Y(f.y1),x2:X(f.x2),y2:Y(f.y2),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);return r;});
+    const nuove=data.file.map(f=>{const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:X(f.x1),y1:Y(f.y1),x2:X(f.x2),y2:Y(f.y2),bloccati:[],primo:'',n:f.n,spec:f.posti.length===f.n?f.posti.join(','):''};r.curva=curvaDa(r,f.xm!=null?X(f.xm):null,f.ym!=null?Y(f.ym):null);r.posti=postiFrom(r);return r;});
     pushHist();
     if(area){const prima=z.rows.length;z.rows=z.rows.filter(r=>!inRect(rowMid(r),area));const tolte=prima-z.rows.length;z.rows.push(...nuove);
       toast(`Area scansionata: ${nuove.length} file · ${nuove.reduce((a,r)=>a+r.posti.length,0)} posti${tolte?` (al posto di ${tolte} file)`:''}. Controllale`);}
@@ -2342,9 +2383,12 @@ async function scanPianta(area){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!S
     V.area=null;markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();}
   catch(e){toast('Scansione non riuscita ('+(e.message||e)+')','bad');}
   finally{V.scanning=false;if(V.name==='teatro')renderTools();}}
+/* dalla posizione del posto centrale restituita dalla scansione: quanto è curva la fila */
+function curvaDa(r,xm,ym){if(xm==null||ym==null)return 0;const dx=r.x2-r.x1,dy=r.y2-r.y1,L=Math.hypot(dx,dy);if(L<1)return 0;
+  const d=((xm-(r.x1+r.x2)/2)*(-dy)+(ym-(r.y1+r.y2)/2)*dx)/L;const c=d/L;return Math.abs(c)<0.012?0:Math.max(-0.35,Math.min(0.35,Math.round(c*1000)/1000));}
 function clearArea(area){const z=Z();const n=z.rows.filter(r=>inRect(rowMid(r),area)).length;if(!n){toast('Nessuna fila dentro l’area','warn');return;}
-  pushHist();z.rows=z.rows.filter(r=>!inRect(rowMid(r),area));markDirty();V.lastArea=area;V.tool='seleziona';renderTools();drawEd();
-  toast(`Tolte ${n} file dall’area. Ora puoi disegnarle a mano o scansionare solo quell’area (Annulla per ripristinarle)`);}
+  pushHist();z.rows=z.rows.filter(r=>!inRect(rowMid(r),area));markDirty();V.lastArea=null;V.area=null;V.tool='seleziona';renderTools();drawEd();
+  toast(`Tolte ${n} file dall’area. Se ti sei sbagliato usa “↶ Indietro”`);}
 async function setBgCanvas(c){
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));const z=Z();
   V.bg[z.id]={url:URL.createObjectURL(blob),blob};V.showBg=true;
@@ -2366,7 +2410,7 @@ async function saveTeatro(btn){
     t.aggiornato=new Date().toISOString();
     if(V.linkTappa){const lt=S.c.tappe[V.linkTappa];if(lt&&lt.hsTeatro&&lt.hsTeatro.id&&!t.hsTeatroId&&!Object.values(S.c.teatri).some(x=>x.id!==t.id&&x.hsTeatroId===lt.hsTeatro.id))t.hsTeatroId=lt.hsTeatro.id;}
     const keep=clone(t);delete keep.zone;const out={...keep,id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
-      rows:z.rows.map(r=>({id:r.id,fila:r.fila,x1:f2(r.x1),y1:f2(r.y1),x2:f2(r.x2),y2:f2(r.y2),n:r.n??r.posti.length,primo:r.primo??'',spec:r.spec||'',posti:r.posti,bloccati:r.bloccati||[],...((r.carrozzina||[]).length?{carrozzina:r.carrozzina}:{})}))}))};
+      rows:z.rows.map(r=>({id:r.id,fila:r.fila,x1:f2(r.x1),y1:f2(r.y1),x2:f2(r.x2),y2:f2(r.y2),n:r.n??r.posti.length,primo:r.primo??'',spec:r.spec||'',posti:r.posti,bloccati:r.bloccati||[],...((r.carrozzina||[]).length?{carrozzina:r.carrozzina}:{}),...(+r.curva?{curva:Math.round(r.curva*1000)/1000}:{})}))}))};
     await put('teatri',t.id,out);V.dirty=false;toast('Mappa salvata');archSoon('t',t.id);
     if(V.linkTappa){const tp=S.c.tappe[V.linkTappa];if(tp&&tp.teatroId!==t.id){const o={...clone(tp),teatroId:t.id};delete o.id;await put('tappe',tp.id,o);toast('Mappa salvata e collegata alla data');}}
     const s=document.getElementById('edState');if(s)s.textContent='Salvata';
@@ -2720,7 +2764,7 @@ function castForm(c){
    <div class="grid2"><div class="field"><label for="cNome">Nome</label><input class="in" id="cNome" value="${esc(c.nome||'')}"></div>
    <div class="field"><label for="cCogn">Cognome</label><input class="in" id="cCogn" value="${esc(c.cognome||'')}"></div>
    <div class="field"><label for="cRuolo">Ruolo</label><select class="in" id="cRuolo">${[['Attore','Attore'],['Attrice','Attrice'],['Fonico','Fonico'],['Tecnico luci','Tecnico luci'],['Tecnico','Tecnico (ruolo lo sceglie il TM)']].map(([v,l])=>`<option value="${v}" ${(c.ruolo||'Attore')===v?'selected':''}>${l}</option>`).join('')}${c.ruolo&&!['Attore','Attrice','Fonico','Tecnico luci','Tecnico'].includes(c.ruolo)?`<option selected>${esc(c.ruolo)}</option>`:''}</select></div>
-   <div class="field"><label for="cTour">Tour</label><select class="in" id="cTour">${allTours().map(t=>`<option ${t===(c.tour&&c.tour!==ALL?c.tour:allTours()[0])?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
+   <div class="field"><label for="cTour">Tour</label><select class="in" id="cTour">${allTours().map(t=>`<option value="${esc(t)}" ${t===(c.tour&&c.tour!==ALL?c.tour:allTours()[0])?'selected':''}>${esc(tourShort(t))}</option>`).join('')}</select></div>
    <div class="field"><label for="cTel">Telefono</label><input class="in" id="cTel" type="tel" value="${esc(c.telefono||'')}"></div>
    <div class="doc-fields grid2" style="grid-column:1/-1" ${isTec(c)?'hidden':''}><div class="field"><label for="cDocT">Documento</label><select class="in" id="cDocT">${DOC_TIPI.map(d=>`<option ${c.docTipo===d?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="field"><label for="cDocN">Numero</label><input class="in" id="cDocN" value="${esc(c.docNumero||'')}" autocomplete="off"></div>
@@ -2782,7 +2826,7 @@ function renderDocs(){
   <div class="newp"><input class="in" id="dq" type="search" placeholder="Cerca per città, tipo, nome…" value="${esc(V.q||'')}" aria-label="Cerca documenti" style="flex:1 1 220px;max-width:360px">${role()!=='venditore'?'<button class="btn primary" data-dc="add">+ Carica documento</button>':''}</div>`;
   if(V.up){const u=V.up;h+=`<article class="card edit" style="margin-bottom:16px;max-width:720px"><div class="card-head"><h3>Nuovo documento</h3></div>
     <div class="grid2"><div class="field"><label for="dT">Titolo</label><input class="in" id="dT" value="${esc(u.titolo||'')}" placeholder="es. Permesso SIAE Torino 22 gennaio"></div>
-    <div class="field"><label for="dC">Tipo</label><select class="in" id="dC">${DCAT.map(c=>`<option ${u.categoria===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="field"><label for="dC">Tipo</label><select class="in" id="dC">${DCAT.filter(c=>c!=='Piantine originali'||u.categoria===c).map(c=>`<option ${u.categoria===c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div class="field"><label for="dTp">Data della tournée</label><select class="in" id="dTp"><option value="">Vale per tutto il tour</option>${tappe.map(tp=>`<option value="${tp.id}" ${u.tappaId===tp.id?'selected':''}>${fmtDate(tp.data)} · ${esc(tp.citta)}${isAll?' · '+esc(tp.tour):''}</option>`).join('')}</select></div>
     ${isAll?`<div class="field"><label for="dTour">Tour (se vale per tutto il tour)</label><select class="in" id="dTour">${allTours().map(t=>`<option ${u.tour===t?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`:''}
     <div class="field"><span class="flabel">File</span><button class="btn small" data-dc="file">${u._blob?'Cambia file':'Scegli file'}</button><span class="muted small" id="dFileName">${esc(u._blobName||'')}</span></div></div>
@@ -2823,7 +2867,7 @@ document.addEventListener('input',e=>{if(V.name==='documenti'&&e.target.id==='dq
 /* =================== SUGGERIMENTI ALLO SVILUPPATORE =================== */
 const DEV_EMAIL='matteomongiorgi1@gmail.com';
 function isDev(){const u=me();return !!u&&(u.email||'').toLowerCase()===DEV_EMAIL;}
-function fbUnread(){return Object.values(S.c.segnalazioni||{}).filter(x=>!x.letto).length;}
+function fbUnread(){return Object.values(S.c.segnalazioni||{}).filter(x=>!x.letto&&!x.risolta).length;}
 function fbLbl(){if(!isDev())return 'Suggerimenti';const n=fbUnread();return 'Segnalazioni'+(n?` <span class="nav-badge">${n}</span>`:'');}
 const FB_ARG=['Oggi / giornata','Tournée','Piantine','Mappatura del teatro','Mappa','Checklist','Teatri','Cast','Documenti','QR docenti','Auto ed emergenze','Controllo','Accessi','Profilo','Accesso e login','Altro'];
 const FB_ROLE=[['direzione','Direzione'],['tm','Tour Manager'],['venditore','Referenti di zona']];
@@ -2834,7 +2878,7 @@ function renderFeedback(){const u=me();if(!u){app.innerHTML='';return;}
   <section class="card" style="max-width:640px"><div class="field"><label for="fbArg">Argomento</label><select class="in" id="fbArg"><option value="">— Scegli la sezione dell’app —</option>${FB_ARG.map(a=>`<option ${V.fbArg===a?'selected':''}>${esc(a)}</option>`).join('')}</select></div>
    <div class="field"><label for="fbTxt">Cosa vorresti dire</label><textarea class="in ta" id="fbTxt" rows="6" placeholder="es. Nella piantina vorrei poter spostare una scuola con un tocco; oppure: il pulsante Aggiorna da HubSpot non risponde">${esc(V.fbTxt||'')}</textarea></div>
    <div class="row-btns"><button class="btn primary" data-fbsend>Invia</button></div></section>
-  ${mine.length?`<h2 class="alt-sec">Le tue segnalazioni</h2><div class="list" style="max-width:640px">${mine.map(x=>`<article class="card"><div class="card-head"><b>${esc(x.argomento)}</b><span class="muted small">${esc(shortDate((x.ts||'').slice(0,10)))} · ${x.letto?'letta':'inviata'}</span></div><p style="margin:0;white-space:pre-wrap">${esc(x.testo)}</p></article>`).join('')}</div>`:''}`;}
+  ${mine.length?`<h2 class="alt-sec">Le tue segnalazioni</h2><div class="list" style="max-width:640px">${mine.map(x=>`<article class="card"><div class="card-head"><b>${esc(x.argomento)}</b><span class="muted small">${esc(shortDate((x.ts||'').slice(0,10)))} · ${x.risolta?'<b class="pz-ok">risolta</b>':x.letto?'letta':'inviata'}</span></div><p style="margin:0;white-space:pre-wrap">${esc(x.testo)}</p></article>`).join('')}</div>`:''}`;}
 document.addEventListener('input',e=>{if(V.name!=='feedback')return;if(e.target.id==='fbTxt')V.fbTxt=e.target.value;});
 document.addEventListener('change',e=>{if(V.name!=='feedback')return;if(e.target.id==='fbArg')V.fbArg=e.target.value;});
 document.addEventListener('click',async e=>{if(V.name!=='feedback')return;
@@ -2844,17 +2888,22 @@ document.addEventListener('click',async e=>{if(V.name!=='feedback')return;
     try{await put('segnalazioni',id,d);S.c.segnalazioni=S.c.segnalazioni||{};S.c.segnalazioni[id]={...d,id};V.fbTxt='';V.fbArg='';toast('Grazie! Segnalazione inviata');render();}catch(err){b.disabled=false;toast('Non inviata ('+(err.code||err.message)+')','bad');}return;}
   const o=e.target.closest('[data-fbopen]');if(o&&isDev()){const id=o.dataset.fbopen;V.fbOpen=V.fbOpen===id?null:id;const x=(S.c.segnalazioni||{})[id];
     if(x&&!x.letto){const d={...x,letto:true,lettoIl:new Date().toISOString()};delete d.id;try{await put('segnalazioni',id,d);S.c.segnalazioni[id]={...d,id};}catch(_){}}render();return;}
-  const r=e.target.closest('[data-fbrole]');if(r){V.fbRole=r.dataset.fbrole;render();}});
-function renderFbInbox(){const all=Object.values(S.c.segnalazioni||{}).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));const rl=V.fbRole||'';
+  const r=e.target.closest('[data-fbrole]');if(r){V.fbRole=r.dataset.fbrole;render();return;}
+  const rs=e.target.closest('[data-fbris]');if(rs){V.fbRisolte=rs.dataset.fbris==='1';V.fbOpen=null;render();return;}
+  const rv=e.target.closest('[data-fbres]');if(rv&&isDev()){const id=rv.dataset.fbres;const x=(S.c.segnalazioni||{})[id];if(!x)return;const d={...x,letto:true,risolta:rv.dataset.v==='1',risoltaIl:rv.dataset.v==='1'?new Date().toISOString():''};delete d.id;
+    try{await put('segnalazioni',id,d);S.c.segnalazioni[id]={...d,id};V.fbOpen=null;toast(d.risolta?'Segnata come risolta: chi l’ha scritta lo vede':'Riaperta');render();}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}return;}
+  const dl=e.target.closest('[data-fbdel]');if(dl&&isDev()){const id=dl.dataset.fbdel;if(V.fbDelOk!==id){V.fbDelOk=id;render();setTimeout(()=>{if(V.fbDelOk===id){V.fbDelOk=null;if(V.name==='feedback')render();}},5000);return;}
+    V.fbDelOk=null;try{await del('segnalazioni',id);toast('Segnalazione eliminata');render();}catch(err){toast('Non eliminata ('+(err.code||err.message)+')','bad');}}});
+function renderFbInbox(){const every=Object.values(S.c.segnalazioni||{}).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));const all=every.filter(x=>!!x.risolta===!!V.fbRisolte);const nRis=every.filter(x=>x.risolta).length;const rl=V.fbRole||'';
   let h=`<div class="page-head"><span class="eyebrow">Sviluppatore</span><h1>Segnalazioni</h1><p class="muted" style="margin:0">Idee e problemi inviati da Direzione, Tour Manager e referenti di zona. Tocca un messaggio per leggerlo: diventa “letto”.</p></div>
-   <div class="chips" style="margin-bottom:14px"><button class="chip ${rl?'':'on'}" data-fbrole="">Tutti (${all.length})</button>${FB_ROLE.map(([k,l])=>{const n=all.filter(x=>x.ruolo===k);const u=n.filter(x=>!x.letto).length;return `<button class="chip ${rl===k?'on':''}" data-fbrole="${k}">${l} (${n.length})${u?` <span class="nav-badge">${u}</span>`:''}</button>`;}).join('')}</div>`;
-  if(!all.length){app.innerHTML=h+`<div class="empty"><b>Ancora nessuna segnalazione.</b></div>`;return;}
+   <div class="chips" style="margin-bottom:14px"><button class="chip ${V.fbRisolte?'':'on'}" data-fbris="0">Da gestire (${every.length-nRis})</button><button class="chip ${V.fbRisolte?'on':''}" data-fbris="1">Risolte (${nRis})</button><span class="sep"></span><button class="chip ${rl?'':'on'}" data-fbrole="">Tutti (${all.length})</button>${FB_ROLE.map(([k,l])=>{const n=all.filter(x=>x.ruolo===k);const u=n.filter(x=>!x.letto).length;return `<button class="chip ${rl===k?'on':''}" data-fbrole="${k}">${l} (${n.length})${u?` <span class="nav-badge">${u}</span>`:''}</button>`;}).join('')}</div>`;
+  if(!all.length){app.innerHTML=h+`<div class="empty"><b>${V.fbRisolte?'Nessuna segnalazione risolta.':'Nessuna segnalazione da gestire.'}</b></div>`;return;}
   FB_ROLE.filter(([k])=>!rl||rl===k).forEach(([k,l])=>{const xs=all.filter(x=>x.ruolo===k);if(!xs.length)return;
     h+=`<h2 class="alt-sec">${l}</h2>`;
     [...new Set(xs.map(x=>x.argomento))].forEach(a=>{const ys=xs.filter(x=>x.argomento===a);
       h+=`<div class="fb-grp"><span class="tmonth">${esc(a)} · ${ys.length}</span><div class="list" style="max-width:820px">${ys.map(x=>{const op=V.fbOpen===x.id;
         return `<article class="card fb-msg ${x.letto?'':'unread'}"><button class="acc-row" data-fbopen="${esc(x.id)}" aria-expanded="${op}"><span class="tmain"><b>${x.letto?'':'<i class="fb-dot" aria-label="Da leggere"></i>'}${esc(x.nome||x.email)}</b><span class="muted small">${esc(shortDate((x.ts||'').slice(0,10)))} ${esc((x.ts||'').slice(11,16))}${x.tour?' · '+esc(x.tour):''}${op?'':' · '+esc(x.testo.slice(0,70))+(x.testo.length>70?'…':'')}</span></span><span class="acc-chev" aria-hidden="true">${op?'▴':'▾'}</span></button>
-         ${op?`<p style="margin:10px 0 0;white-space:pre-wrap">${esc(x.testo)}</p><p class="muted small" style="margin:6px 0 0">${esc(x.email)}</p>`:''}</article>`;}).join('')}</div></div>`;});});
+         ${op?`<p style="margin:10px 0 0;white-space:pre-wrap">${esc(x.testo)}</p><p class="muted small" style="margin:6px 0 0">${esc(x.email)}</p><div class="row-btns">${x.risolta?`<button class="btn small" data-fbres="${esc(x.id)}" data-v="0">Riapri</button>`:`<button class="btn small primary" data-fbres="${esc(x.id)}" data-v="1">Risolvi</button>`}<button class="btn small ghost" data-fbdel="${esc(x.id)}">${V.fbDelOk===x.id?'Confermi? Elimina':'Elimina'}</button></div>`:''}</article>`;}).join('')}</div></div>`;});});
   app.innerHTML=h;}
 let FB_SEEN=null;
 function fbNotify(){if(!isDev())return;const ids=Object.keys(S.c.segnalazioni||{});if(FB_SEEN===null){FB_SEEN=new Set(ids);return;}const nu=ids.filter(i=>!FB_SEEN.has(i));nu.forEach(i=>FB_SEEN.add(i));
@@ -3011,7 +3060,7 @@ function spCard(){
   const sp=['en','fr','es'].map(lg=>({lg,...showOf(lg==='en'?'inglese':lg==='fr'?'francese':'spagnolo')}));const LGN={en:'Inglese',fr:'Francese',es:'Spagnolo'};
   const spCard=role()==='direzione'?`<section class="card" style="margin-top:16px;max-width:640px"><div class="card-head"><h2>Spettacoli della stagione</h2>${V.spEdit?'':'<button class="btn small" data-sp="edit">Modifica</button>'}</div>
     <p class="muted small" style="margin:0">Il titolo di ogni data arriva da HubSpot (Product name); qui carichi i loghi e il titolo di riserva per ogni lingua.</p>
-    ${sp.map(x=>`<div class="sp-row"><span class="flabel">Tour ${LGN[x.lg]}</span>${V.spEdit?`<input class="in" data-spt="${x.lg}" value="${esc(x.titolo||'')}" aria-label="Titolo tour ${LGN[x.lg]}"><label class="btn small">${x.logo?'Cambia logo':'Carica logo'}<input type="file" accept="image/*" data-spl="${x.lg}" hidden></label>`:`${showHTML(x.lg==='en'?'inglese':x.lg==='fr'?'francese':'spagnolo','sp-show')}${x.logo?'':'<span class="pill warn">Logo da caricare</span>'}`}</div>`).join('')}
+    ${sp.map(x=>`<div class="sp-row"><span class="flabel">Tour ${LGN[x.lg]}</span>${V.spEdit?`<input class="in" data-spt="${x.lg}" value="${esc(x.titolo||'')}" aria-label="Titolo tour ${LGN[x.lg]}"><label class="btn small">${x.logo?'Cambia logo':'Carica logo'}<input type="file" accept="image/*" data-spl="${x.lg}" hidden></label><label class="btn small" title="Versione chiara del logo, per il tema scuro">${x.logoDark?'Cambia logo negativo':'Carica logo negativo'}<input type="file" accept="image/*" data-spl="${x.lg}" data-dark="1" hidden></label>`:`${showHTML(x.lg==='en'?'inglese':x.lg==='fr'?'francese':'spagnolo','sp-show')}${x.logo?'':'<span class="pill warn">Logo da caricare</span>'}${x.logo&&!x.logoDark?'<span class="pill">Manca il negativo</span>':''}`}</div>`).join('')}
     ${V.spEdit?'<div class="row-btns"><button class="btn small primary" data-sp="save">Salva titoli</button><button class="btn small" data-sp="cancel">Chiudi</button></div>':''}</section>`:'';
   return spCard;
 }
@@ -3020,8 +3069,8 @@ document.addEventListener('click',async e=>{if(V.name!=='altro'&&V.name!=='acces
   else if(a==='save'){const cur=clone(S.c.impostazioni.spettacoli||{});delete cur.id;document.querySelectorAll('[data-spt]').forEach(i=>{cur[i.dataset.spt]={...(cur[i.dataset.spt]||{}),titolo:i.value.trim()};});
     try{await put('impostazioni','spettacoli',cur);S.c.impostazioni.spettacoli={...cur,id:'spettacoli'};V.spEdit=false;toast('Titoli salvati');render();}catch(err){toast('Non salvati ('+(err.code||err.message)+')','bad');}}});
 document.addEventListener('change',async e=>{if((V.name!=='altro'&&V.name!=='accessi')||!e.target.dataset.spl)return;const f=e.target.files[0];if(!f)return;const lg=e.target.dataset.spl;
-  try{if(!S.assets)throw {code:'assets_unavailable'};toast('Carico il logo…');const up=await S.assets.upload(f);const cur=clone(S.c.impostazioni.spettacoli||{});delete cur.id;cur[lg]={...(cur[lg]||{}),logo:up.id};
-    await put('impostazioni','spettacoli',cur);S.c.impostazioni.spettacoli={...cur,id:'spettacoli'};toast('Logo caricato');render();}catch(err){toast('Logo non caricato ('+(err.code||err.message||'errore')+')','bad');}});
+  try{if(!S.assets)throw {code:'assets_unavailable'};toast('Carico il logo…');const up=await S.assets.upload(f);const cur=clone(S.c.impostazioni.spettacoli||{});delete cur.id;cur[lg]={...(cur[lg]||{}),[e.target.dataset.dark?'logoDark':'logo']:up.id};
+    await put('impostazioni','spettacoli',cur);S.c.impostazioni.spettacoli={...cur,id:'spettacoli'};toast(e.target.dataset.dark?'Logo negativo caricato':'Logo caricato');render();}catch(err){toast('Logo non caricato ('+(err.code||err.message||'errore')+')','bad');}});
 document.addEventListener('change',e=>{if(e.target.id==='tourSel2'){S.pref.tour=e.target.value;savePref();renderNav();}});
 document.addEventListener('input',e=>{if(e.target.id==='tmName2'){S.pref.tm=e.target.value;savePref();}});
 
@@ -3082,7 +3131,7 @@ function renderQrList(){
   const reps=tp.repliche||[];V.qrOpen=V.qrOpen||{};
   let h=`<div class="page-head day-head">
     <div class="day-nav"><button class="icon-btn" data-qn="prev" ${pv?'':'disabled'} aria-label="Giorno precedente">‹</button><button class="icon-btn" data-qn="next" ${nx?'':'disabled'} aria-label="Giorno successivo">›</button></div>
-    <div><span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
+    <div>${canAll()?'<button class="btn small page-back" data-alltours>← Tutti i tour</button>':''}<span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
   if(!reps.length)h+=`<div class="empty"><b>Nessuna replica indicata per questa data.</b></div>`;
   h+=`<div class="rep-list">`;
   reps.forEach((r,j)=>{const p=findP(tp.id,r);const open=V.qrOpen[tp.id+r]??(j===0);
@@ -3157,7 +3206,7 @@ window.addEventListener('resize',()=>fitNames());
 window.addEventListener('hashchange',()=>{if(landingToken())renderLanding();});
 /* =================== DATI DI FATTURAZIONE =================== */
 const FATT=[['ragione','Ragione sociale'],['piva','Partita IVA'],['sdi','Codice univoco (SDI)'],['indirizzo','Indirizzo della sede'],['email','Email per le fatture']];
-function fattData(){return S.c.impostazioni.fatturazione||{};}
+function fattData(){const f={...(S.c.impostazioni.fatturazione||{})};if(f.piva)f.piva=String(f.piva).replace(/\s*\(\s*anche\s+codice\s+fiscale\s*\)/i,'').trim();return f;}
 function fattAll(){const f=fattData();return FATT.map(([k,l])=>`${l}: ${f[k]||''}`).join('\n');}
 function fattRows(){const f=fattData();return FATT.map(([k,l])=>`<div class="fatt-row"><span class="tmain"><span class="flabel">${l}</span><b>${f[k]?esc(f[k]):'<span class="muted">Da compilare</span>'}</b></span>${f[k]?`<button class="icon-btn" data-fcopy="${esc(f[k])}" aria-label="Copia ${esc(l)}" title="Copia">⧉</button>`:''}</div>`).join('');}
 function fattCard(){const f=fattData();
