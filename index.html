@@ -721,7 +721,7 @@ async function initSupa(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){S.pref.user='';savePref();V={name:'welcome'};render();}});
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
-  await loadAllSupa();S.ready=true;onData();segnaPresenza();startOnline();setTimeout(archCatchup,45000);
+  await loadAllSupa();S.ready=true;onData();segnaPresenza();startOnline();setTimeout(archCatchup,45000);setTimeout(hsLearn,20000);
   const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>{onData();segnaPresenza();});});
 }
@@ -2295,7 +2295,8 @@ async function saveTeatro(btn){
       try{if(!up.has(b.blob))up.set(b.blob,(await S.assets.upload(b.blob)).id);z.bg=up.get(b.blob);b.blob=null;}
       catch(err){toast('Mappa salvata senza scansione ('+(err.code||'errore')+')','warn');}}}
     t.aggiornato=new Date().toISOString();
-    const out={id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
+    if(V.linkTappa){const lt=S.c.tappe[V.linkTappa];if(lt&&lt.hsTeatro&&lt.hsTeatro.id&&!t.hsTeatroId&&!Object.values(S.c.teatri).some(x=>x.id!==t.id&&x.hsTeatroId===lt.hsTeatro.id))t.hsTeatroId=lt.hsTeatro.id;}
+    const out={id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,...(t.hsTeatroId?{hsTeatroId:t.hsTeatroId}:{}),...(t.indirizzo?{indirizzo:t.indirizzo}:{}),zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
       rows:z.rows.map(r=>({id:r.id,fila:r.fila,x1:f2(r.x1),y1:f2(r.y1),x2:f2(r.x2),y2:f2(r.y2),n:r.n??r.posti.length,primo:r.primo??'',spec:r.spec||'',posti:r.posti,bloccati:r.bloccati||[],...((r.carrozzina||[]).length?{carrozzina:r.carrozzina}:{})}))}))};
     await put('teatri',t.id,out);V.dirty=false;toast('Mappa salvata');archSoon('t',t.id);
     if(V.linkTappa){const tp=S.c.tappe[V.linkTappa];if(tp&&tp.teatroId!==t.id){const o={...clone(tp),teatroId:t.id};delete o.id;await put('tappe',tp.id,o);toast('Mappa salvata e collegata alla data');}}
@@ -3199,6 +3200,30 @@ function pendenze(tr){const td=today(),hm=nowHM(),out=[];const lim=addDays(td,3)
   const v=S.c.impostazioni[vKey(tr)]||{};const rs=(v.letture||[]).map(x=>x.ts).sort();const lastKm=rs.length?rs[rs.length-1].slice(0,10):(v.kmIniTs||'').slice(0,10);
   if(list.some(t=>t.data>=td)&&(!lastKm||lastKm<addDays(td,-7)))out.push({id:'km_'+norm(tr).replace(/[^a-z0-9]+/g,'_'),kind:'km',tour:tr,lvl:'admin',data:td,citta:'',dir:lastKm?'Km del veicolo non aggiornati da più di 7 giorni':'Km del veicolo mai inseriti',tm:'Ricordati di aggiornare i km del veicolo (foto del contachilometri)',auto:false});
   return out;}
+
+/* ---------- teatri associati alle rappresentazioni su HubSpot: controlli per la Logistica ---------- */
+const HS_TEATRO_URL='https://app.hubspot.com/contacts/25713675/record/2-111622126/';
+const NOME_STOP=new Set(['teatro','cinema','cineteatro','cine','auditorium','sala','di','del','della','dei','delle','de','la','il','lo','le','l','e','comunale','nuovo','nuova','spazio','centro','san','santa','s']);
+function nomeTok(x){return norm(x).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!NOME_STOP.has(w));}
+function nomeSim(a,b){const A=new Set(nomeTok(a)),Bt=new Set(nomeTok(b));if(!A.size||!Bt.size)return norm(a)===norm(b)?1:0;let k=0;A.forEach(w=>{if(Bt.has(w))k++;});return k/Math.min(A.size,Bt.size);}
+function hsTeatriCheck(){const td=today(),lim=addDays(td,60);const out=[];let tot=0,ass=0;
+  Object.values(S.c.tappe||{}).filter(tp=>!tp.rimossa&&tp.data>=td&&tp.data<=lim).sort((a,b)=>a.data.localeCompare(b.data)).forEach(tp=>{tot++;const h=tp.hsTeatro;if(!h)return;ass++;
+    const add=(t)=>out.push({tp,h,t});const t=teatroDoc(tp);
+    if(tp.hsTeatroDiversi)add(`Le repliche sono associate a teatri diversi: ${tp.hsTeatroDiversi.join(' / ')}`);
+    else if(t&&t.hsTeatroId&&t.hsTeatroId!==h.id)add(`Su HubSpot il teatro è «${h.nome}», ma nell’app la data è collegata alla mappa di «${t.nome}»`);
+    else if(tp.teatroNome&&h.nome&&nomeSim(h.nome,tp.teatroNome)<0.34)add(`Teatro associato «${h.nome}» diverso da quello scritto nella rappresentazione «${tp.teatroNome}»`);
+    const cap=int(h.platea)+int(h.galleria);if(cap>0)(tp.hs&&tp.hs.rappresentazioni||[]).forEach(r=>{if(int(r.persone)>cap)add(`Replica ${r.ora}: ${int(r.persone)} persone prenotate, capienza su HubSpot ${cap}`);});
+    if(h.disabili==='no'){const n=(tp.repliche||[]).reduce((a,r)=>a+dealsFor(tp,r).reduce((b,d)=>b+int(d.disabili),0),0);if(n)add(`${n} ${n===1?'studente':'studenti'} con disabilità, ma il teatro risulta senza accesso disabili`);}});
+  return {out,tot,ass};}
+function hsTeatriHTML(){const {out,tot,ass}=hsTeatriCheck();if(!ass)return '';
+  return `<section class="card prom-dir"><div class="card-head"><h2>Teatri da verificare</h2><span class="pill ${out.length?'warn':'ok'}">${out.length?out.length+(out.length===1?' cosa':' cose'):'Tutto a posto'}</span></div>
+   <p class="muted small" style="margin:0">Controlli sul teatro associato alle rappresentazioni su HubSpot, nei prossimi 60 giorni. Teatro associato in ${ass} date su ${tot}.</p>
+   ${out.map(x=>`<div class="prom-drow">${tTag(x.tp.tour)}<span class="tmain"><b>${esc(x.t)}</b><span class="muted small">${esc(cap(shortDate(x.tp.data)))} · ${esc(x.tp.citta||'')}</span></span><a class="btn small" href="${HS_TEATRO_URL}${encodeURIComponent(x.h.id)}" target="_blank" rel="noopener">Apri su HubSpot</a></div>`).join('')}</section>`;}
+/* la Direzione collega da sola le mappe già usate al teatro HubSpot, quando il nome torna */
+async function hsLearn(){if(S.mode!=='supa'||!isDir())return;const claimed=new Set(Object.values(S.c.teatri).map(t=>t.hsTeatroId).filter(Boolean));let n=0;
+  for(const tp of Object.values(S.c.tappe||{})){if(n>=10)break;const h=tp.hsTeatro;if(!h||!h.id||tp.hsTeatroDiversi||claimed.has(h.id))continue;const t=teatroOf(tp);
+    if(!t||t.hsTeatroId||t.archiviato||nomeSim(h.nome,t.nome)<0.5)continue;const d=clone(S.c.teatri[t.id]);delete d.id;d.hsTeatroId=h.id;
+    try{await put('teatri',t.id,d);claimed.add(h.id);n++;}catch(_){break;}}}
 function promSent(id){const d=(S.c.promemoria||{})[id];return d&&d.ts?d:null;}
 function promAttivi(){const u=me();if(!u||u.ruolo!=='tm'||!u.tour)return [];const now=Date.now();PROM_HIDE.size;
   return pendenze(u.tour).filter(x=>{if(PROM_HIDE.has(x.id))return false;const s=promSent(x.id);return x.auto||(s&&now-new Date(s.ts).getTime()<24*3600e3);});}
@@ -3229,7 +3254,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-prom
   try{await put('promemoria',x.id,d);S.c.promemoria=S.c.promemoria||{};S.c.promemoria[x.id]={...d,id:x.id};toast('Promemoria inviato al TM');render();}catch(err){b.disabled=false;toast('Non inviato ('+(err.code||err.message)+')','bad');}});
 function renderControllo(){
   const td=today();const ts=tours();
-  let h=`<div class="page-head"><span class="eyebrow">${esc(cap(new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})))}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?promListHTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
+  let h=`<div class="page-head"><span class="eyebrow">${esc(cap(new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})))}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?promListHTML()+hsTeatriHTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
   const tOrd=ts.map(tr=>{const l=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));return {tr,d:l.length?l[pickDay(l).i].data:'9999'};}).sort((a,b)=>a.d.localeCompare(b.d)||a.tr.localeCompare(b.tr)).map(x=>x.tr);
   tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;
     const pk=pickDay(list);const tp=list[pk.i];const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);
