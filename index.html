@@ -516,8 +516,8 @@ details.rep>summary{flex-wrap:wrap}
 details.rep>summary .pill{white-space:normal}
 .rep-chev{margin-left:auto}
 @media (max-width:640px){
-  .ed-seg{display:flex;width:100%}.ed-seg button{flex:1 1 auto;padding:0 8px;font-size:14px}
-  .tools .ed-seg{flex:1 0 100%}
+  .ed-seg{display:flex;width:auto}.ed-seg button{flex:0 0 auto;padding:0 12px;font-size:14px;white-space:nowrap}
+  .tools .ed-seg{flex:0 0 auto}
   details.rep>summary{gap:6px 12px;padding:14px 16px}.rep-time{font-size:28px}
 }
 .credit{margin:28px 0 0;}body.welcome .credit{color:#CFE0D9;padding:0 16px 12px}.credit{text-align:right;font-size:12px;color:var(--muted);opacity:.8;letter-spacing:.2px}
@@ -968,7 +968,7 @@ function tipForm(cats,ph){return `<div class="km-form">${cats.length>1?`<div cla
 function renderOggi(){
   if(!S.ready){app.innerHTML=`<div class="empty"><b>Carico la tournée…</b></div>`;return;}
   const list=dayList();
-  if(!list.length){app.innerHTML=`<div class="page-head"><span class="eyebrow">Oggi</span><h1>Nessuna data in calendario</h1><p class="muted">Le date della tournée arrivano dal Google Calendar di Mater Lingua. In questo prototipo non ce ne sono ancora.</p></div>`;return;}
+  if(!list.length){app.innerHTML=`<div class="page-head"><span class="eyebrow">Oggi</span><h1>Nessuna data in calendario</h1><p class="muted">Le date della tournée arrivano da HubSpot e dal Google Calendar di Mater Lingua: appena ce n’è una per il tuo tour, la trovi qui.</p></div>`;return;}
   let i=V.dayId?list.findIndex(t=>t.id===V.dayId):-1;let kind='scelta';
   if(i<0){const pk=pickDay(list);i=pk.i;kind=pk.kind;}
   if(list[i].off){renderOff(list[i],i,list);return;}
@@ -1340,7 +1340,7 @@ function autoOverview(){const save=S.pref.tour;let s='';
 function renderAuto(){
   if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}${role()==='direzione'?flottaCard(true):''}</div>`;return;}
   const v=vData();const veh=vehOf(v);const tg=veh?veh.targa:v.targa;const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
-  let h=`<div class="page-head">${canAll()?'<button class="btn small page-back" data-alltours style="align-self:flex-start;width:auto;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid auto-grid">`;
+  let h=`<div class="page-head">${canAll()?'<button class="btn small page-back" data-alltours style="display:flex;width:fit-content;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid auto-grid">`;
   h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>${veh&&!V.vEdit?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}`;
   if(V.vEdit)h+=`${flotta().length?`<div class="field"><label for="vVeh">Veicolo del tour</label><select class="in" id="vVeh"><option value="">— Scegli —</option>${flotta().map(x=>`<option value="${esc(x.id)}" ${x.id===v.veicoloId?'selected':''}>${esc(vehLbl(x))}</option>`).join('')}</select></div>`:`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>`}
      <div class="field"><label for="vKm0">Km alla consegna</label><input class="in" id="vKm0" type="number" inputmode="numeric" value="${esc(v.kmIniziali??'')}"></div>
@@ -3149,7 +3149,7 @@ function renderQrList(){
   const reps=tp.repliche||[];V.qrOpen=V.qrOpen||{};
   let h=`<div class="page-head day-head">
     <div class="day-nav"><button class="icon-btn" data-qn="prev" ${pv?'':'disabled'} aria-label="Giorno precedente">‹</button><button class="icon-btn" data-qn="next" ${nx?'':'disabled'} aria-label="Giorno successivo">›</button></div>
-    <div>${canAll()?'<button class="btn small page-back" data-alltours style="align-self:flex-start;width:auto;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
+    <div>${canAll()?'<button class="btn small page-back" data-alltours style="display:flex;width:fit-content;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
   if(!reps.length)h+=`<div class="empty"><b>Nessuna replica indicata per questa data.</b></div>`;
   h+=`<div class="rep-list">`;
   reps.forEach((r,j)=>{const p=findP(tp.id,r);const open=V.qrOpen[tp.id+r]??(j===0);
