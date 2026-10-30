@@ -650,6 +650,8 @@ details.rep>summary .pill{white-space:normal}
 html.splashing .shell{animation:appIn 1.1s cubic-bezier(.3,.1,.3,1) 1.15s both}
 @keyframes appIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#splash{animation:spBg .4s ease .6s forwards}#splash .logo{animation:none}html.splashing .shell{animation:appIn .4s ease .6s both}}
+.viewas-bar .btn{background:#7a4a12!important;color:#fff!important;border-color:#7a4a12!important}
+.viewas-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fbeee0;color:#7a4a12;border:1px solid #f0d2b0;border-radius:12px;padding:10px 14px;margin:0 0 16px;font-size:.92rem}
 </style>
 
 <div id="splash" aria-hidden="true"><span class="logo"></span></div>
@@ -909,7 +911,7 @@ function render(){
   const nv=navFor().map(x=>x[0]).concat(['altro','check','teatro','piantina','oggi','welcome','acc']);if(!nv.includes(V.name))V={name:navFor()[0][0]};
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo,feedback:renderFeedback}[V.name];
-  if(f)f();layoutMas();
+  if(f)f();const vb=viewAsBanner();if(vb)app.insertAdjacentHTML('afterbegin',vb);layoutMas();
   setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
@@ -932,7 +934,7 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
    <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
-  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${themeCard()}${canArch()?archCard():''}</div>`;
+  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${viewAsCard()}${themeCard()}${canArch()&&!VIEWAS?archCard():''}</div>`;
   app.innerHTML=h;}
 document.addEventListener('input',e=>{if(V.name==='profilo'&&e.target.dataset.pf)V.profDirty=true;});
 document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.closest('[data-pfsave]'))return;const u=me();if(!u)return;
@@ -3291,7 +3293,22 @@ document.addEventListener('click',async e=>{
 const ROLE_L={direzione:'Direzione',venditore:'Referente di zona',tm:'Tour Manager'};
 function deptOf(u){return u.ruolo==='tm'?'Tour Manager':u.ruolo==='venditore'?'Referente di zona':(u.reparto||'Direzione');}
 function users(){return ((S.c.impostazioni.utenti||{}).lista)||[];}
-function me(){const e=(S.pref.user||'').toLowerCase();return e?users().find(u=>(u.email||'').toLowerCase()===e)||null:null;}
+let VIEWAS=null;try{VIEWAS=JSON.parse(localStorage.getItem('ml_viewas')||'null');}catch(e){}
+function me(){const e=(S.pref.user||'').toLowerCase();const u=e?users().find(u=>(u.email||'').toLowerCase()===e)||null:null;
+  if(u&&VIEWAS&&e===DEV_EMAIL)return {...u,ruolo:VIEWAS.ruolo,tour:VIEWAS.tour||'',regioni:VIEWAS.regioni||[],area:VIEWAS.area||'',reparto:''};return u;}
+function setViewAs(v){VIEWAS=v;try{v?localStorage.setItem('ml_viewas',JSON.stringify(v)):localStorage.removeItem('ml_viewas');}catch(e){}
+  if(v&&v.ruolo==='tm'){S.pref.tour=v.tour;savePref();}V={name:navFor()[0][0]};render();window.scrollTo(0,0);}
+function viewAsBanner(){if(!VIEWAS||(S.pref.user||'').toLowerCase()!==DEV_EMAIL)return '';
+  return `<div class="viewas-bar"><span>Stai provando l’app come <b>${VIEWAS.ruolo==='tm'?'Tour Manager · '+esc(tourShort(VIEWAS.tour)):'Referente di zona · '+esc(VIEWAS.label||'')}</b></span><button class="btn small" data-viewas-off>Torna al mio account</button></div>`;}
+function viewAsCard(){if((S.pref.user||'').toLowerCase()!==DEV_EMAIL||VIEWAS)return '';
+  const refs=users().filter(u=>u.ruolo==='venditore');
+  return `<section class="card"><div class="card-head"><h2>Prova l’app come…</h2></div><p class="muted small" style="margin:0 0 10px">Vedi l’app esattamente come la vede un TM o un referente, senza cambiare il tuo account. Solo su questo dispositivo. Attenzione: quello che salvi in prova viene salvato davvero.</p>
+   <div class="field"><label for="vaTm">Tour Manager di</label><div class="row-btns"><select class="in" id="vaTm">${allTours().map(t=>`<option value="${esc(t)}">${esc(tourShort(t))}</option>`).join('')}</select><button class="btn primary" data-viewas="tm">Entra come TM</button></div></div>
+   ${refs.length?`<div class="field"><label for="vaRef">Referente di zona</label><div class="row-btns"><select class="in" id="vaRef">${refs.map((u,i)=>`<option value="${i}">${esc(u.nome||u.email)}${(u.regioni||[]).length?' · '+esc(u.regioni.join(', ')):''}</option>`).join('')}</select><button class="btn" data-viewas="ref">Entra come referente</button></div></div>`:''}</section>`;}
+document.addEventListener('click',e=>{if(e.target.closest('[data-viewas-off]')){setViewAs(null);toast('Sei tornato al tuo account');return;}
+  const b=e.target.closest('[data-viewas]');if(!b||(S.pref.user||'').toLowerCase()!==DEV_EMAIL)return;
+  if(b.dataset.viewas==='tm'){const t=document.getElementById('vaTm').value;if(t)setViewAs({ruolo:'tm',tour:t});}
+  else{const r=users().filter(u=>u.ruolo==='venditore')[+document.getElementById('vaRef').value];if(r)setViewAs({ruolo:'venditore',regioni:r.regioni||[],area:r.area||'',label:r.nome||r.email});}});
 function role(){const u=me();return u?u.ruolo:'tm';}
 function isDir(){return role()==='direzione';}
 function tmName(){const u=me();return (u&&u.nome)||S.pref.tm||'';}
