@@ -2769,7 +2769,7 @@ function renderAltro(){
   app.innerHTML=`<div class="page-head"><span class="eyebrow">Menu</span><h1>Altro</h1></div>
   <h2 class="alt-sec">Tournée</h2><div class="list">${tour.map(card).join('')}</div>
   <h2 class="alt-sec">Account</h2><div class="list">${acc.map(card).join('')}</div>
-  ${canPulizia()?`<h2 class="alt-sec">Archivio Drive</h2><section class="card"><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button></div></section>`:''}
+  ${canPulizia()?`<h2 class="alt-sec">Archivio Drive</h2><section class="card"><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button><button class="btn small" data-archtest>Prova il collegamento</button></div></section>`:''}
   <div class="alt-cols">
   <section class="card"><div class="card-head"><h2>Come leggere i colori</h2></div>
    <ul class="legend-list"><li><i style="background:var(--ok)"></i>Verde: fatto, pronto, pagato</li><li><i style="background:var(--warn)"></i>Arancio: da fare</li><li><i style="background:#F2B705"></i>Giallo: attenzione o consiglio da leggere</li><li><i style="background:#3B6FB6"></i>Azzurro: nota del referente di zona</li><li><i style="background:var(--bad)"></i>Rosso: problema o dati cambiati</li></ul></section>
@@ -2888,7 +2888,14 @@ async function pzDelete(b){if(!PZ.conf){PZ.conf=true;b.textContent='Confermi? Cl
   const res=r.risultato||{};const del=Object.values(res).reduce((a,x)=>a+x.cancellati,0),sk=Object.values(res).reduce((a,x)=>a+x.saltati,0);
   await loadAllSupa();onData();PZ.st=null;pzPaint();
   pzMsg(`Fatto: ${del} elementi tolti dall’app.${sk?` ${sk} lasciati perché non ancora sul Drive.`:''} Sul Drive resta tutto.`,'ok');}
-document.addEventListener('click',e=>{if(e.target.closest('[data-pulizia]'))openPulizia();});
+document.addEventListener('click',e=>{if(e.target.closest('[data-pulizia]'))openPulizia();const t=e.target.closest('[data-archtest]');if(t)archTest(t);});
+async function archTest(b){if(S.mode!=='supa'){toast('Disponibile solo nell’app online','warn');return;}const l=b.textContent;b.disabled=true;b.textContent='Provo…';
+  try{const {data,error}=await SB.functions.invoke(ARCH_FN,{body:{action:'test'}});let r=data;
+    if(error){r=null;try{r=await error.context.json();}catch(_){}if(!r)r={errore:error.message||'funzione non raggiungibile'};}
+    if(r&&r.ok)toast(`Collegato al Drive: ${r.cartelle} cartelle${r.foglio?' e il foglio checklist':' (foglio checklist NON trovato)'}`,r.foglio?'ok':'warn');
+    else toast('Collegamento non riuscito: '+((r&&r.errore)||'errore'),'bad');}
+  catch(e){toast('Collegamento non riuscito: '+(e.message||e),'bad');}
+  b.disabled=false;b.textContent=l;}
 function applyTheme(){if(document.body.classList.contains('landing'))return;const T=themePref();const r=document.documentElement;
   if(T.modo==='auto'){delete r.dataset.theme;return;}
   let dark=T.modo==='scuro';if(T.modo==='sera'){const h=nowHM();dark=T.da<=T.a?(h>=T.da&&h<T.a):(h>=T.da||h<T.a);}
