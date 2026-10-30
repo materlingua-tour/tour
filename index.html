@@ -2815,8 +2815,8 @@ let archSyncT=0;function archSync(){clearTimeout(archSyncT);archSyncT=setTimeout
 const ARCH_T={};function archSoon(k,id){clearTimeout(ARCH_T[k+id]);ARCH_T[k+id]=setTimeout(()=>(k==='p'?archPlan(id):archTeatro(id)),20000);}
 function blobB64(b){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=ko;r.readAsDataURL(b);});}
 function tourOfP(p){return ((S.c.tappe||{})[p.tappaId]||{}).tour||p.tour||'';}
-function teatroArchHash(t){return hstr(JSON.stringify([t.nome,t.citta,t.zone]));}
-function planArchHash(p,t){return hstr(JSON.stringify([p.data,p.replica,tourOfP(p),p.scuole,p.assign,p.esclusi,p.carrozzina,p.distNote||'',t?teatroArchHash(t):'']));}
+function teatroArchHash(t){return hstr(JSON.stringify([2,t.nome,t.citta,t.zone]));}
+function planArchHash(p,t){return hstr(JSON.stringify([p.data,p.replica,tourOfP(p),p.scuole,p.assign,p.esclusi,p.carrozzina,p.distNote||'',t?hstr(JSON.stringify([t.nome,t.citta,t.zone])):'']));}
 function planArchable(p){const t=p&&S.c.teatri[p.teatroId];return !!(t&&(p.scuole||[]).length&&Object.keys(p.assign||{}).length);}
 async function archPlan(id,force){const p=S.c.piantine[id];if(!planArchable(p))return false;const t=S.c.teatri[p.teatroId];const h=planArchHash(p,t);
   if(!force&&archGet()['pianta_'+id]===h)return true;
@@ -2828,7 +2828,7 @@ function teatroArchable(t){return !!(t&&!t.archiviato&&(t.zone||[]).some(z=>(z.r
 async function archTeatro(id,force){const t=S.c.teatri[id];if(!teatroArchable(t))return false;const h=teatroArchHash(t);
   if(!force&&archGet()['teatro_'+id]===h)return true;
   try{await loadScript(JSPDF);const doc=await planPDF(null,{scuole:[],assign:{},esclusi:{},carrozzina:{},opzioni:{},data:'',replica:'',_mappa:true},t);if(!doc)return false;
-    const r=await archCall({action:'pdf',kind:'teatro',id,hash:h,name:`${t.nome}${t.citta?' - '+t.citta:''}.pdf`,b64:await blobB64(doc.output('blob')),json:JSON.stringify(t),sfondi:(t.zone||[]).map(z=>z.bg).filter(Boolean)});
+    const r=await archCall({action:'pdf',kind:'teatro',id,hash:h,name:`${t.nome}${t.citta&&!norm(t.nome).includes(norm(t.citta))?' - '+t.citta:''}.pdf`,b64:await blobB64(doc.output('blob'))});
     if(r&&r.ok){archSet('teatro_'+id,h);return true;}}catch(e){console.warn('archivio teatro',e);}return false;}
 function ckSheet(tp,ck){const prev=Object.values(S.c.tappe||{}).filter(x=>x.tour===tp.tour&&x.data<tp.data).sort((a,b)=>b.data.localeCompare(a.data))[0];
   const yn=v=>v==='si'?'Sì':v==='no'?'No':'';const H=['Data','Tour','Città','Teatro','TM','Hotel (notte prima)','Inviata il','Modificata dopo l’invio'];
