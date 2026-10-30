@@ -1925,7 +1925,7 @@ function previewLabels(arr){if(!arr.length)return 'Nessun posto: indica quanti s
    - Si riempie prima la platea. Se una scuola non ci sta intera: se in platea restano almeno 2 file la
      scuola si divide (davanti in platea, il resto in galleria); se resta 1 fila sola va tutta in galleria
      e la piantina segnala i posti liberi in platea.
-   - Due scuole P1 si affiancano solo se la platea ha due blocchi separati davanti al palco: una per blocco, in verticale.
+   - Se la platea ha due blocchi separati dal corridoio, ogni scuola sta in un blocco solo, in colonna: si riempie per prima la colonna più avanti.
    - Una scuola con studenti con disabilità non va mai in galleria; se è segnato un posto carrozzina
      la scuola si dispone attorno a quel posto.
    - Se con queste regole i posti non bastano, le scuole possono condividere le file (sala quasi piena). */
@@ -1954,20 +1954,33 @@ function distribute(t,p){
       while(cap<anchor.D.n&&(anchor.ri+d<z.rows.length||anchor.ri-d>=0)){for(const ri of [anchor.ri+d,anchor.ri-d]){if(cap>=anchor.D.n)break;if(ri>=0&&ri<z.rows.length){ris.push(ri);cap+=z.rows[ri].seats.length;}}d++;}
       if(cap<anchor.D.n)return null;ris.sort((a,b)=>Math.abs(a-anchor.ri)-Math.abs(b-anchor.ri));fill(anchor.D,anchor.zi,ris,anchor.D.n,anchor.proj);}
     let rest=order.filter(x=>!anchor||x!==anchor.D);
-    /* due P1 su due blocchi separati */
-    const z0=zones[0];
+    /* platea con due blocchi separati dal corridoio: ogni scuola sta in un blocco, in colonna (come a Milano) */
+    const z0=zones[0];let cz=0;
     const aisleOf=r=>{const ps=r.seats.map(q=>q.proj);if(ps.length<4)return null;const d=ps.slice(1).map((v,i)=>v-ps[i]);const md=d.slice().sort((a,b)=>a-b)[Math.floor(d.length/2)];
       const g=d.map((v,i)=>[v,i]).filter(([v])=>v>md*1.8);return g.length===1?(ps[g[0][1]]+ps[g[0][1]+1])/2:null;};
-    const aisle=z0&&z0.rows.length?aisleOf(z0.rows[0]):null;
-    if(z0&&z0.pl&&rest.length>=2&&rest[0].pr==='P1'&&rest[1].pr==='P1'&&!taken[0][0]&&aisle!=null){
-      const blk=(ri,side)=>z0.rows[ri].seats.filter(q=>side?q.proj>aisle:q.proj<aisle);
-      const colRows=(n,side)=>{const out=[];let cap=0;for(let ri=0;ri<z0.rows.length&&cap<n;ri++){if(taken[0][ri])break;const b=blk(ri,side);if(!b.length)continue;out.push(ri);cap+=b.length;}return cap>=n?out:null;};
-      const A=rest[0],B=rest[1],ra=colRows(A.n,0),rb=colRows(B.n,1);
-      if(ra&&rb){[[A,ra,0],[B,rb,1]].forEach(([x,ris,side])=>{let left=x.n;ris.forEach(ri=>{for(const q of near(blk(ri,side),aisle)){if(!left)break;res[q.k]=x.s.id;left--;}});});
-        for(let ri=0;ri<=Math.max(ra[ra.length-1],rb[rb.length-1]);ri++)taken[0][ri]=true;rest=rest.slice(2);}
+    const fr0=z0&&z0.pl?z0.rows.findIndex((r,ri)=>!taken[0][ri]&&r.seats.length):-1;
+    const aisle=fr0>=0?aisleOf(z0.rows[fr0]):null;
+    const bal=aisle!=null?(()=>{const r=z0.rows[fr0].seats;const l=r.filter(q=>q.proj<aisle).length;return Math.min(l,r.length-l)/r.length;})():0;
+    if(aisle!=null&&bal>=0.3&&rest.length){
+      const blk=(ri,side)=>z0.rows[ri].seats.filter(q=>side?q.proj>aisle:q.proj<aisle);const ptr=[0,0];
+      const colFree=side=>{const o=[];for(let ri=ptr[side];ri<z0.rows.length;ri++){if(!taken[0][ri]&&blk(ri,side).length)o.push(ri);}return o;};
+      const capOf=(side,ris)=>ris.reduce((a,ri)=>a+blk(ri,side).length,0);
+      const put=(x,side,ris,n)=>{let left=n,last=ptr[side]-1;for(const ri of ris){if(!left)break;for(const q of near(blk(ri,side),aisle)){if(!left)break;res[q.k]=x.s.id;left--;}last=ri;}ptr[side]=last+1;return n-left;};
+      while(rest.length){const x=rest[0];const fr=[colFree(0),colFree(1)],caps=[capOf(0,fr[0]),capOf(1,fr[1])];
+        const depth=sd=>fr[sd].length?fr[sd][0]:1e9;const side=[0,1].sort((a,b)=>depth(a)-depth(b)||caps[b]-caps[a]).find(sd=>caps[sd]>=x.n);
+        if(side!=null){put(x,side,fr[side],x.n);rest.shift();continue;}
+        /* non entra in un blocco solo: occupa il resto di entrambi i blocchi, prima quello più avanti */
+        if(caps[0]+caps[1]>=x.n){const ord=[0,1].sort((a,b)=>depth(a)-depth(b));const n1=put(x,ord[0],fr[ord[0]],Math.min(x.n,caps[ord[0]]));put(x,ord[1],fr[ord[1]],x.n-n1);rest.shift();continue;}
+        break;}
+      if(rest.length){const x=rest[0];const fr=[colFree(0),colFree(1)],caps=[capOf(0,fr[0]),capOf(1,fr[1])];const sd=caps[1]>caps[0]?1:0;
+        if(zones.length<2)return null;
+        if(x.dis>0&&order.indexOf(order.find(o=>o.s.id===x.s.id))>0)return {promote:order.find(o=>o.s.id===x.s.id)};
+        if(caps[0]+caps[1]>0&&(fr[0].length+fr[1].length>=4||x.dis>0)){const n=put(x,0,fr[0],caps[0])+put(x,1,fr[1],caps[1]);rest[0]={...x,n:x.n-n,cont:true};}
+        else{const fl=[...new Set([...fr[0],...fr[1]])].sort((a,b)=>a-b);
+          if(caps[0]+caps[1]>0)notes.push({z:zones[0].nome,n:caps[0]+caps[1],file:fl.map(ri=>zones[0].rows[ri].fila).join(', '),scuola:x.s.nome||'la scuola successiva'});}}
+      z0.rows.forEach((r,ri)=>{taken[0][ri]=true;});cz=1;
     }
-    let cz=0;
-    for(const x of rest){let left=x.n,first=true;
+    for(const x0 of rest){const x=x0.cont?order.find(o=>o.s.id===x0.s.id)||x0:x0;let left=x0.n,first=!x0.cont;
       while(left>0){if(cz>=zones.length)return null;
         if(x.dis>0&&!zones[cz].pl&&first)return {promote:x};
         const fr=freeRows(cz);const cap=fr.reduce((a,ri)=>a+zones[cz].rows[ri].seats.length,0);
@@ -2388,7 +2401,7 @@ function renderSchools(){
    <li>Ordine dal palco: <b>P1</b>, <b>P2</b>, <b>medie</b>, <b>superiori</b>. L’ordine si rispetta sempre.</li>
    <li>Le scuole stanno <b>una dietro l’altra</b>, mai affiancate: ogni fila è di una sola scuola.</li>
    <li>Si riempie prima la <b>platea</b>. Se una scuola non ci sta intera e restano almeno 2 file, si divide: davanti in platea, il resto in galleria. Se resta 1 fila sola, va tutta in galleria e la piantina indica i posti liberi in platea.</li>
-   <li>Due scuole <b>P1</b> stanno affiancate solo se la platea ha <b>due blocchi separati</b> davanti al palco: una per blocco, in verticale.</li>
+   <li>Se la platea ha <b>due blocchi separati</b> dal corridoio, ogni scuola sta in <b>un blocco solo</b>, in colonna: la scuola successiva va nel blocco dove si arriva più avanti al palco.</li>
    <li>Una scuola con <b>studenti con disabilità</b> non va mai in galleria. Se segni un <b>posto carrozzina</b>, la scuola si dispone attorno a quel posto.</li>
    <li>Solo se la sala è quasi piena le scuole possono condividere una fila: l’app te lo segnala.</li></ol></details>`;
 }
@@ -2399,7 +2412,7 @@ function schoolCard(s){
    <div class="school-head"><button class="swatch ${V.tool===s.id?'on':''}" data-pl="paint" style="background:${zcol(s)}" aria-label="Assegna posti a ${esc(s.nome||'questa scuola')}" title="Tocca e poi passa il dito sui posti"></button>
    <textarea class="in sname" data-f="nome" rows="1" placeholder="Nome scuola" aria-label="Nome scuola">${esc(s.nome)}</textarea>
    ${V.confirmDel===s.id?`<button class="icon-btn confirm" data-pl="delok">Elimina</button>`:`<button class="icon-btn" data-pl="del" aria-label="Elimina scuola">×</button>`}</div>
-   ${s.dealId||s.docente||stageWarn?`<div class="school-meta">${s.dealId?'<span class="tag">HubSpot</span>':''}${s.docente?`<span class="muted small">Prof. ${esc(s.docente)}</span>`:''}${stageWarn}</div>`:''}
+   ${s.dealId||s.docente||s.telDocente||stageWarn?`<div class="school-meta">${s.dealId?'<span class="tag">HubSpot</span>':''}${s.docente||s.telDocente?`<span class="muted small">${s.docente?'Prof. '+esc(s.docente):'Prof.'}${s.telDocente?` · <a class="link" href="${telHref(s.telDocente)}">${esc(s.telDocente)}</a>`:''}</span>`:''}${stageWarn}</div>`:''}
    <div class="school-fields">
     <div class="field"><span class="flabel">Persone</span><input class="in" type="number" inputmode="numeric" min="0" data-f="persone" value="${esc(s.persone)}" aria-label="Persone"></div>
     <div class="field"><span class="flabel">Livello</span><select class="in" data-f="livello" aria-label="Livello"><option value="medie" ${s.livello==='medie'?'selected':''}>Medie</option><option value="superiori" ${s.livello==='superiori'?'selected':''}>Superiori</option></select></div>
@@ -2563,7 +2576,7 @@ async function planPDF(doc,p,t){
     let y=lastBottom+8;const lineH=4.6,areaW=PW-2*M;
     const exN=Object.values(GT.byK).filter(s=>s.excl).length;
     const mkItems=W=>p.scuole.map(s=>{const rs=rangesFor(GT,p.assign,s.id);const n=countFor(GT,p.assign,s.id);const cd=int(s.disabili)>0?Math.min(int(s.classeDis),int(s.persone)):0;
-      const meta=`${LVL_L[s.livello]||''}${s.docente?' · Prof. '+s.docente:''} · ${int(s.persone)} persone · ${n} posti${prioOf(s)?' · '+prioOf(s):''}${int(s.disabili)?` · ${int(s.disabili)} con disabilità`+(p.carrozzina&&Object.keys(p.carrozzina).length||Object.values(GT.byK).some(q=>q.carr)?', posto carrozzina':''):''}`;
+      const meta=`${LVL_L[s.livello]||''}${s.docente?' · Prof. '+s.docente:''}${s.telDocente?' · Tel. '+s.telDocente:''} · ${int(s.persone)} persone · ${n} posti${prioOf(s)?' · '+prioOf(s):''}${int(s.disabili)?` · ${int(s.disabili)} con disabilità`+(p.carrozzina&&Object.keys(p.carrozzina).length||Object.values(GT.byK).some(q=>q.carr)?', posto carrozzina':''):''}`;
       const lines=[...doc.splitTextToSize(rs.length?rangesText(GT,rs):'Nessun posto assegnato',W-8)];if(s.note)lines.push(...doc.splitTextToSize('Note: '+s.note,W-8));
       return {s,meta,lines};});
     doc.setFont('helvetica','normal');doc.setFontSize(9);let items=mkItems(areaW);
