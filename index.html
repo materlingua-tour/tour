@@ -529,6 +529,11 @@ details.rep>summary .pill{white-space:normal}
 .done-roll{display:flex;align-items:center;gap:12px;text-align:left;background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-bd);border-radius:14px;padding:14px 16px;font-size:17px;font-weight:700;line-height:1.35;margin-top:6px;width:100%}
 .done-roll .tri{flex:none}
 .done-btn{width:100%;min-height:50px;font-size:17px;margin-top:6px}
+.pz-card{background:var(--surface);color:var(--ink);border-radius:18px;padding:20px;width:100%;max-width:480px;max-height:calc(100vh - 40px);overflow:auto;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:dpop .22s ease-out}
+.pz-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px}
+.pz-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;cursor:pointer}.pz-row+.pz-row{border-top:1px solid var(--line)}
+.pz-row input{margin-top:3px;width:18px;height:18px;flex:none}.pz-row>span{display:flex;flex-direction:column;gap:2px}
+.pz-card [hidden]{display:none!important}.pz-row input{accent-color:var(--brand)}.pz-ok{color:var(--ok)}.pz-warn{color:var(--warn)}
 @keyframes dfade{from{opacity:0}to{opacity:1}}@keyframes dpop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.done-ov,.done-card{animation:none}}
 [data-trmap] svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
@@ -716,7 +721,7 @@ async function initSupa(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){S.pref.user='';savePref();V={name:'welcome'};render();}});
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
-  await loadAllSupa();S.ready=true;onData();segnaPresenza();
+  await loadAllSupa();S.ready=true;onData();segnaPresenza();setTimeout(archCatchup,45000);
   const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>{onData();segnaPresenza();});});
 }
@@ -1257,7 +1262,7 @@ document.addEventListener('change',async e=>{if(!e.target.matches('[data-fotorep
   const tp=V.name==='check'?V.tp:S.c.tappe[V.dayId];if(!tp)return;const rep_=e.target.dataset.fotorep;let ok=0;
   for(const f of files){toast('Carico la foto '+(ok+1)+' di '+files.length+'…');
     try{const asset=await uploadPhoto(f,true);const id=uid('f');const doc={tipo:'replica',replica:rep_,tappaId:tp.id,teatroId:tp.teatroId||'',teatroNome:tp.teatroNome||'',citta:tp.citta||'',tour:tp.tour,data:tp.data,ts:nowStamp(),tm:tmName(),asset};
-      S.c.foto[id]={...doc,id};await put('foto',id,doc);ok++;}catch(err){toast('Foto non caricata ('+(err.code||err.message||'errore')+')','bad');}}
+      S.c.foto[id]={...doc,id};await put('foto',id,doc);ok++;archSync();}catch(err){toast('Foto non caricata ('+(err.code||err.message||'errore')+')','bad');}}
   if(ok)toast(ok===1?'Foto caricata':ok+' foto caricate');const y=window.scrollY;render();window.scrollTo(0,y);});
 function fattureFor(tp){return Object.values(S.c.foto||{}).filter(f=>f.tappaId===tp.id&&f.tipo==='fattura').sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));}
 function fotoTeatro(t){return Object.values(S.c.foto||{}).filter(f=>f.tipo==='scenografia'&&f.teatroId===t.id).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));}
@@ -1273,7 +1278,7 @@ function fotoCard(tp){const fs=fotoFor(tp);const last=fs[fs.length-1];
 document.addEventListener('change',async e=>{if(V.name!=='oggi'||!e.target.matches('[data-foto],[data-fotofatt]'))return;const f=e.target.files&&e.target.files[0];if(!f)return;
   const tp=S.c.tappe[V.dayId];if(!tp)return;toast('Carico la foto…');const fatt=e.target.matches('[data-fotofatt]');
   try{const asset=await uploadPhoto(f,fatt);const id=uid('f');const doc={tipo:fatt?'fattura':'scenografia',hotel:fatt&&tp.hotel?tp.hotel.nome:'',tappaId:tp.id,teatroId:tp.teatroId||'',teatroNome:tp.teatroNome||'',citta:tp.citta||'',tour:tp.tour,data:tp.data,ts:nowStamp(),tm:tmName(),asset};
-    S.c.foto[id]={...doc,id};await put('foto',id,doc);toast(fatt?'Fattura salvata: la vede la Direzione':'Foto inviata alla Logistica');const y=window.scrollY;render();window.scrollTo(0,y);}
+    S.c.foto[id]={...doc,id};await put('foto',id,doc);if(!fatt)archSync();toast(fatt?'Fattura salvata: la vede la Direzione':'Foto inviata alla Logistica');const y=window.scrollY;render();window.scrollTo(0,y);}
   catch(err){toast('Foto non caricata ('+(err.code||err.message||'errore')+')','bad');}});
 
 /* ---------- auto ed emergenze ---------- */
@@ -1369,7 +1374,7 @@ document.addEventListener('click',async e=>{if(V.name!=='auto')return;const b=e.
   else if(a==='rsave'){const km=document.getElementById('rKm').value;const f=document.getElementById('rFoto').files[0];
     if(km===''){toast('Scrivi i km','warn');return;}if(!f){toast('Aggiungi la foto del contachilometri','warn');return;}
     b.disabled=true;b.textContent='Carico…';const foto=await uploadPhoto(f);const v=vData();
-    await putImp(vKey(),{letture:[...(v.letture||[]),{km:int(km),ts:nowStamp(),foto,tm:tmName()}]});V.rNew=false;toast('Km aggiornati');re();}
+    await putImp(vKey(),{letture:[...(v.letture||[]),{km:int(km),ts:nowStamp(),foto,tm:tmName()}]});V.rNew=false;archSync();toast('Km aggiornati');re();}
   else if(a==='eedit'){V.eEdit=true;re();}
   else if(a==='ecancel'){V.eEdit=false;re();}
   else if(a==='esave'){const numeri=document.getElementById('eNum').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.lastIndexOf(':');return i>0?{nome:l.slice(0,i).trim(),tel:l.slice(i+1).trim()}:{nome:l,tel:''};});
@@ -1802,7 +1807,7 @@ document.addEventListener('click',async e=>{
   if(a==='allok'){const sec=CK.find(x=>x.id===b.dataset.s);let n=0;sec.q.forEach(it=>{const o=it[2]||{};if(o.pres||!ckVisible(ck,it))return;const r=ck.risposte[it[0]]||{};if(!r.v){ck.risposte[it[0]]={...r,v:o.inv||o.tip?'no':'si'};n++;}});
     ck._dirty=true;const y=window.scrollY;renderCheck();window.scrollTo(0,y);schedCk();if(!n)toast('Già tutto compilato in questa sezione');return;}
   if(a==='voto'){ck.voti[b.dataset.k]=+b.dataset.v;ck._dirty=true;const y=window.scrollY;renderCheck();window.scrollTo(0,y);schedCk();return;}
-  if(a==='send'){clearTimeout(V.saveT);ck.accoglienza=accReport(V.tp);ck.inviata=true;ck.inviataIl=new Date().toISOString();ck._dirty=false;ck.modificataDopoInvio=false;await saveCheck();await ckTipsToMemory(V.tp,ck);showDone();const y=window.scrollY;renderCheck();window.scrollTo(0,y);}
+  if(a==='send'){clearTimeout(V.saveT);ck.accoglienza=accReport(V.tp);ck.inviata=true;ck.inviataIl=new Date().toISOString();ck._dirty=false;ck.modificataDopoInvio=false;await saveCheck();archCk(V.tp.id);await ckTipsToMemory(V.tp,ck);showDone();const y=window.scrollY;renderCheck();window.scrollTo(0,y);}
 });
 document.addEventListener('input',e=>{
   if(V.name!=='check'||role()!=='tm')return;const ck=V.ck;
@@ -2265,7 +2270,7 @@ async function saveTeatro(btn){
     t.aggiornato=new Date().toISOString();
     const out={id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
       rows:z.rows.map(r=>({id:r.id,fila:r.fila,x1:f2(r.x1),y1:f2(r.y1),x2:f2(r.x2),y2:f2(r.y2),n:r.n??r.posti.length,primo:r.primo??'',spec:r.spec||'',posti:r.posti,bloccati:r.bloccati||[],...((r.carrozzina||[]).length?{carrozzina:r.carrozzina}:{})}))}))};
-    await put('teatri',t.id,out);V.dirty=false;toast('Mappa salvata');
+    await put('teatri',t.id,out);V.dirty=false;toast('Mappa salvata');archSoon('t',t.id);
     if(V.linkTappa){const tp=S.c.tappe[V.linkTappa];if(tp&&tp.teatroId!==t.id){const o={...clone(tp),teatroId:t.id};delete o.id;await put('tappe',tp.id,o);toast('Mappa salvata e collegata alla data');}}
     const s=document.getElementById('edState');if(s)s.textContent='Salvata';
   }catch(err){toast('Salvataggio non riuscito ('+(err.code||err.message)+')','bad');}
@@ -2400,7 +2405,7 @@ function updateRegen(){const p=V.p;const bar=document.getElementById('regenBar')
 function setSaveState(msg){const el=document.getElementById('pState');if(!el)return;el.textContent=msg||(V.saved?(S.mode==='local'?'Salvata solo su questo dispositivo':V.p&&pendOf(V.p.id)?'Non ancora online: riprovo appena torna la connessione':'Salvata online'):'');}
 function scheduleSave(){V.saved=false;setSaveState('Salvataggio…');clearTimeout(V.saveT);V.saveT=setTimeout(savePiantina,900);}
 async function savePiantina(){const p=V.p;if(!p)return;p.aggiornato=new Date().toISOString();
-  try{await put('piantine',p.id,clone(p));V.saved=true;pendSet(p.id,null);setSaveState();qrStRefresh();}catch(err){pendSet(p.id,clone(p));setSaveState('Non salvata');qrStRefresh();toast('Salvataggio non riuscito ('+(err.code||err.message)+'): i QR non sono aggiornati','bad');}}
+  try{await put('piantine',p.id,clone(p));V.saved=true;pendSet(p.id,null);setSaveState();qrStRefresh();archSoon('p',p.id);}catch(err){pendSet(p.id,clone(p));setSaveState('Non salvata');qrStRefresh();toast('Salvataggio non riuscito ('+(err.code||err.message)+'): i QR non sono aggiornati','bad');}}
 /* piantine con modifiche non ancora arrivate all'archivio: i QR dei docenti mostrano ancora la versione vecchia */
 const PEND_K='ml_pend_piantine';
 function pendAll(){try{return JSON.parse(localStorage.getItem(PEND_K)||'{}');}catch(_){return {};}}
@@ -2508,7 +2513,7 @@ async function planPDF(doc,p,t){
     let PW=0,PH=0;const M=10;
     const poly=(pts,style)=>{const rel=pts.slice(1).map((q,i)=>[q[0]-pts[i][0],q[1]-pts[i][1]]);doc.lines(rel,pts[0][0],pts[0][1],[1,1],style,true);};
     const header=(sub)=>{doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor('#17202B');doc.text(`${t.nome}${t.citta?' – '+t.citta:''}`,M,M+5);
-      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor('#5B6675');doc.text(`${fmtDate(p.data)} · replica ore ${p.replica||''} · ${p.scuole.length} scuole · ${tot} persone${sub?' · '+sub:''}`,M,M+11);};
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor('#5B6675');doc.text(p._mappa?`Mappa della sala · ${Object.values(GT.byK).filter(q=>!q.blocked).length} posti${sub?' · '+sub:''}`:`${fmtDate(p.data)} · replica ore ${p.replica||''} · ${p.scuole.length} scuole · ${tot} persone${sub?' · '+sub:''}`,M,M+11);};
     let lastBottom=0;
     zones.forEach((x,zi)=>{
       const z=x.z,G=x.G,S0=G.S;const bb=contentBox(z,G);const land=bb.w>bb.h*1.15;
@@ -2539,7 +2544,7 @@ async function planPDF(doc,p,t){
           doc.text(String(s.label),X(s.x),Y(s.y),{align:'center',baseline:'middle',angle:Math.abs(s.ang)>2?-s.ang:0});}});
       lastBottom=top+bb.h*k;
     });
-    if(!doc||!zones.length)return doc;
+    if(!doc||!zones.length||p._mappa)return doc;
     // legenda
     let y=lastBottom+8;const lineH=4.6,areaW=PW-2*M;
     const exN=Object.values(GT.byK).filter(s=>s.excl).length;
@@ -2764,6 +2769,7 @@ function renderAltro(){
   app.innerHTML=`<div class="page-head"><span class="eyebrow">Menu</span><h1>Altro</h1></div>
   <h2 class="alt-sec">Tournée</h2><div class="list">${tour.map(card).join('')}</div>
   <h2 class="alt-sec">Account</h2><div class="list">${acc.map(card).join('')}</div>
+  ${canPulizia()?`<h2 class="alt-sec">Archivio Drive</h2><section class="card"><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button></div></section>`:''}
   <div class="alt-cols">
   <section class="card"><div class="card-head"><h2>Come leggere i colori</h2></div>
    <ul class="legend-list"><li><i style="background:var(--ok)"></i>Verde: fatto, pronto, pagato</li><li><i style="background:var(--warn)"></i>Arancio: da fare</li><li><i style="background:#F2B705"></i>Giallo: attenzione o consiglio da leggere</li><li><i style="background:#3B6FB6"></i>Azzurro: nota del referente di zona</li><li><i style="background:var(--bad)"></i>Rosso: problema o dati cambiati</li></ul></section>
@@ -2778,6 +2784,111 @@ function themeCard(){const T=themePref();return `<section class="card"><div clas
    ${T.modo==='sera'?`<div class="grid2"><div class="field"><label for="thFrom">Scuro dalle</label><input class="in" type="time" id="thFrom" value="${esc(T.da)}"></div><div class="field"><label for="thTo">fino alle</label><input class="in" type="time" id="thTo" value="${esc(T.a)}"></div></div>`:''}
    <p class="muted small" style="margin:0">Vale su questo dispositivo.</p></section>`;}
 function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{})};}
+
+/* ---------- archivio su Google Drive: copia automatica + pulizia di fine tournée ----------
+   L'app non scrive mai sul Drive direttamente: passa dalla funzione "drive-archivio", che sul Drive
+   può solo aggiungere/aggiornare file (mai cancellare). */
+const ARCH_FN='drive-archivio';
+function canPulizia(){return ['clivia.lachkar@materlingua.eu',DEV_EMAIL].includes((S.pref.user||'').toLowerCase());}
+function hstr(x){let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+const ARCH_K='ml_arch';let ARCH_H=null;
+function archGet(){if(ARCH_H)return ARCH_H;try{ARCH_H=JSON.parse(localStorage.getItem(ARCH_K)||'{}');}catch(_){ARCH_H={};}return ARCH_H;}
+function archSet(id,h){archGet()[id]=h;try{localStorage.setItem(ARCH_K,JSON.stringify(ARCH_H));}catch(_){}}
+async function archCall(body){if(S.mode!=='supa'||!SB||!navigator.onLine)return null;
+  try{const {data,error}=await SB.functions.invoke(ARCH_FN,{body});if(error)throw error;return data;}catch(e){console.warn('archivio Drive',e);return null;}}
+let archSyncT=0;function archSync(){clearTimeout(archSyncT);archSyncT=setTimeout(()=>archCall({action:'sync'}),4000);}
+const ARCH_T={};function archSoon(k,id){clearTimeout(ARCH_T[k+id]);ARCH_T[k+id]=setTimeout(()=>(k==='p'?archPlan(id):archTeatro(id)),20000);}
+function blobB64(b){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=ko;r.readAsDataURL(b);});}
+function tourOfP(p){return ((S.c.tappe||{})[p.tappaId]||{}).tour||p.tour||'';}
+function teatroArchHash(t){return hstr(JSON.stringify([t.nome,t.citta,t.zone]));}
+function planArchHash(p,t){return hstr(JSON.stringify([p.data,p.replica,tourOfP(p),p.scuole,p.assign,p.esclusi,p.carrozzina,p.distNote||'',t?teatroArchHash(t):'']));}
+function planArchable(p){const t=p&&S.c.teatri[p.teatroId];return !!(t&&(p.scuole||[]).length&&Object.keys(p.assign||{}).length);}
+async function archPlan(id,force){const p=S.c.piantine[id];if(!planArchable(p))return false;const t=S.c.teatri[p.teatroId];const h=planArchHash(p,t);
+  if(!force&&archGet()['pianta_'+id]===h)return true;
+  try{await loadScript(JSPDF);const doc=await planPDF(null,prepP(clone(p)),t);if(!doc)return false;const tr=tourOfP(p);
+    const name=[p.data||'senza-data',t.nome,tr,(p.replica||'').replace(':','-')].filter(Boolean).join('_')+'.pdf';
+    const r=await archCall({action:'pdf',kind:'pianta',id,hash:h,tour:tr||'Senza tournée',name,b64:await blobB64(doc.output('blob'))});
+    if(r&&r.ok){archSet('pianta_'+id,h);return true;}}catch(e){console.warn('archivio piantina',e);}return false;}
+function teatroArchable(t){return !!(t&&!t.archiviato&&(t.zone||[]).some(z=>(z.rows||[]).length));}
+async function archTeatro(id,force){const t=S.c.teatri[id];if(!teatroArchable(t))return false;const h=teatroArchHash(t);
+  if(!force&&archGet()['teatro_'+id]===h)return true;
+  try{await loadScript(JSPDF);const doc=await planPDF(null,{scuole:[],assign:{},esclusi:{},carrozzina:{},opzioni:{},data:'',replica:'',_mappa:true},t);if(!doc)return false;
+    const r=await archCall({action:'pdf',kind:'teatro',id,hash:h,name:`${t.nome}${t.citta?' - '+t.citta:''}.pdf`,b64:await blobB64(doc.output('blob')),json:JSON.stringify(t),sfondi:(t.zone||[]).map(z=>z.bg).filter(Boolean)});
+    if(r&&r.ok){archSet('teatro_'+id,h);return true;}}catch(e){console.warn('archivio teatro',e);}return false;}
+function ckSheet(tp,ck){const prev=Object.values(S.c.tappe||{}).filter(x=>x.tour===tp.tour&&x.data<tp.data).sort((a,b)=>b.data.localeCompare(a.data))[0];
+  const yn=v=>v==='si'?'Sì':v==='no'?'No':'';const H=['Data','Tour','Città','Teatro','TM','Hotel (notte prima)','Inviata il','Modificata dopo l’invio'];
+  const R=[tp.data||'',tp.tour||'',tp.citta||'',tp.teatroNome||ck.teatro||'',ck.tm||'',prev&&prev.hotel?prev.hotel.nome||'':'',ck.inviataIl?new Date(ck.inviataIl).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'',ck.modificataDopoInvio?'Sì':''];
+  CK.forEach(sec=>{sec.q.forEach(it=>{const r=(ck.risposte||{})[it[0]]||{};H.push(`${sec.t} · ${it[1]}`);R.push(ckVisible(ck,it)?[yn(r.v),(r.opts||[]).join(', '),r.nota||''].filter(Boolean).join(' – '):'');});
+    (sec.sc||[]).forEach(([k,l])=>{H.push(`${sec.t} · ${l}`);R.push(ck.voti&&ck.voti[k]!=null?String(ck.voti[k]):'');});
+    sec.x.forEach(([k,l])=>{H.push(`${sec.t} · ${l}`);R.push((ck.testi||{})[k]||'');});});
+  H.push('Valutazione del teatro','Valutazione dell’hotel','Altre note per la Logistica');
+  R.push(...['teatro','hotel'].map(k=>ck.voti&&ck.voti[k]!=null?String(ck.voti[k]):''),(ck.testi||{}).__note||'');return {H,R};}
+function ckArchHash(id){const ck=S.c.checklist[id],tp=S.c.tappe[id];return ck&&tp?hstr(JSON.stringify(ckSheet(tp,ck).R)):'';}
+async function archCk(id,force){const ck=S.c.checklist[id],tp=S.c.tappe[id];if(!ck||!ck.inviata||!tp)return false;const {H,R}=ckSheet(tp,ck);const h=hstr(JSON.stringify(R));
+  if(!force&&archGet()['ck_'+id]===h)return true;const r=await archCall({action:'checklist',id,tour:tp.tour||'',hash:h,header:H,row:R});
+  if(r&&r.ok){archSet('ck_'+id,h);return true;}return false;}
+/* all'apertura: recupera ciò che non è arrivato sul Drive (es. telefono offline al momento del salvataggio) */
+async function archCatchup(){if(S.mode!=='supa'||!navigator.onLine||!(isDir()||role()==='tm'))return;
+  try{const {data,error}=await SB.from('docs').select('id,data').eq('coll','archivio');if(error)return;const srv={};(data||[]).forEach(r=>{srv[r.id]=(r.data||{}).hash||'';});
+    ARCH_H={...archGet(),...srv};const mine=tp=>isDir()||(tp&&tp.tour===curTour());const todo=[];
+    Object.entries(S.c.checklist||{}).forEach(([id,ck])=>{if(ck.inviata&&mine(S.c.tappe[id])&&srv['ck_'+id]!==ckArchHash(id))todo.push(()=>archCk(id,true));});
+    Object.values(S.c.piantine||{}).forEach(p=>{if(planArchable(p)&&mine(S.c.tappe[p.tappaId])&&srv['pianta_'+p.id]!==planArchHash(p,S.c.teatri[p.teatroId]))todo.push(()=>archPlan(p.id,true));});
+    if(isDir())Object.values(S.c.teatri||{}).forEach(t=>{if(teatroArchable(t)&&srv['teatro_'+t.id]!==teatroArchHash(t))todo.push(()=>archTeatro(t.id,true));});
+    for(const f of todo.slice(0,8)){if(!navigator.onLine)break;await f();}
+    archCall({action:'sync'});}catch(e){console.warn('archivio Drive',e);}}
+/* pulizia di fine tournée (solo Clivia e sviluppatore) */
+const PZ_C=[['piantine','Piantine'],['checklist','Checklist'],['scen','Foto della scenografia'],['rep','Foto delle repliche'],['km','Foto del contachilometri']];
+let PZ=null;
+function openPulizia(){if(!canPulizia())return;const ts=allTours();const t0=curTour()!==ALL&&ts.includes(curTour())?curTour():ts[0]||'';PZ={tour:t0,st:null,busy:false,conf:false};
+  const ov=document.createElement('div');ov.className='done-ov';ov.id='pzOv';
+  ov.innerHTML=`<div class="pz-card" role="dialog" aria-modal="true" aria-labelledby="pzT"><div class="card-head"><h2 id="pzT">Pulizia di fine tournée</h2><button class="btn small ghost" data-pz="x" aria-label="Chiudi">✕</button></div>
+    <div class="field"><label for="pzTour">Tournée</label><select class="in" id="pzTour">${ts.map(t=>`<option ${t===t0?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
+    <p class="muted small" style="margin:0">Cosa togliere dall’app. Si cancella solo ciò che risulta già sul Drive.</p>
+    <div class="pz-list">${PZ_C.map(([k,l])=>`<label class="pz-row"><input type="checkbox" data-pzc="${k}" checked><span><b>${l}</b><span class="small muted" id="pzs_${k}">Da controllare</span></span></label>`).join('')}</div>
+    <p class="muted small" style="margin:0">Restano sempre nell’app: consigli dei TM e teatri mappati.</p>
+    <div id="pzWarn"></div>
+    <div class="row-btns"><button class="btn primary" data-pz="check">Controlla il Drive</button><button class="btn" data-pz="up" hidden>Carica i mancanti</button><button class="btn danger" data-pz="del" disabled>Cancella dall’app</button></div>
+    <p class="small" id="pzMsg" aria-live="polite" style="margin:0"></p></div>`;
+  document.body.appendChild(ov);pzWarn();
+  const close=()=>{if(PZ&&PZ.busy)return;ov.remove();document.removeEventListener('keydown',k);PZ=null;};const k=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',k);
+  ov.addEventListener('change',e=>{if(e.target.id==='pzTour'){PZ.tour=e.target.value;PZ.st=null;pzPaint();pzWarn();}else if(e.target.dataset.pzc)pzPaint();});
+  ov.addEventListener('click',async e=>{if(e.target===ov){close();return;}const b=e.target.closest('[data-pz]');if(!b||PZ.busy)return;const a=b.dataset.pz;
+    if(a==='x')close();else if(a==='check')await pzCheck();else if(a==='up')await pzUpload();else if(a==='del')await pzDelete(b);});
+  ov.querySelector('#pzTour').focus();}
+function pzMsg(t,cls){const m=document.getElementById('pzMsg');if(m){m.textContent=t||'';m.className='small'+(cls?' pz-'+cls:'');}}
+function pzWarn(){const el=document.getElementById('pzWarn');if(!el)return;const n=Object.values(S.c.tappe||{}).filter(x=>x.tour===PZ.tour&&x.data>=today()).length;
+  el.innerHTML=n?`<div class="banner warn" style="margin:0">Attenzione: questa tournée ha ancora ${n} ${n===1?'data':'date'} in calendario da oggi in poi.</div>`:'';}
+function pzSel(){return [...document.querySelectorAll('#pzOv [data-pzc]')].filter(x=>x.checked).map(x=>x.dataset.pzc);}
+function pzLocal(srv){const A=srv.archivio||{};const tp=new Set(Object.values(S.c.tappe||{}).filter(x=>x.tour===PZ.tour).map(x=>x.id));
+  const ps=Object.values(S.c.piantine||{}).filter(p=>tp.has(p.tappaId));const pOk=[],pMiss=[];let pVuote=0;
+  ps.forEach(p=>{if(!planArchable(p)){pVuote++;return;}const r=A['pianta_'+p.id];(r&&r.ok&&r.hash===planArchHash(p,S.c.teatri[p.teatroId])?pOk:pMiss).push(p.id);});
+  const cs=Object.entries(S.c.checklist||{}).filter(([id,c])=>tp.has(id)||c.tour===PZ.tour);const cOk=[],cMiss=[];let cBozze=0;
+  cs.forEach(([id,c])=>{if(!c.inviata){cBozze++;return;}const r=A['ck_'+id];(r&&r.ok&&r.hash===ckArchHash(id)?cOk:cMiss).push(id);});
+  const f=srv.foto||{};const fo=k=>({tot:(f[k]||{}).tot||0,miss:(f[k]||{}).mancanti||0});
+  return {pOk,pMiss,cOk,cMiss,piantine:{tot:pOk.length+pMiss.length,miss:pMiss.length,extra:pVuote?(pVuote===1?'1 vuota resta nell’app':`${pVuote} vuote restano nell’app`):''},checklist:{tot:cOk.length+cMiss.length,miss:cMiss.length,extra:cBozze?(cBozze===1?'1 non inviata resta nell’app':`${cBozze} non inviate restano nell’app`):''},scen:fo('scen'),rep:fo('rep'),km:fo('km')};}
+function pzPaint(){const st=PZ.st;let miss=0,any=0;PZ_C.forEach(([k])=>{const el=document.getElementById('pzs_'+k);if(!el)return;
+    if(!st){el.textContent='Da controllare';el.className='small muted';return;}const c=st[k];const on=pzSel().includes(k);
+    el.textContent=!c.tot?'Niente da togliere'+(c.extra?' · '+c.extra:''):`${c.tot} nell’app · `+(c.miss?`${c.miss} non ancora sul Drive`:'tutte sul Drive ✓')+(c.extra?' · '+c.extra:'');
+    el.className='small '+(!c.tot?'muted':c.miss?'pz-warn':'pz-ok');if(on){miss+=c.miss;any+=c.tot;}});
+  const up=document.querySelector('#pzOv [data-pz="up"]'),del=document.querySelector('#pzOv [data-pz="del"]');if(!up)return;
+  up.hidden=!(st&&miss);del.disabled=!(st&&!miss&&any);PZ.conf=false;del.textContent='Cancella dall’app';}
+async function pzCheck(){PZ.busy=true;pzMsg('Controllo il Drive…');const r=await archCall({action:'verify',tour:PZ.tour});PZ.busy=false;
+  if(!r||!r.ok){PZ.st=null;pzPaint();pzMsg('Controllo non riuscito'+(r&&r.errore?': '+r.errore:' (sei online?)'),'warn');return;}
+  PZ.st=pzLocal(r);pzPaint();const sel=pzSel();const miss=sel.reduce((a,k)=>a+PZ.st[k].miss,0);
+  pzMsg(miss?`Mancano ${miss} file sul Drive: caricali prima di cancellare.`:'Sul Drive c’è tutto: puoi cancellare dall’app.',miss?'warn':'ok');}
+async function pzUpload(){PZ.busy=true;const sel=pzSel(),st=PZ.st;let n=0,ko=0;
+  const jobs=[...(sel.includes('piantine')?st.pMiss.map(id=>()=>archPlan(id,true)):[]),...(sel.includes('checklist')?st.cMiss.map(id=>()=>archCk(id,true)):[])];
+  for(const j of jobs){pzMsg(`Carico sul Drive… ${++n} di ${jobs.length}`);if(!(await j()))ko++;}
+  if(['scen','rep','km'].some(k=>sel.includes(k)&&st[k].miss)){for(let i=0;i<6;i++){pzMsg('Carico le foto sul Drive…');const r=await archCall({action:'sync',fix:true});if(!r||!r.ok||!r.caricati)break;}}
+  PZ.busy=false;await pzCheck();if(ko)pzMsg(`${ko} file non caricati: riprova tra poco.`,'warn');}
+async function pzDelete(b){if(!PZ.conf){PZ.conf=true;b.textContent='Confermi? Clicca di nuovo';setTimeout(()=>{if(PZ&&PZ.conf&&b.isConnected){PZ.conf=false;b.textContent='Cancella dall’app';}},5000);return;}
+  PZ.busy=true;b.disabled=true;pzMsg('Ricontrollo il Drive e cancello dall’app…');const st=PZ.st;
+  const r=await archCall({action:'cleanup',tour:PZ.tour,cats:pzSel(),piantineOk:st.pOk,checklistOk:st.cOk});PZ.busy=false;
+  if(!r||!r.ok){pzMsg('Pulizia non riuscita'+(r&&r.errore?': '+r.errore:''),'warn');b.disabled=false;return;}
+  const res=r.risultato||{};const del=Object.values(res).reduce((a,x)=>a+x.cancellati,0),sk=Object.values(res).reduce((a,x)=>a+x.saltati,0);
+  await loadAllSupa();onData();PZ.st=null;pzPaint();
+  pzMsg(`Fatto: ${del} elementi tolti dall’app.${sk?` ${sk} lasciati perché non ancora sul Drive.`:''} Sul Drive resta tutto.`,'ok');}
+document.addEventListener('click',e=>{if(e.target.closest('[data-pulizia]'))openPulizia();});
 function applyTheme(){if(document.body.classList.contains('landing'))return;const T=themePref();const r=document.documentElement;
   if(T.modo==='auto'){delete r.dataset.theme;return;}
   let dark=T.modo==='scuro';if(T.modo==='sera'){const h=nowHM();dark=T.da<=T.a?(h>=T.da&&h<T.a):(h>=T.da||h<T.a);}
