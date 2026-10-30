@@ -591,6 +591,8 @@ details.rep>summary .pill{white-space:normal}
 .wel-grp{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 .ztl-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;background:var(--hl-bg);border:1px solid var(--hl-bd);color:var(--hl-ink);border-radius:10px;padding:10px 12px}.ztl-row>span{flex:1 1 180px;display:flex;flex-direction:column}.ztl-row .muted{color:var(--hl-ink);opacity:.85}
 .ins-box{background:var(--surface-2,rgba(127,127,127,.08));border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tour-tag{color:color-mix(in srgb,var(--tc) 55%,#fff)}}
+:root[data-theme="dark"] .tour-tag{color:color-mix(in srgb,var(--tc) 55%,#fff)}
 .card-head .tour-tag{margin:0;align-self:center}
 .acc-row{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0;font:inherit}
 .acc-row .tmain{flex:1;min-width:0}.acc-row .tmain .small{overflow-wrap:anywhere}.acc-chev{color:var(--muted);font-size:14px;width:16px;text-align:center}
@@ -791,7 +793,7 @@ function onData(c){if(landingToken()){renderLanding();return;}if(c==='segnalazio
 function tours(){const u=me();const all=allTours();if(!u)return all;
   if(u.ruolo==='tm')return all.filter(t=>t===u.tour);if(u.ruolo==='venditore')return all.filter(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t)));return all;}
 const ALL='__ALL__',ALL_VIEWS=['tournee','mappa','cast','piantine','auto','checklist','documenti','qr'];
-const TOUR_COLS={'FRANCESE 1':'#3B6FB6','FRANCESE 2':'#8A5BB0','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
+const TOUR_COLS={'FRANCESE 1':'#1F4FEA','FRANCESE 2':'#0B6E78','INGLESE':'#C8414B','SPAGNOLO':'#D98A1C'};
 function tTag(tr){return tr?`<span class="tour-tag" style="--tc:${tourCol(tr)}">${esc(tr)}</span>`:'';}
 function tourCol(tr){return TOUR_COLS[tr]||PALETTE[Math.abs([...String(tr)].reduce((a,c)=>a*31+c.charCodeAt(0),7))%PALETTE.length];}
 function canAll(){const u=me();return !!u&&u.ruolo!=='tm';}
