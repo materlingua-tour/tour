@@ -2563,7 +2563,7 @@ async function planPDF(doc,p,t){
     let y=lastBottom+8;const lineH=4.6,areaW=PW-2*M;
     const exN=Object.values(GT.byK).filter(s=>s.excl).length;
     const mkItems=W=>p.scuole.map(s=>{const rs=rangesFor(GT,p.assign,s.id);const n=countFor(GT,p.assign,s.id);const cd=int(s.disabili)>0?Math.min(int(s.classeDis),int(s.persone)):0;
-      const meta=`${LVL_L[s.livello]||''} · ${int(s.persone)} persone · ${n} posti${prioOf(s)?' · '+prioOf(s):''}${int(s.disabili)?` · ${int(s.disabili)} con disabilità`+(p.carrozzina&&Object.keys(p.carrozzina).length||Object.values(GT.byK).some(q=>q.carr)?', posto carrozzina':''):''}`;
+      const meta=`${LVL_L[s.livello]||''}${s.docente?' · Prof. '+s.docente:''} · ${int(s.persone)} persone · ${n} posti${prioOf(s)?' · '+prioOf(s):''}${int(s.disabili)?` · ${int(s.disabili)} con disabilità`+(p.carrozzina&&Object.keys(p.carrozzina).length||Object.values(GT.byK).some(q=>q.carr)?', posto carrozzina':''):''}`;
       const lines=[...doc.splitTextToSize(rs.length?rangesText(GT,rs):'Nessun posto assegnato',W-8)];if(s.note)lines.push(...doc.splitTextToSize('Note: '+s.note,W-8));
       return {s,meta,lines};});
     doc.setFont('helvetica','normal');doc.setFontSize(9);let items=mkItems(areaW);
@@ -2816,13 +2816,18 @@ const ARCH_T={};function archSoon(k,id){clearTimeout(ARCH_T[k+id]);ARCH_T[k+id]=
 function blobB64(b){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=ko;r.readAsDataURL(b);});}
 function tourOfP(p){return ((S.c.tappe||{})[p.tappaId]||{}).tour||p.tour||'';}
 function teatroArchHash(t){return hstr(JSON.stringify([2,t.nome,t.citta,t.zone]));}
-function planArchHash(p,t){return hstr(JSON.stringify([p.data,p.replica,tourOfP(p),p.scuole,p.assign,p.esclusi,p.carrozzina,p.distNote||'',t?hstr(JSON.stringify([t.nome,t.citta,t.zone])):'']));}
+function planArchHash(p,t){return hstr(JSON.stringify([2,p.data,p.replica,tourOfP(p),p.scuole,p.assign,p.esclusi,p.carrozzina,p.distNote||'',t?hstr(JSON.stringify([t.nome,t.citta,t.zone])):'']));}
+const MESI_U=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+/* come le piantine dell'anno scorso: "02. OTTOBRE 2026" (numerato dall'inizio dell'anno scolastico) → "02.10.26 - VARESE" */
+function planArchPath(p){const d=p.data||'';if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return [];const [y,m,g]=d.split('-');const mi=+m;const n=mi>=9?mi-8:mi+4;
+  const tp=(S.c.tappe||{})[p.tappaId]||{};const t=S.c.teatri[p.teatroId]||{};const city=String(tp.citta||t.citta||'').toUpperCase();
+  return [`${String(n).padStart(2,'0')}. ${MESI_U[mi-1]} ${y}`,`${g}.${m}.${y.slice(2)}${city?' - '+city:''}`];}
 function planArchable(p){const t=p&&S.c.teatri[p.teatroId];return !!(t&&(p.scuole||[]).length&&Object.keys(p.assign||{}).length);}
 async function archPlan(id,force){const p=S.c.piantine[id];if(!planArchable(p))return false;const t=S.c.teatri[p.teatroId];const h=planArchHash(p,t);
   if(!force&&archGet()['pianta_'+id]===h)return true;
   try{await loadScript(JSPDF);const doc=await planPDF(null,prepP(clone(p)),t);if(!doc)return false;const tr=tourOfP(p);
     const name=[p.data||'senza-data',t.nome,tr,(p.replica||'').replace(':','-')].filter(Boolean).join('_')+'.pdf';
-    const r=await archCall({action:'pdf',kind:'pianta',id,hash:h,tour:tr||'Senza tournée',name,b64:await blobB64(doc.output('blob'))});
+    const r=await archCall({action:'pdf',kind:'pianta',id,hash:h,tour:tr||'Senza tournée',path:planArchPath(p),name,b64:await blobB64(doc.output('blob'))});
     if(r&&r.ok){archSet('pianta_'+id,h);return true;}}catch(e){console.warn('archivio piantina',e);}return false;}
 function teatroArchable(t){return !!(t&&!t.archiviato&&(t.zone||[]).some(z=>(z.rows||[]).length));}
 async function archTeatro(id,force){const t=S.c.teatri[id];if(!teatroArchable(t))return false;const h=teatroArchHash(t);
