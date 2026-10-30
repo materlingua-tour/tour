@@ -721,15 +721,29 @@ async function initSupa(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){S.pref.user='';savePref();V={name:'welcome'};render();}});
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
-  await loadAllSupa();S.ready=true;onData();segnaPresenza();setTimeout(archCatchup,45000);
+  await loadAllSupa();S.ready=true;onData();segnaPresenza();startOnline();setTimeout(archCatchup,45000);
   const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>{onData();segnaPresenza();});});
 }
 /* primo accesso della giornata: serve al TM per sapere se il referente di zona oggi c'è */
 function presKey(email){return String(email||'').toLowerCase().replace(/[^a-z0-9]+/g,'_');}
 function presenteOggi(u){const p=u&&S.c.presenze[presKey(u.email)];return !!(p&&p.giorno===today());}
-async function segnaPresenza(){const u=me();if(!u||!u.confermato)return;const k=presKey(u.email);const p=S.c.presenze[k];if(p&&p.giorno===today())return;
-  try{await put('presenze',k,{email:u.email,giorno:today(),ora:nowHM()});}catch(e){}}
+async function segnaPresenza(){const u=me();if(!u||!u.confermato)return;const k=presKey(u.email);const p=S.c.presenze[k];const now=nowStamp();
+  if(p&&p.giorno===today()&&p.ultimo&&minsBetween(p.ultimo,now)<10)return;
+  try{await put('presenze',k,{email:u.email,giorno:today(),ora:p&&p.giorno===today()?p.ora:nowHM(),ultimo:now});}catch(e){}}
+function minsBetween(a,b){return Math.abs((new Date(b)-new Date(a))/60000);}
+/* chi ha l'app aperta in questo momento (presenza in tempo reale di Supabase, gratuita) */
+let ONLINE=new Set();
+function startOnline(){const e=(S.pref.user||'').toLowerCase();if(!e||!SB||!SB.channel)return;
+  try{const ch=SB.channel('online',{config:{presence:{key:e}}});if(!ch.track)return;
+    ch.on('presence',{event:'sync'},()=>{ONLINE=new Set(Object.keys(ch.presenceState()).map(x=>x.toLowerCase()));paintOnline();});
+    ch.subscribe(st=>{if(st==='SUBSCRIBED')ch.track({da:nowStamp()});});}catch(_){}}
+function accStato(u){const e=String(u.email||'').toLowerCase();if(e&&ONLINE.has(e))return `<span class="pill ok" data-ast="${esc(e)}">Online ora</span>`;
+  const p=S.c.presenze[presKey(e)];const last=p?(p.ultimo||(p.giorno&&p.ora?p.giorno+'T'+p.ora:'')):'';
+  if(last){const d=last.slice(0,10),hh=last.slice(11,16);const quando=d===today()?'oggi':d===addDays(today(),-1)?'ieri':dObj(d).toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+    return `<span class="pill" data-ast="${esc(e)}" title="Ultimo accesso">Ultimo accesso ${quando}${hh?' '+hh:''}</span>`;}
+  return u.confermato?`<span class="pill" data-ast="${esc(e)}">Entrato in passato</span>`:`<span class="pill" data-ast="${esc(e)}">Mai entrato</span>`;}
+function paintOnline(){document.querySelectorAll('[data-ast]').forEach(el=>{const u=users().find(x=>String(x.email||'').toLowerCase()===el.dataset.ast);if(u)el.outerHTML=accStato(u);});}
 async function loadCollSupa(c){const data=[];for(let from=0;;from+=1000){const {data:part,error}=await SB.from('docs').select('id,data').eq('coll',c).order('id').range(from,from+999);if(error){toast('Archivio non raggiungibile ('+(error.code||error.message)+')','bad');return;}data.push(...part);if(part.length<1000)break;}
   const o={};data.forEach(r=>{if(r.data&&(r.data.rimossa||r.data.escluso||/DA ASSEGNARE/i.test(r.data.tour||'')))return;o[r.id]={...r.data,id:r.id};if(c==='teatri')o[r.id]=normT(o[r.id]);});S.c[c]=o;}
 async function loadAllSupa(){await Promise.all(COLLS.map(loadCollSupa));}
@@ -880,7 +894,7 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
    <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
-  <div style="max-width:640px;margin-top:16px">${themeCard()}</div>`;
+  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${themeCard()}${canPulizia()?archCard():''}</div>`;
   app.innerHTML=h;}
 document.addEventListener('input',e=>{if(V.name==='profilo'&&e.target.dataset.pf)V.profDirty=true;});
 document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.closest('[data-pfsave]'))return;const u=me();if(!u)return;
@@ -2769,7 +2783,7 @@ function renderAltro(){
   app.innerHTML=`<div class="page-head"><span class="eyebrow">Menu</span><h1>Altro</h1></div>
   <h2 class="alt-sec">Tournée</h2><div class="list">${tour.map(card).join('')}</div>
   <h2 class="alt-sec">Account</h2><div class="list">${acc.map(card).join('')}</div>
-  ${canPulizia()?`<h2 class="alt-sec">Archivio Drive</h2><section class="card"><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button><button class="btn small" data-archtest>Prova il collegamento</button></div></section>`:''}
+  ${canPulizia()?`<div style="margin-top:16px">${archCard()}</div>`:''}
   <div class="alt-cols">
   <section class="card"><div class="card-head"><h2>Come leggere i colori</h2></div>
    <ul class="legend-list"><li><i style="background:var(--ok)"></i>Verde: fatto, pronto, pagato</li><li><i style="background:var(--warn)"></i>Arancio: da fare</li><li><i style="background:#F2B705"></i>Giallo: attenzione o consiglio da leggere</li><li><i style="background:#3B6FB6"></i>Azzurro: nota del referente di zona</li><li><i style="background:var(--bad)"></i>Rosso: problema o dati cambiati</li></ul></section>
@@ -2789,6 +2803,7 @@ function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{
    L'app non scrive mai sul Drive direttamente: passa dalla funzione "drive-archivio", che sul Drive
    può solo aggiungere/aggiornare file (mai cancellare). */
 const ARCH_FN='drive-archivio';
+function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.</p><div class="row-btns"><button class="btn small primary" data-pulizia>Pulizia di fine tournée</button><button class="btn small" data-archtest>Prova il collegamento</button></div></section>`;}
 function canPulizia(){return ['clivia.lachkar@materlingua.eu',DEV_EMAIL].includes((S.pref.user||'').toLowerCase());}
 function hstr(x){let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
 const ARCH_K='ml_arch';let ARCH_H=null;
@@ -3305,7 +3320,7 @@ function renderAccessi(){
    idx.forEach(i=>{const u=lista[i];const open=V.accOpen.has(i);
     h+=`<div class="card acc ${open?'open':''}" data-acc="${i}" data-s="${esc(norm([u.nome,u.email,u.tour,u.reparto,(u.regioni||[]).join(' '),u.area?'area '+u.area:''].join(' ')))}">
      <button class="acc-row" data-atog="${i}" aria-expanded="${open}"><span class="tmain"><b>${esc(u.nome||'Nuova persona')}</b><span class="muted small">${esc(u.email||'email da inserire')}${sub(u)?' · '+esc(sub(u)):''}</span></span>
-      ${u.confermato?'<span class="pill ok">Attivo</span>':'<span class="pill">Mai entrato</span>'}${u.nota?'<span class="pill warn" title="'+esc(u.nota)+'">Nota</span>':''}<span class="acc-chev" aria-hidden="true">${open?'▴':'▾'}</span></button>`;
+      ${accStato(u)}${u.nota?'<span class="pill warn" title="'+esc(u.nota)+'">Nota</span>':''}<span class="acc-chev" aria-hidden="true">${open?'▴':'▾'}</span></button>`;
     if(!open){h+='</div>';return;}
     h+=`<div class="grid2">
     <div class="field"><label>Nome e cognome</label><input class="in" data-af="nome" value="${esc(u.nome||'')}"></div>
