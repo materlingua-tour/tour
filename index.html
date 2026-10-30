@@ -2034,7 +2034,7 @@ function renderEditor(){
     <button class="btn back" data-ed="back" aria-label="Indietro">←<span class="hide-sm"> Indietro</span></button>
     <div class="grow"><input class="in" id="tNome" placeholder="Nome del teatro" value="${esc(t.nome)}" aria-label="Nome del teatro"><input class="in" id="tCitta" placeholder="Città" value="${esc(t.citta)}" aria-label="Città"></div>
     <div class="ws-actions"><span class="save-state" id="edState">${V.dirty?'Modifiche non salvate':''}</span>
-    ${S.c.teatri[t.id]&&(S.c.teatri[t.id].zone||[]).some(z=>(z.rows||[]).length)?'<button class="btn" data-ed="prova" title="Piantine di esempio su questa sala, senza salvare nulla">Prova distribuzione</button>':''}<button class="btn primary" data-ed="save">Salva mappa</button></div>
+<button class="btn primary" data-ed="save">Salva mappa</button></div>
   </div>
   ${(()=>{const s=S.c.teatri[t.id];const tw=s&&s.daHubspot&&!hasPlan(s)?gemelloArchivio(s):null;return tw?`<div class="banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><span style="flex:1 1 260px">La pianta di questa sala c’è già in archivio come <b>${esc(tw.nome)}</b> (${esc(tw.citta||'')}). Usala invece di ricominciare da zero.</span><button class="btn small primary" data-twin="${t.id}">Usa questa pianta</button></div>`:'';})()}
   <div class="ws">
@@ -2201,7 +2201,6 @@ app.addEventListener('click',async e=>{
       go(V.linkTappa?'oggi':'teatri',V.linkTappa?{dayId:V.linkTappa}:{});return;}
     if(a==='save'){await saveTeatro(b);return;}
     if(a==='scanfine'){scanPiantaFine();return;}
-    if(a==='prova'){if(V.dirty){toast('Salva prima la mappa: la prova usa la versione salvata','warn');return;}openProva(V.t.id,'mattina');return;}
     if(a==='altre'){V.showAltre=!V.showAltre;renderZones();return;}
     if(a==='fit'){fitSeats(true);return;}
     if(a==='undo'){if(!V.hist.length)return;const h=JSON.parse(V.hist.pop());V.t=h.t;V.zi=Math.min(h.zi,V.t.zone.length-1);resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();return;}
@@ -2378,21 +2377,6 @@ async function saveTeatro(btn){
 /* =================== PIANTINA =================== */
 function prepP(p){p.scuole=p.scuole||[];p.assign=p.assign||{};p.esclusi=p.esclusi||{};p.carrozzina=p.carrozzina||{};p.opzioni=p.opzioni||{gap:false};
   p.scuole.forEach(s=>{if(s.priorita===true)s.priorita='P1';else if(s.priorita===false)s.priorita='';});return p;}
-/* piantine di esempio: 6 situazioni tipiche su una sala mappata, per controllare la distribuzione. Non si salvano mai. */
-const PROVE=[['mattina','Mattina tipo'],['p1','Due P1 delle medie'],['grande','Scuola grande'],['dis','Disabilità e carrozzina'],['pieno','Quasi pieno'],['p1sup','P1 delle superiori']];
-function provaScuole(k,C){const n=f=>Math.max(10,Math.round(C*f));const S_=(nome,f,livello,o)=>({nome:nome+' (esempio)',persone:n(f),livello,docente:'Esempio',telDocente:'',disabili:0,priorita:'',...(o||{})});
-  return ({mattina:[S_('IC Manzoni',.18,'medie'),S_('Liceo Galilei',.2,'superiori'),S_('IC Pascoli',.15,'medie'),S_('IIS Volta',.12,'superiori'),S_('SM Dante',.1,'medie')],
-    p1:[S_('IC Verdi',.15,'medie',{priorita:'P1'}),S_('IC Rodari',.12,'medie',{priorita:'P1'}),S_('SM Leopardi',.15,'medie'),S_('Liceo Fermi',.2,'superiori')],
-    grande:[S_('IC Collodi',.25,'medie'),S_('SM Carducci',.22,'medie'),S_('Liceo Classico Parini',.45,'superiori')],
-    dis:[S_('IC Montale',.2,'medie'),S_('IIS Marconi',.2,'superiori',{disabili:2}),S_('SM Deledda',.15,'medie')],
-    pieno:[S_('IC Ungaretti',.3,'medie'),S_('SM Calvino',.25,'medie'),S_('Liceo Volta',.25,'superiori'),S_('IIS Einaudi',.18,'superiori')],
-    p1sup:[S_('Liceo Scientifico Newton',.2,'superiori',{priorita:'P1'}),S_('IC Saba',.2,'medie'),S_('IIS Olivetti',.2,'superiori'),S_('SM Quasimodo',.15,'medie',{priorita:'P2'})]})[k];}
-function openProva(teatroId,k){const t=S.c.teatri[teatroId];if(!t)return;const GT=geomT(t,{});const C=Object.values(GT.byK).filter(q=>!q.blocked).length;
-  const p=prepP({id:'prova_'+teatroId,teatroId,data:today(),replica:'09:00',prova:true});p.scuole=[];provaScuole(k,C).forEach(x=>p.scuole.push({id:uid('s'),...x,classeDis:'',c:nextColor(p)}));
-  distribute(t,p);V={name:'piantina',p,prova:k,from:'teatri',tool:'pan',zoom:startZoom(),zi:0,showBg:false,saved:true};render();window.scrollTo(0,0);setSaveState('Prova: non viene salvata');}
-function provaBar(){return `<div class="banner warn" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"><span><b>Piantina di prova</b>: scuole inventate per vedere come l’app distribuisce i posti in questa sala. Non viene salvata e non va a nessuno. Puoi cambiare le scuole e rigenerare, o esportare il PDF.</span>
-  <div class="row-btns">${PROVE.map(([k,l])=>`<button class="chip ${V.prova===k?'on':''}" data-prova="${k}"><span class="t">${esc(l)}</span></button>`).join('')}</div></div>`;}
-app.addEventListener('click',e=>{const b=e.target.closest('[data-prova]');if(b&&V.name==='piantina'&&V.prova)openProva(V.p.teatroId,b.dataset.prova);});
 function newPiantina(teatroId){if(!S.c.teatri[teatroId])return;
   const p=prepP({id:uid('p'),teatroId,data:today(),replica:'09:00'});
   V={name:'piantina',p,tool:'pan',zoom:startZoom(),zi:0,showBg:false,saved:false};render();window.scrollTo(0,0);}
@@ -2406,7 +2390,7 @@ function renderPiantina(){
   const p=V.p,t=curT();
   if(!t){app.innerHTML=`<div class="empty"><b>Il teatro di questa piantina non esiste più.</b><button class="btn" data-pl="back">Torna indietro</button></div>`;return;}
   V.zi=Math.min(V.zi,t.zone.length-1);const tp=curTappa();V.ro=plLocked(p);if(V.ro)V.tool='pan';
-  app.innerHTML=`${V.prova?provaBar():''}${V.ro?`<div class="banner">Piantina bloccata: dalle 06:00 del ${fmtDate(p.data)} la può modificare solo il Tour Manager. Puoi consultarla ed esportarla.</div>`:''}
+  app.innerHTML=`${V.ro?`<div class="banner">Piantina bloccata: dalle 06:00 del ${fmtDate(p.data)} la può modificare solo il Tour Manager. Puoi consultarla ed esportarla.</div>`:''}
   <div class="ws-top ${V.ro?'ro':''}">
     <button class="btn back" data-pl="back" aria-label="Indietro">←<span class="hide-sm"> Indietro</span></button>
     <div class="ws-title"><b>${esc(t.nome)} · replica ${esc(p.replica)}</b><span class="muted small">${tp?esc(cap(longDate(p.data)))+' · '+esc(tp.citta):esc(t.citta||'')}</span></div>
@@ -2415,7 +2399,7 @@ function renderPiantina(){
     <span id="regenWrap" class="regen-wrap">${regenBtnHTML()}</span>
     <button class="btn" data-pl="pdf">Esporta PDF</button></div>
   </div>
-  <div id="hsBar"></div>${p.scuole&&p.scuole.length&&!V.prova?`<div id="plQrSt">${qrStHTML(p.id)}</div>`:''}
+  <div id="hsBar"></div>${p.scuole&&p.scuole.length?`<div id="plQrSt">${qrStHTML(p.id)}</div>`:''}
   <div id="regenBar"></div>
   <div class="ws">
     <div class="stage-col">
@@ -2515,7 +2499,7 @@ function updateRegen(){const p=V.p;const bar=document.getElementById('regenBar')
   if(top)top.classList.toggle('primary',st);}
 function setSaveState(msg){const el=document.getElementById('pState');if(!el)return;el.textContent=msg||(V.saved?(S.mode==='local'?'Salvata solo su questo dispositivo':V.p&&pendOf(V.p.id)?'Non ancora online: riprovo appena torna la connessione':'Salvata online'):'');}
 function scheduleSave(){V.saved=false;setSaveState('Salvataggio…');clearTimeout(V.saveT);V.saveT=setTimeout(savePiantina,900);}
-async function savePiantina(){const p=V.p;if(!p)return;if(V.prova){V.saved=true;setSaveState('Prova: non viene salvata');return;}p.aggiornato=new Date().toISOString();
+async function savePiantina(){const p=V.p;if(!p)return;p.aggiornato=new Date().toISOString();
   try{await put('piantine',p.id,clone(p));V.saved=true;pendSet(p.id,null);setSaveState();qrStRefresh();archSoon('p',p.id);}catch(err){pendSet(p.id,clone(p));setSaveState('Non salvata');qrStRefresh();toast('Salvataggio non riuscito ('+(err.code||err.message)+'): i QR non sono aggiornati','bad');}}
 /* piantine con modifiche non ancora arrivate all'archivio: i QR dei docenti mostrano ancora la versione vecchia */
 const PEND_K='ml_pend_piantine';
