@@ -529,6 +529,12 @@ details.rep>summary .pill{white-space:normal}
 .done-roll{display:flex;align-items:center;gap:12px;text-align:left;background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-bd);border-radius:14px;padding:14px 16px;font-size:17px;font-weight:700;line-height:1.35;margin-top:6px;width:100%}
 .done-roll .tri{flex:none}
 .done-btn{width:100%;min-height:50px;font-size:17px;margin-top:6px}
+.rep-box{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px dashed var(--line);border-radius:10px;margin-top:4px}
+.altre-box{flex-basis:100%;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.altre-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.altre-it{margin:0;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface-2)}
+.altre-it img{width:100%;height:140px;object-fit:contain;background:#fff;border-radius:6px}
+.altre-it figcaption{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pz-card{background:var(--surface);color:var(--ink);border-radius:18px;padding:20px;width:100%;max-width:480px;max-height:calc(100vh - 40px);overflow:auto;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:dpop .22s ease-out}
 .pz-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px}
 .pz-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;cursor:pointer}.pz-row+.pz-row{border-top:1px solid var(--line)}
@@ -2028,7 +2034,7 @@ function renderEditor(){
     <button class="btn back" data-ed="back" aria-label="Indietro">←<span class="hide-sm"> Indietro</span></button>
     <div class="grow"><input class="in" id="tNome" placeholder="Nome del teatro" value="${esc(t.nome)}" aria-label="Nome del teatro"><input class="in" id="tCitta" placeholder="Città" value="${esc(t.citta)}" aria-label="Città"></div>
     <div class="ws-actions"><span class="save-state" id="edState">${V.dirty?'Modifiche non salvate':''}</span>
-    <button class="btn primary" data-ed="save">Salva mappa</button></div>
+    ${S.c.teatri[t.id]&&(S.c.teatri[t.id].zone||[]).some(z=>(z.rows||[]).length)?'<button class="btn" data-ed="prova" title="Piantine di esempio su questa sala, senza salvare nulla">Prova distribuzione</button>':''}<button class="btn primary" data-ed="save">Salva mappa</button></div>
   </div>
   ${(()=>{const s=S.c.teatri[t.id];const tw=s&&s.daHubspot&&!hasPlan(s)?gemelloArchivio(s):null;return tw?`<div class="banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><span style="flex:1 1 260px">La pianta di questa sala c’è già in archivio come <b>${esc(tw.nome)}</b> (${esc(tw.citta||'')}). Usala invece di ricominciare da zero.</span><button class="btn small primary" data-twin="${t.id}">Usa questa pianta</button></div>`:'';})()}
   <div class="ws">
@@ -2043,20 +2049,40 @@ function renderEditor(){
   </div>
   <input type="file" id="bgFile" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>`;
   renderZones();renderTools();renderPanel();drawEd();
+  requestAnimationFrame(()=>fitSeats(false));
 }
+/* zoom e scorrimento sui posti: utile soprattutto con le piante in verticale, dove la sala è piccola nel foglio */
+function fitSeats(force){const z=edZone?edZone():Z();if(!z||!z.rows.length)return;const G=geom(z);const bb=contentBox(z,G);const w=document.getElementById('edWrap');if(!bb||!w)return;
+  const fw=bb.w/z.w,fh=bb.h/z.h;if(!force&&fw>0.7)return;const vw=w.clientWidth,vh=w.clientHeight||vw;
+  const zoom=Math.max(1,Math.min(5,Math.min(0.92/fw,0.92*(vh/vw)*(z.w/z.h)/fh)));V.zoom=force?zoom:Math.max(V.zoom,zoom);drawEd();
+  requestAnimationFrame(()=>{const cw=w.scrollWidth,ch=w.scrollHeight;w.scrollLeft=Math.max(0,(bb.x+bb.w/2)/z.w*cw-vw/2);w.scrollTop=Math.max(0,(bb.y+bb.h/2)/z.h*ch-vh/2);});}
 function renderZones(){
   const t=V.t;
-  document.getElementById('edZones').innerHTML=`<span class="flabel">Zone</span>${t.zone.map((z,i)=>`<button class="chip ${i===V.zi?'on':''}" data-zone="${i}"><span class="t">${esc(z.nome||'Zona')}</span></button>`).join('')}<button class="btn small" data-ed="addzone">+ Aggiungi zona</button>`;
+  document.getElementById('edZones').innerHTML=`<span class="flabel">Zone</span>${t.zone.map((z,i)=>`<button class="chip ${i===V.zi?'on':''}" data-zone="${i}"><span class="t">${esc(z.nome||'Zona')}</span></button>`).join('')}<button class="btn small" data-ed="addzone">+ Aggiungi zona</button>${(t.pianteAltre||[]).length?`<button class="btn small ${V.showAltre?'primary':''}" data-ed="altre">Altre piante (${t.pianteAltre.length})</button>`:''}`+(V.showAltre?altreHTML():'');
 }
+function altreHTML(){const t=V.t;const xs=t.pianteAltre||[];
+  return `<div class="altre-box"><p class="muted small" style="margin:0">Piante arrivate insieme a questa (altre pagine o altri file). Puoi usarne una al posto di quella della zona attuale, o farne una zona nuova (es. la galleria).</p><div class="altre-list">${xs.map((x,i)=>`<figure class="altre-it"><img src="${esc(B(x.id))}" alt="Pianta ${i+1}" loading="lazy"><figcaption class="small">${esc(String(x.file||'Pianta '+(i+1)).split('/').pop())}</figcaption>
+    <div class="row-btns"><button class="btn small" data-altre="swap" data-i="${i}">Usa per ${esc(Z().nome||'questa zona')}</button><button class="btn small" data-altre="zona" data-i="${i}">Nuova zona</button></div></figure>`).join('')}</div></div>`;}
+async function altreAct(kind,i){const t=V.t;const x=(t.pianteAltre||[])[i];if(!x)return;const z=Z();pushHist();
+  try{const blob=await (await fetch(B(x.id))).blob();const url=URL.createObjectURL(blob);
+    if(kind==='swap'){const old=z.bg?{id:z.bg,file:'Pianta precedente di '+(z.nome||'zona'),w:z.w,h:z.h,ts:new Date().toISOString()}:null;
+      t.pianteAltre=t.pianteAltre.filter((_,j)=>j!==i).concat(old?[old]:[]);z.bg=x.id;V.bg[z.id]={url,blob:null};
+      if(!z.rows.length&&x.w&&x.h){z.w=1000;z.h=Math.round(1000*x.h/x.w);}
+      toast(z.rows.length?'Pianta cambiata: controlla che le file combacino ancora (la precedente resta tra le altre piante)':'Pianta cambiata: la precedente resta tra le altre piante');}
+    else{const n=t.zone.length;const nz={id:uid('z'),nome:n===1?'Galleria':'Zona '+(n+1),tipo:'galleria',w:1000,h:x.w&&x.h?Math.round(1000*x.h/x.w):1000,bg:x.id,front:null,rows:[]};
+      t.zone.push(nz);V.bg[nz.id]={url,blob:null};t.pianteAltre=t.pianteAltre.filter((_,j)=>j!==i);V.zi=t.zone.length-1;resetSel();V.tool='palco';toast('Zona nuova creata con questa pianta: rinominala e mappala');}
+    V.showAltre=!!(t.pianteAltre||[]).length&&kind==='swap';V.showBg=true;markDirty();renderZones();renderTools();renderPanel();drawEd();}
+  catch(e){toast('Pianta non caricata ('+(e.message||e)+')','bad');}}
+app.addEventListener('click',e=>{if(V.name!=='teatro')return;const b=e.target.closest('[data-altre]');if(b)altreAct(b.dataset.altre,+b.dataset.i);});
 function renderTools(){
   const z=Z();const fr=z.tipo==='platea'?'Palco':'Balaustra';
   const T=[['palco',fr],['fila','Fila'],['seleziona','Modifica'],['blocca','Blocca posto'],['carr','♿ Posto carrozzina']];
   const b=V.bg[z.id]||{};
   let h=`<div class="seg ed-seg" role="group" aria-label="Strumento">${T.map(([k,l])=>`<button data-tool="${k}" class="${V.tool===k?'on':''}">${l}</button>`).join('')}</div>`;
   h+=`<button class="btn small" data-ed="undo" ${V.hist.length?'':'disabled'}>Annulla</button><span class="sep"></span>`;
-  h+=`<button class="btn small" data-ed="zout" aria-label="Riduci">−</button><button class="btn small" data-ed="zin" aria-label="Ingrandisci">+</button><button class="btn small" data-ed="fs">${V.fs?'Chiudi schermo intero':'Schermo intero'}</button><span class="sep"></span>`;
+  h+=`<button class="btn small" data-ed="zout" aria-label="Riduci">−</button><button class="btn small" data-ed="zin" aria-label="Ingrandisci">+</button><button class="btn small" data-ed="fs">${V.fs?'Chiudi schermo intero':'Schermo intero'}</button>${Z().rows.length?'<button class="btn small" data-ed="fit">Centra sui posti</button>':''}<span class="sep"></span>`;
   h+=`<button class="btn small" data-ed="bg">${b.url?'Cambia piantina':'Carica piantina (PDF o foto)'}</button>`;
-  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona tutta la pianta'}</button><button class="btn small ${V.tool==='areascan'?'primary':''}" data-tool="areascan" ${V.scanning?'disabled':''}>Scansiona un’area</button>`;
+  if(b.url&&CFG)h+=`<button class="btn small primary" data-ed="scan" ${V.scanning?'disabled':''}>${V.scanning?'Scansione in corso…':'Scansiona tutta la pianta'}</button><button class="btn small" data-ed="scanfine" ${V.scanning?'disabled':''} title="Divide la pianta in fasce e le scansiona una per volta: più lenta, ma legge meglio le piante grandi o in verticale">Scansione precisa</button><button class="btn small ${V.tool==='areascan'?'primary':''}" data-tool="areascan" ${V.scanning?'disabled':''}>Scansiona un’area</button>`;
   if(Z().rows.length)h+=`<button class="btn small ${V.tool==='areaclear'?'primary':''}" data-tool="areaclear">Pulisci un’area</button>`;
   if(V.lastArea&&b.url&&CFG&&!V.scanning)h+=`<button class="btn small" data-ed="scanlast">Scansiona l’area pulita</button>`;
   if(V.pdf&&V.pdfZone===z.id&&V.pdf.numPages>1)h+=`<select class="in" id="pdfPage" aria-label="Pagina del PDF">${Array.from({length:V.pdf.numPages},(_,i)=>`<option value="${i+1}" ${V.pdfPage===i+1?'selected':''}>Pagina ${i+1}</option>`).join('')}</select>`;
@@ -2066,7 +2092,7 @@ function renderTools(){
 }
 function renderHint(){
   const z=Z();const isP=z.tipo==='platea';let m='';
-  if(V.pending)m=V.pending.type==='dup'?'Tocca dove va il <b>primo posto</b> della nuova fila: sarà uguale a quella selezionata.':V.pending.type==='start'?'Tocca la nuova posizione del <b>primo posto</b>.':'Tocca la nuova posizione dell’<b>ultimo posto</b>.';
+  if(V.pending)m=V.pending.type==='rep'?`Tocca il <b>primo posto della fila subito dietro</b>: ne creo ${V.pending.n} con la stessa distanza e le lettere successive.`:V.pending.type==='dup'?'Tocca dove va il <b>primo posto</b> della nuova fila: sarà uguale a quella selezionata.':V.pending.type==='start'?'Tocca la nuova posizione del <b>primo posto</b>.':'Tocca la nuova posizione dell’<b>ultimo posto</b>.';
   else if(V.tool==='palco')m=V.pts.length?'Ora tocca l’<b>altro estremo</b>.':isP?'Tocca i <b>due estremi del bordo del palco</b>, il lato verso il pubblico.':`Tocca i <b>due estremi della balaustra</b> di ${esc(z.nome)}: il lato affacciato sulla sala. Le file più vicine sono quelle davanti.`;
   else if(V.tool==='fila')m=V.draft?'Controlla che i posti combacino con il disegno, poi conferma nel pannello.':V.pts.length?'Ora tocca il centro dell’<b>ultimo posto</b> della fila.':'Tocca il centro del <b>primo posto</b> della fila. Se c’è un corridoio, fai un tratto per lato con la stessa lettera.';
   else if(V.tool==='seleziona')m='Tocca un posto per modificare la sua fila.';
@@ -2115,10 +2141,15 @@ function renderPanel(){
    <div class="preview" id="fPrev">${previewLabels(r.posti)}</div>
    ${isNew?`<div class="row-btns"><button class="btn primary" data-ed="addrow">Aggiungi fila</button><button class="btn" data-ed="cancelrow">Annulla</button></div>`
    :`<div class="row-btns"><button class="btn primary" data-ed="donerow">Fatto</button><button class="btn" data-ed="duprow">Duplica fila</button></div>
+     <div class="rep-box"><label for="fRep" class="small"><b>Ripeti dietro</b>: crea altre file uguali, con le lettere successive</label><div class="row-btns"><input class="in" id="fRep" type="number" inputmode="numeric" min="1" max="40" value="${esc(V.repN||5)}" aria-label="Quante file" style="width:80px"><button class="btn small" data-ed="reprow">Ripeti</button></div></div>
      <div class="row-btns"><button class="btn small" data-ed="movestart">Sposta primo posto</button><button class="btn small" data-ed="moveend">Sposta ultimo posto</button></div>
      <div class="row-btns">${V.confirmRow?`<button class="btn small danger" data-ed="delrowok">Conferma: elimina fila</button><button class="btn small ghost" data-ed="delrowno">Annulla</button>`:`<button class="btn small ghost" data-ed="delrow">Elimina fila</button>`}</div>`}`;
   if(isNew)setTimeout(()=>{const el=document.getElementById(f.fila?'fN':'fFila');if(el&&window.matchMedia('(min-width:981px)').matches)el.focus();},0);
 }
+const FILE_IT='ABCDEFGHILMNOPQRSTUVZ';
+function nextFila(f){f=String(f||'').trim().toUpperCase();if(!f)return '';if(/^\d+$/.test(f))return String(+f+1);
+  if(/^[A-Z]$/.test(f)){const i=FILE_IT.indexOf(f);if(i>=0)return i<FILE_IT.length-1?FILE_IT[i+1]:'AA';return String.fromCharCode(f.charCodeAt(0)+1);}
+  const m=f.match(/^(.*?)(\d+)$/);if(m)return m[1]+(+m[2]+1);const l=f.slice(-1);return f.length>1&&/[A-Z]/.test(l)?f.slice(0,-1)+nextFila(l):f+'2';}
 function suggestRow(a,b){
   const z=Z();const S0=seatSize(z);const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
   let near=null,best=Infinity;z.rows.forEach(r=>{const d=distSeg(mid.x,mid.y,r);const dy=Math.abs((r.y1+r.y2)/2-mid.y);if(dy<S0*0.7&&d<best){best=d;near=r;}});
@@ -2163,6 +2194,10 @@ app.addEventListener('click',async e=>{
     if(a==='back'){if(V.dirty&&!V.leaveOk){V.leaveOk=true;b.textContent='Esci senza salvare?';b.classList.add('danger');setTimeout(()=>{if(b.isConnected){V.leaveOk=false;b.textContent='← Indietro';b.classList.remove('danger');}},4000);return;}
       go(V.linkTappa?'oggi':'teatri',V.linkTappa?{dayId:V.linkTappa}:{});return;}
     if(a==='save'){await saveTeatro(b);return;}
+    if(a==='scanfine'){scanPiantaFine();return;}
+    if(a==='prova'){if(V.dirty){toast('Salva prima la mappa: la prova usa la versione salvata','warn');return;}openProva(V.t.id,'mattina');return;}
+    if(a==='altre'){V.showAltre=!V.showAltre;renderZones();return;}
+    if(a==='fit'){fitSeats(true);return;}
     if(a==='undo'){if(!V.hist.length)return;const h=JSON.parse(V.hist.pop());V.t=h.t;V.zi=Math.min(h.zi,V.t.zone.length-1);resetSel();markDirty();renderZones();renderTools();renderPanel();drawEd();return;}
     if(a==='fs'){V.fs=!V.fs;document.querySelector('.stage-col').classList.toggle('fs',V.fs);document.body.classList.toggle('noscroll',V.fs);renderTools();return;}
     if(a==='zin'){V.zoom=Math.min(5,V.zoom*1.35);drawEd();return;}
@@ -2183,6 +2218,7 @@ app.addEventListener('click',async e=>{
     if(a==='cancelrow'){resetSel();renderPanel();renderHint();drawEd();return;}
     if(a==='donerow'){resetSel();renderPanel();drawEd();return;}
     if(a==='duprow'){V.pending={type:'dup',rowId:V.selRow};renderHint();return;}
+    if(a==='reprow'){const n=Math.max(1,Math.min(40,int(document.getElementById('fRep').value)));V.repN=n;V.pending={type:'rep',rowId:V.selRow,n};renderHint();return;}
     if(a==='movestart'){V.pending={type:'start',rowId:V.selRow};renderHint();return;}
     if(a==='moveend'){V.pending={type:'end',rowId:V.selRow};renderHint();return;}
     if(a==='delrow'){V.confirmRow=true;renderPanel();return;}
@@ -2195,7 +2231,10 @@ app.addEventListener('click',async e=>{
 function edCanvasClick(e,svg){
   const z=Z();const p=svgPoint(svg,e);const seatEl=e.target.closest('[data-k]');
   if(V.pending){const r=z.rows.find(x=>x.id===V.pending.rowId);if(!r){V.pending=null;renderHint();return;}pushHist();
-    if(V.pending.type==='dup'){const dx=p.x-r.x1,dy=p.y-r.y1;const nr={...clone(r),id:uid('r'),x1:p.x,y1:p.y,x2:r.x2+dx,y2:r.y2+dy,fila:'',bloccati:[]};
+    if(V.pending.type==='rep'){const dx=p.x-r.x1,dy=p.y-r.y1;let f=r.fila;const made=[];
+      for(let i=1;i<=V.pending.n;i++){f=nextFila(f);const nr={...clone(r),id:uid('r'),x1:f2(r.x1+dx*i),y1:f2(r.y1+dy*i),x2:f2(r.x2+dx*i),y2:f2(r.y2+dy*i),fila:f,bloccati:[]};delete nr.carrozzina;nr.posti=postiFrom(nr);made.push(nr);}
+      z.rows.push(...made);V.selRow=null;V.form=null;V.tool='seleziona';toast(`Create ${made.length} file (${made[0].fila}–${made[made.length-1].fila}): se una ha posti diversi, toccala e correggila`);}
+    else if(V.pending.type==='dup'){const dx=p.x-r.x1,dy=p.y-r.y1;const nr={...clone(r),id:uid('r'),x1:p.x,y1:p.y,x2:r.x2+dx,y2:r.y2+dy,fila:'',bloccati:[]};
       z.rows.push(nr);V.selRow=nr.id;V.form={mode:'edit',...rowForm(nr)};toast('Fila duplicata: scrivi la lettera');}
     else if(V.pending.type==='start'){r.x1=p.x;r.y1=p.y;}else{r.x2=p.x;r.y2=p.y;}
     V.pending=null;markDirty();renderTools();renderPanel();drawEd();
@@ -2250,6 +2289,29 @@ async function scanCall(canvas){const b64=canvas.toDataURL('image/jpeg',0.85).sp
 function rowMid(r){return {x:(r.x1+r.x2)/2,y:(r.y1+r.y2)/2};}
 function inRect(p,a){return p.x>=a.x1&&p.x<=a.x2&&p.y>=a.y1&&p.y<=a.y2;}
 /* area = rettangolo in coordinate della zona; senza area = tutta la pianta */
+/* scansione a fasce orizzontali: le file sono orizzontali, quindi una fascia non le taglia;
+   ogni fila si tiene solo dalla fascia in cui cade il suo centro (niente doppioni nelle sovrapposizioni) */
+async function scanPiantaFine(){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
+  if(z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione precisa','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
+  V.scanOk=false;V.scanning=true;renderTools();
+  try{const blob=b.blob||await (await fetch(b.url)).blob();const img=await createImageBitmap(blob);const br=bgRect(z,img.width,img.height);
+    const nb=Math.max(2,Math.min(5,Math.round(img.height/img.width*2)));const band=img.height/nb,ov=band*0.18;const nuove=[];let palco=null;
+    for(let i=0;i<nb;i++){toast(`Scansione precisa: fascia ${i+1} di ${nb}…`);
+      const sy=Math.max(0,i*band-ov),ey=Math.min(img.height,(i+1)*band+ov),sh=ey-sy,sw=img.width;
+      const sc=Math.min(3,1600/Math.max(sw,sh));const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
+      const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(img,0,sy,sw,sh,0,0,c.width,c.height);
+      let data;try{data=await scanCall(c);}catch(e){toast(`Fascia ${i+1} non riuscita: continuo con le altre`,'warn');continue;}
+      const core0=i*band,core1=(i+1)*band;
+      (data.file||[]).forEach(f=>{const my=sy+((f.y1+f.y2)/2)*sh;if(my<core0||my>=core1)return;
+        const X=v=>f2(br.x+v*sw*br.s),Y=v=>f2(br.y+(sy+v*sh)*br.s);
+        const r={id:uid('r'),fila:f.fila==='?'?'':f.fila,x1:X(f.x1),y1:Y(f.y1),x2:X(f.x2),y2:Y(f.y2),bloccati:[],primo:'',n:f.n,spec:(f.posti||[]).length===f.n?f.posti.join(','):''};r.posti=postiFrom(r);nuove.push(r);});
+      if(!palco&&data.palco)palco={x1:f2(br.x+data.palco.x1*sw*br.s),y1:f2(br.y+(sy+data.palco.y1*sh)*br.s),x2:f2(br.x+data.palco.x2*sw*br.s),y2:f2(br.y+(sy+data.palco.y2*sh)*br.s)};}
+    if(!nuove.length){toast('Non ho trovato file leggibili: prova con una foto più nitida o disegnale a mano','warn');return;}
+    pushHist();z.rows=nuove;if(palco&&!z.front)z.front=palco;
+    markDirty();V.tool='seleziona';V.selRow=null;V.form=null;renderTools();renderPanel();drawEd();
+    toast(`Trovate ${nuove.length} file · ${nuove.reduce((a,r)=>a+r.posti.length,0)} posti. Controllale: tocca una fila per correggerla`);}
+  catch(e){toast('Scansione non riuscita ('+(e.message||e)+')','bad');}
+  finally{V.scanning=false;if(V.name==='teatro')renderTools();}}
 async function scanPianta(area){const z=Z();const b=V.bg[z.id]||{};if(!b.url||!SB)return;
   if(!area&&z.rows.length&&!V.scanOk){V.scanOk=true;toast('La zona ha già delle file: premi di nuovo per sostituirle con la scansione','warn');setTimeout(()=>{V.scanOk=false;},6000);return;}
   V.scanOk=false;V.scanning=true;renderTools();toast(area?'Scansione dell’area in corso…':'Scansione in corso: ci vogliono 20-40 secondi…');
@@ -2296,7 +2358,7 @@ async function saveTeatro(btn){
       catch(err){toast('Mappa salvata senza scansione ('+(err.code||'errore')+')','warn');}}}
     t.aggiornato=new Date().toISOString();
     if(V.linkTappa){const lt=S.c.tappe[V.linkTappa];if(lt&&lt.hsTeatro&&lt.hsTeatro.id&&!t.hsTeatroId&&!Object.values(S.c.teatri).some(x=>x.id!==t.id&&x.hsTeatroId===lt.hsTeatro.id))t.hsTeatroId=lt.hsTeatro.id;}
-    const out={id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,...(t.hsTeatroId?{hsTeatroId:t.hsTeatroId}:{}),...(t.indirizzo?{indirizzo:t.indirizzo}:{}),zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
+    const keep=clone(t);delete keep.zone;const out={...keep,id:t.id,nome:t.nome,citta:t.citta,aggiornato:t.aggiornato,zone:t.zone.map(z=>({id:z.id,nome:z.nome,tipo:z.tipo,w:z.w,h:z.h,bg:z.bg||null,front:z.front?{x1:f2(z.front.x1),y1:f2(z.front.y1),x2:f2(z.front.x2),y2:f2(z.front.y2)}:null,
       rows:z.rows.map(r=>({id:r.id,fila:r.fila,x1:f2(r.x1),y1:f2(r.y1),x2:f2(r.x2),y2:f2(r.y2),n:r.n??r.posti.length,primo:r.primo??'',spec:r.spec||'',posti:r.posti,bloccati:r.bloccati||[],...((r.carrozzina||[]).length?{carrozzina:r.carrozzina}:{})}))}))};
     await put('teatri',t.id,out);V.dirty=false;toast('Mappa salvata');archSoon('t',t.id);
     if(V.linkTappa){const tp=S.c.tappe[V.linkTappa];if(tp&&tp.teatroId!==t.id){const o={...clone(tp),teatroId:t.id};delete o.id;await put('tappe',tp.id,o);toast('Mappa salvata e collegata alla data');}}
@@ -2310,6 +2372,21 @@ async function saveTeatro(btn){
 /* =================== PIANTINA =================== */
 function prepP(p){p.scuole=p.scuole||[];p.assign=p.assign||{};p.esclusi=p.esclusi||{};p.carrozzina=p.carrozzina||{};p.opzioni=p.opzioni||{gap:false};
   p.scuole.forEach(s=>{if(s.priorita===true)s.priorita='P1';else if(s.priorita===false)s.priorita='';});return p;}
+/* piantine di esempio: 6 situazioni tipiche su una sala mappata, per controllare la distribuzione. Non si salvano mai. */
+const PROVE=[['mattina','Mattina tipo'],['p1','Due P1 delle medie'],['grande','Scuola grande'],['dis','Disabilità e carrozzina'],['pieno','Quasi pieno'],['p1sup','P1 delle superiori']];
+function provaScuole(k,C){const n=f=>Math.max(10,Math.round(C*f));const S_=(nome,f,livello,o)=>({nome:nome+' (esempio)',persone:n(f),livello,docente:'Esempio',telDocente:'',disabili:0,priorita:'',...(o||{})});
+  return ({mattina:[S_('IC Manzoni',.18,'medie'),S_('Liceo Galilei',.2,'superiori'),S_('IC Pascoli',.15,'medie'),S_('IIS Volta',.12,'superiori'),S_('SM Dante',.1,'medie')],
+    p1:[S_('IC Verdi',.15,'medie',{priorita:'P1'}),S_('IC Rodari',.12,'medie',{priorita:'P1'}),S_('SM Leopardi',.15,'medie'),S_('Liceo Fermi',.2,'superiori')],
+    grande:[S_('IC Collodi',.25,'medie'),S_('SM Carducci',.22,'medie'),S_('Liceo Classico Parini',.45,'superiori')],
+    dis:[S_('IC Montale',.2,'medie'),S_('IIS Marconi',.2,'superiori',{disabili:2}),S_('SM Deledda',.15,'medie')],
+    pieno:[S_('IC Ungaretti',.3,'medie'),S_('SM Calvino',.25,'medie'),S_('Liceo Volta',.25,'superiori'),S_('IIS Einaudi',.18,'superiori')],
+    p1sup:[S_('Liceo Scientifico Newton',.2,'superiori',{priorita:'P1'}),S_('IC Saba',.2,'medie'),S_('IIS Olivetti',.2,'superiori'),S_('SM Quasimodo',.15,'medie',{priorita:'P2'})]})[k];}
+function openProva(teatroId,k){const t=S.c.teatri[teatroId];if(!t)return;const GT=geomT(t,{});const C=Object.values(GT.byK).filter(q=>!q.blocked).length;
+  const p=prepP({id:'prova_'+teatroId,teatroId,data:today(),replica:'09:00',prova:true});p.scuole=[];provaScuole(k,C).forEach(x=>p.scuole.push({id:uid('s'),...x,classeDis:'',c:nextColor(p)}));
+  distribute(t,p);V={name:'piantina',p,prova:k,from:'teatri',tool:'pan',zoom:startZoom(),zi:0,showBg:false,saved:true};render();window.scrollTo(0,0);setSaveState('Prova: non viene salvata');}
+function provaBar(){return `<div class="banner warn" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"><span><b>Piantina di prova</b>: scuole inventate per vedere come l’app distribuisce i posti in questa sala. Non viene salvata e non va a nessuno. Puoi cambiare le scuole e rigenerare, o esportare il PDF.</span>
+  <div class="row-btns">${PROVE.map(([k,l])=>`<button class="chip ${V.prova===k?'on':''}" data-prova="${k}"><span class="t">${esc(l)}</span></button>`).join('')}</div></div>`;}
+app.addEventListener('click',e=>{const b=e.target.closest('[data-prova]');if(b&&V.name==='piantina'&&V.prova)openProva(V.p.teatroId,b.dataset.prova);});
 function newPiantina(teatroId){if(!S.c.teatri[teatroId])return;
   const p=prepP({id:uid('p'),teatroId,data:today(),replica:'09:00'});
   V={name:'piantina',p,tool:'pan',zoom:startZoom(),zi:0,showBg:false,saved:false};render();window.scrollTo(0,0);}
@@ -2323,7 +2400,7 @@ function renderPiantina(){
   const p=V.p,t=curT();
   if(!t){app.innerHTML=`<div class="empty"><b>Il teatro di questa piantina non esiste più.</b><button class="btn" data-pl="back">Torna indietro</button></div>`;return;}
   V.zi=Math.min(V.zi,t.zone.length-1);const tp=curTappa();V.ro=plLocked(p);if(V.ro)V.tool='pan';
-  app.innerHTML=`${V.ro?`<div class="banner">Piantina bloccata: dalle 06:00 del ${fmtDate(p.data)} la può modificare solo il Tour Manager. Puoi consultarla ed esportarla.</div>`:''}
+  app.innerHTML=`${V.prova?provaBar():''}${V.ro?`<div class="banner">Piantina bloccata: dalle 06:00 del ${fmtDate(p.data)} la può modificare solo il Tour Manager. Puoi consultarla ed esportarla.</div>`:''}
   <div class="ws-top ${V.ro?'ro':''}">
     <button class="btn back" data-pl="back" aria-label="Indietro">←<span class="hide-sm"> Indietro</span></button>
     <div class="ws-title"><b>${esc(t.nome)} · replica ${esc(p.replica)}</b><span class="muted small">${tp?esc(cap(longDate(p.data)))+' · '+esc(tp.citta):esc(t.citta||'')}</span></div>
@@ -2332,7 +2409,7 @@ function renderPiantina(){
     <span id="regenWrap" class="regen-wrap">${regenBtnHTML()}</span>
     <button class="btn" data-pl="pdf">Esporta PDF</button></div>
   </div>
-  <div id="hsBar"></div>${p.scuole&&p.scuole.length?`<div id="plQrSt">${qrStHTML(p.id)}</div>`:''}
+  <div id="hsBar"></div>${p.scuole&&p.scuole.length&&!V.prova?`<div id="plQrSt">${qrStHTML(p.id)}</div>`:''}
   <div id="regenBar"></div>
   <div class="ws">
     <div class="stage-col">
@@ -2432,7 +2509,7 @@ function updateRegen(){const p=V.p;const bar=document.getElementById('regenBar')
   if(top)top.classList.toggle('primary',st);}
 function setSaveState(msg){const el=document.getElementById('pState');if(!el)return;el.textContent=msg||(V.saved?(S.mode==='local'?'Salvata solo su questo dispositivo':V.p&&pendOf(V.p.id)?'Non ancora online: riprovo appena torna la connessione':'Salvata online'):'');}
 function scheduleSave(){V.saved=false;setSaveState('Salvataggio…');clearTimeout(V.saveT);V.saveT=setTimeout(savePiantina,900);}
-async function savePiantina(){const p=V.p;if(!p)return;p.aggiornato=new Date().toISOString();
+async function savePiantina(){const p=V.p;if(!p)return;if(V.prova){V.saved=true;setSaveState('Prova: non viene salvata');return;}p.aggiornato=new Date().toISOString();
   try{await put('piantine',p.id,clone(p));V.saved=true;pendSet(p.id,null);setSaveState();qrStRefresh();archSoon('p',p.id);}catch(err){pendSet(p.id,clone(p));setSaveState('Non salvata');qrStRefresh();toast('Salvataggio non riuscito ('+(err.code||err.message)+'): i QR non sono aggiornati','bad');}}
 /* piantine con modifiche non ancora arrivate all'archivio: i QR dei docenti mostrano ancora la versione vecchia */
 const PEND_K='ml_pend_piantine';
