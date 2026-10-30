@@ -154,6 +154,7 @@ h2{text-transform:uppercase;letter-spacing:.03em;font-size:17px;color:var(--bran
 /* OGGI */
 .day-head{flex-direction:row;align-items:flex-start;gap:14px;max-width:none}
 .day-nav{display:flex;gap:6px;padding-top:2px}
+.auto-grid .au-emg{grid-row:span 2}
 .day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .day-grid .span2{grid-column:span 2}
 .day-grid.mas-on{display:flex;flex-direction:column;gap:14px;align-items:stretch}.day-grid.mas-on>*{width:100%;max-width:none;box-sizing:border-box}.mas-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}.mas-col{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -1230,7 +1231,7 @@ function showOf(tour){const lg=tourLang(tour);const sp=S.c.impostazioni.spettaco
 function showOfTp(tp){const base=showOf(tp.tour);const t=(tp.spettacolo||'').trim();if(!t)return base;
   const sp=S.c.impostazioni.spettacoli||{};const lg=Object.keys(SHOW_DEF).find(k=>norm(({...SHOW_DEF[k],...(sp[k]||{})}).titolo)===norm(t));
   return lg?{...SHOW_DEF[lg],...(sp[lg]||{}),lg}:{titolo:t,lg:''};}
-function showHTML(tour,cls){const sh=typeof tour==='object'?showOfTp(tour):showOf(tour);if(!sh.titolo&&!sh.logo)return '';
+function showHTML(tour,cls){const sh0=typeof tour==='object'?showOfTp(tour):showOf(tour);if(!sh0.titolo&&!sh0.logo)return '';const sh=/^(qr|sala)/.test(cls||'')?{...sh0,logoDark:''}:sh0;
   return `<div class="${cls||'show'}">${sh.logo?`<img class="${sh.logoDark?'lg-l':''}" src="${esc(B(sh.logo))}" alt="${esc(sh.titolo||'Spettacolo')}">${sh.logoDark?`<img class="lg-d" src="${esc(B(sh.logoDark))}" alt="${esc(sh.titolo||'Spettacolo')}">`:''}`:`<span class="show-t">${esc(sh.titolo)}<sup>™</sup></span>`}</div>`;}
 
 /* ---------- accoglienza scuole ---------- */
@@ -1339,7 +1340,7 @@ function autoOverview(){const save=S.pref.tour;let s='';
 function renderAuto(){
   if(curTour()===ALL){app.innerHTML=`<div class="page-head"><span class="eyebrow">Tutti i tour</span><h1>Auto ed emergenze</h1><p class="muted" style="margin:0">Una scheda per ogni veicolo. Tocca “Apri” per vedere letture, tratti ed emergenze.</p></div><div class="day-grid">${autoOverview()}${role()==='direzione'?flottaCard(true):''}</div>`;return;}
   const v=vData();const veh=vehOf(v);const tg=veh?veh.targa:v.targa;const E=emg();const est=kmEstimate();const isDir=role()==='direzione';const canV=role()==='tm'||isDir;const rs=[...(v.letture||[])].sort((a,b)=>b.ts.localeCompare(a.ts));
-  let h=`<div class="page-head">${canAll()?'<button class="btn small page-back" data-alltours>← Tutti i tour</button>':''}<span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid">`;
+  let h=`<div class="page-head">${canAll()?'<button class="btn small page-back" data-alltours style="align-self:flex-start;width:auto;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">${esc(tourLbl())}</span><h1>Auto ed emergenze</h1></div><div class="day-grid auto-grid">`;
   h+=`<section class="card"><div class="card-head"><h2>Veicolo</h2>${tg?`<span class="pill">${esc(tg)}</span>`:'<span class="pill warn">Veicolo da assegnare</span>'}</div>${veh&&!V.vEdit?`<p style="margin:0"><b>${esc(veh.modello||'')}</b>${veh.noleggio?' <span class="pill">Noleggio</span>':''}</p>`:''}`;
   if(V.vEdit)h+=`${flotta().length?`<div class="field"><label for="vVeh">Veicolo del tour</label><select class="in" id="vVeh"><option value="">— Scegli —</option>${flotta().map(x=>`<option value="${esc(x.id)}" ${x.id===v.veicoloId?'selected':''}>${esc(vehLbl(x))}</option>`).join('')}</select></div>`:`<div class="field"><label for="vTarga">Targa</label><input class="in" id="vTarga" value="${esc(v.targa||'')}" autocapitalize="characters" placeholder="AB123CD"></div>`}
      <div class="field"><label for="vKm0">Km alla consegna</label><input class="in" id="vKm0" type="number" inputmode="numeric" value="${esc(v.kmIniziali??'')}"></div>
@@ -1354,10 +1355,10 @@ function renderAuto(){
      <div class="field"><label for="rFoto">Foto del contachilometri</label><input class="in" id="rFoto" type="file" accept="image/*"></div>
      <div class="row-btns"><button class="btn small primary" data-au="rsave">Salva lettura</button><button class="btn small" data-au="rcancel">Annulla</button></div></div>`;
   if(rs.length)h+=`<details class="km-hist"><summary>Letture (${rs.length})</summary>${rs.map(r=>`<div class="km-row"><b>${(+r.km).toLocaleString('it-IT')} km</b><span class="muted small">${esc(shortDate(r.ts.slice(0,10)))} ${esc(r.ts.slice(11,16))}${r.tm?' · '+esc(r.tm):''}</span>${r.foto?`<button class="btn small ghost" data-view="${esc(r.foto)}" data-ext="jpg" data-title="Contachilometri ${esc(r.km)} km">Foto</button>`:''}</div>`).join('')}</details>`;
-  if(est&&est.legs.length)h+=`<details class="km-hist"><summary>Tratti della tournée (${est.legs.length})</summary>${est.legs.map(x=>`<div class="km-row ${x.ts<=est.now?'done':''}"><b>${x.km} km</b><span class="small">${esc(x.l)}</span><span class="muted small">${esc(shortDate(x.data))} · ${x.quando}</span></div>`).join('')}<p class="proto">Km di esempio: nella versione collegata li calcola Google Maps per ogni tratto.</p></details>`;
+  if(est&&est.legs.length)h+=`<details class="km-hist"><summary>Tratti della tournée (${est.legs.length})</summary>${est.legs.map(x=>`<div class="km-row ${x.ts<=est.now?'done':''}"><b>${x.km} km</b><span class="small">${esc(x.l)}</span><span class="muted small">${esc(shortDate(x.data))} · ${x.quando}</span></div>`).join('')}<p class="proto" ${CFG?'hidden':''}>Km di esempio: nella versione collegata li calcola Google Maps per ogni tratto.</p></details>`;
   h+=`</section>`;
   const ass=E.assicurazione||{};const vn=veh?parseNum(veh.altri):[];
-  h+=`<section class="card"><div class="card-head"><h2>Emergenze</h2></div>
+  h+=`<section class="card au-emg"><div class="card-head"><h2>Emergenze</h2></div>
    ${veh?`<div class="ins-box"><span class="flabel">Da dire alla centrale</span><p style="margin:0">Targa <b>${esc(veh.targa||'—')}</b> · ${esc(veh.compagnia||'Assicurazione')} · polizza <b>${esc(veh.polizza||'—')}</b></p>
      <div class="row-btns"><button class="btn small" data-au="cpins">Copia targa e polizza</button><button class="btn small" data-au="cppos">Copia la mia posizione</button></div></div>`:''}
    <div class="emg"><span class="flabel">Guasto</span><div class="row-btns">${veh&&veh.assistenza?`<a class="btn small primary" href="${telHref(veh.assistenza)}">Assistenza stradale · ${esc(veh.compagnia||'assicurazione')}</a>`:'<a class="btn small" href="tel:803116">Soccorso stradale ACI</a>'}<a class="btn small" href="${mapsSearch('officina meccanica')}" target="_blank" rel="noopener">Officine vicine</a></div>
@@ -1383,9 +1384,16 @@ function flottaCard(wide){const fl=flotta();const ed=V.fEdit;let s=`<section cla
      <div class="row-btns"><button class="btn small primary" data-au="fsave" data-id="${esc(ed)}">Salva</button><button class="btn small" data-au="fcancel">Annulla</button></div>`;}
   else s+=fl.length?`<div class="doclist">${fl.map(x=>{const u=used(x.id);return `<div class="docrow"><span class="tmain"><b>${esc(vehLbl(x))}</b><span class="muted small">${esc(x.compagnia||'Assicurazione da inserire')}${x.polizza?' · polizza '+esc(x.polizza):''}${u.length?' · '+esc(u.join(', ')):' · non assegnato'}</span></span><button class="btn small" data-au="fedit" data-id="${esc(x.id)}">Modifica</button></div>`;}).join('')}</div>`:'<p class="muted small" style="margin:0">Nessun veicolo. Aggiungili qui, poi assegnali a ogni tour con “Scegli il veicolo”.</p>';
   return s+'</section>';}
-function vChangeForm(v,est){return `<div class="km-form"><p class="small" style="margin:0"><b>Cambio veicolo</b>: il veicolo attuale e le sue letture restano nello storico; si riparte da zero con il nuovo.</p>
+/* in quale altro tour è ora un veicolo della flotta */
+function vehTour(id){return allTours().find(t=>t!==curTour()&&(S.c.impostazioni[vKey(t)]||{}).veicoloId===id)||'';}
+function kmOfTour(t){const save=S.pref.tour;try{S.pref.tour=t;const e=kmEstimate();return e?e.km:'';}finally{S.pref.tour=save;}}
+document.addEventListener('change',e=>{if(V.name!=='auto'||e.target.id!=='cVeh')return;const o=vehTour(e.target.value);const box=document.getElementById('cSwapBox');
+  if(box){box.hidden=!o;document.getElementById('cSwapTxt').textContent=o?`Scambio con ${tourShort(o)}: il veicolo attuale (${vData().targa||''}) passa a ${tourShort(o)}`:'';}
+  const km=document.getElementById('cKm');if(o&&km&&!km.value){const k=kmOfTour(o);if(k!=='')km.value=k;}});
+function vChangeForm(v,est){return `<div class="km-form"><p class="small" style="margin:0"><b>Cambio veicolo</b>: il veicolo attuale e le sue letture restano nello storico; si riparte da zero con il nuovo. Se il nuovo è di un’altra tournée, potete fare lo scambio: i due tour si passano i veicoli.</p>
   <div class="field"><label for="cKmOld">Km del veicolo che lasci (${esc(v.targa||'')})</label><input class="in" id="cKmOld" type="number" inputmode="numeric" value="${est?est.km:''}"><span class="muted small">Facoltativo: diventa l’ultima lettura del vecchio veicolo.</span></div>
-  ${flotta().length?`<div class="field"><label for="cVeh">Nuovo veicolo</label><select class="in" id="cVeh"><option value="">— Scegli —</option>${flotta().filter(x=>x.id!==v.veicoloId).map(x=>`<option value="${esc(x.id)}">${esc(vehLbl(x))}</option>`).join('')}<option value="__altro">Altro (scrivo la targa)</option></select></div>`:''}
+  ${flotta().length?`<div class="field"><label for="cVeh">Nuovo veicolo</label><select class="in" id="cVeh"><option value="">— Scegli —</option>${flotta().filter(x=>x.id!==v.veicoloId).map(x=>{const o=vehTour(x.id);return `<option value="${esc(x.id)}">${esc(vehLbl(x))}${o?' · ora in '+esc(tourShort(o)):''}</option>`;}).join('')}<option value="__altro">Altro (scrivo la targa)</option></select></div>
+  <label class="chk" id="cSwapBox" hidden><input type="checkbox" id="cSwap" checked> <span id="cSwapTxt"></span></label>`:''}
   <div class="field"><label for="cTarga">Targa del nuovo veicolo</label><input class="in" id="cTarga" placeholder="${flotta().length?'Solo se non è nella flotta':'es. AB123CD'}" autocomplete="off"></div>
   <div class="field"><label for="cKm">Km del nuovo veicolo alla consegna</label><input class="in" id="cKm" type="number" inputmode="numeric"></div>
   <div class="row-btns"><button class="btn small primary" data-au="csave">Conferma il cambio</button><button class="btn small" data-au="ccancel">Annulla</button></div></div>`;}
@@ -1399,9 +1407,14 @@ document.addEventListener('click',async e=>{if(V.name!=='auto')return;const b=e.
   else if(a==='csave'){const v=vData();const g=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};const vid=g('cVeh');const sel=vid&&vid!=='__altro'?flotta().find(x=>x.id===vid):null;
     const targa=sel?sel.targa:g('cTarga').toUpperCase();const km=g('cKm');const kmOld=g('cKmOld');
     if(!targa){toast('Scegli il nuovo veicolo o scrivi la targa','warn');return;}if(km===''){toast('Scrivi i km del nuovo veicolo','warn');return;}
-    const old=vehOf(v);const now=nowStamp();const lett=[...(v.letture||[])];if(kmOld!=='')lett.push({km:int(kmOld),ts:now,tm:tmName(),finale:true});
+    const old=vehOf(v);const now=nowStamp();const est0=(()=>{const e=kmEstimate();return e?e.km:'';})();const lett=[...(v.letture||[])];if(kmOld!=='')lett.push({km:int(kmOld),ts:now,tm:tmName(),finale:true});
     const storico=[...(v.storico||[]),{veicoloId:v.veicoloId||'',targa:v.targa||'',modello:old?old.modello||'':'',kmIniziali:v.kmIniziali??'',kmIniTs:v.kmIniTs||'',dal:v.kmIniTs||'',al:now,kmFinali:kmOld===''?'':int(kmOld),letture:lett}];
-    await putImp(vKey(),{veicoloId:sel?sel.id:'',targa,kmIniziali:int(km),kmIniTs:now,letture:[],storico});V.vChange=false;toast(`Cambio fatto: ora il tour usa ${targa}`);re();}
+    const ot=sel?vehTour(sel.id):'';const swap=ot&&document.getElementById('cSwap')&&document.getElementById('cSwap').checked;
+    await putImp(vKey(),{veicoloId:sel?sel.id:'',targa,kmIniziali:int(km),kmIniTs:now,letture:[],storico});
+    if(swap){/* l'altro tour prende il veicolo lasciato da questo */const ok=vKey(ot);const ov=S.c.impostazioni[ok]||{};const oldKm=kmOld!==''?int(kmOld):(est0!==''?est0:'');
+      const ost=[...(ov.storico||[]),{veicoloId:ov.veicoloId||'',targa:ov.targa||'',modello:sel.modello||'',kmIniziali:ov.kmIniziali??'',kmIniTs:ov.kmIniTs||'',dal:ov.kmIniTs||'',al:now,kmFinali:int(km),letture:[...(ov.letture||[]),{km:int(km),ts:now,tm:tmName(),finale:true}]}];
+      await putImp(ok,{veicoloId:v.veicoloId||'',targa:v.targa||'',kmIniziali:oldKm,kmIniTs:now,letture:[],storico:ost});}
+    V.vChange=false;toast(swap?`Scambio fatto: qui ${targa}, ${tourShort(ot)} prende ${v.targa||'il veicolo precedente'}`:`Cambio fatto: ora il tour usa ${targa}`);re();}
   else if(a==='fnew'){V.fEdit='new';re();}
   else if(a==='fedit'){V.fEdit=b.dataset.id;re();}
   else if(a==='fcancel'){V.fEdit=null;re();}
@@ -2154,7 +2167,7 @@ function renderPanel(){
       <li><b>A mano</b>, <b>Palco</b>: tocca i due estremi del bordo del palco. Serve a capire quali file sono davanti.</li>
       <li><b>Fila</b>: tocca il primo e l’ultimo posto, poi scrivi lettera e numero di posti. Dalla seconda fila il numero viene proposto in automatico.</li>
       <li>Con un <b>corridoio</b> centrale fai due tratti con la stessa lettera, oppure fai la fila intera e poi, in Modifica, usa <b>Dividi al corridoio</b>.</li>
-      <li><b>File curve</b>: in Modifica tocca la fila e usa la barra <b>Curvatura</b>; “Stessa curva a tutte le file” la copia sulle altre.</li>
+      <li><b>File curve o inclinate</b>: in Modifica tocca la fila, usa la barra <b>Curvatura</b> o sposta il primo/ultimo posto; poi “Allinea le altre file a questa” copia curva e inclinazione su tutta la zona.</li>
       <li><b>Ripeti dietro</b>: fatta una fila, creane altre uguali dietro con le lettere successive.</li>
       <li><b>Sposta file</b>: trascina una fila, o disegna un riquadro e trascina tutte quelle dentro. Le frecce della tastiera le spostano di poco.</li>
       <li>Posti come <b>1A</b> o <b>26B</b>: usa “Etichette personalizzate”, per esempio <i>1A, 1-13</i>.</li>
@@ -2174,7 +2187,7 @@ function renderPanel(){
    :`<div class="row-btns"><button class="btn primary" data-ed="donerow">Fatto</button><button class="btn" data-ed="duprow">Duplica fila</button></div>
      <div class="rep-box"><label for="fRep" class="small"><b>Ripeti dietro</b>: crea altre file uguali, con le lettere successive</label><div class="row-btns"><input class="in" id="fRep" type="number" inputmode="numeric" min="1" max="40" value="${esc(V.repN||5)}" aria-label="Quante file" style="width:80px"><select class="in" id="fAbc" aria-label="Alfabeto delle file" style="width:auto"><option value="auto" ${(V.repAbc||'auto')==='auto'?'selected':''}>Lettere: automatico</option><option value="it" ${V.repAbc==='it'?'selected':''}>Italiano (senza J K W X Y)</option><option value="en" ${V.repAbc==='en'?'selected':''}>Alfabeto completo</option></select><button class="btn small" data-ed="reprow">Ripeti</button></div><span class="muted small" id="fRepPrev">${r.fila?'Creerà: '+esc(repPreview(r,V.repN||5)):'Scrivi prima la lettera di questa fila'}</span></div>
      <div class="row-btns"><button class="btn small" data-ed="movestart">Sposta primo posto</button><button class="btn small" data-ed="moveend">Sposta ultimo posto</button></div>
-     <div class="field"><label for="fCurva">Curvatura della fila</label><input id="fCurva" type="range" min="-0.35" max="0.35" step="0.005" value="${esc(+r.curva||0)}" aria-label="Curvatura della fila"><div class="row-btns"><button class="btn small" data-ed="curva0">Dritta</button><button class="btn small" data-ed="curvall">Stessa curva a tutte le file</button></div></div>
+     <div class="field"><label for="fCurva">Curvatura della fila</label><input id="fCurva" type="range" min="-0.35" max="0.35" step="0.005" value="${esc(+r.curva||0)}" aria-label="Curvatura della fila"><div class="row-btns"><button class="btn small" data-ed="curva0">Dritta</button><button class="btn small" data-ed="curvall" title="Le altre file della zona prendono la stessa curva e la stessa inclinazione di questa">Allinea le altre file a questa</button></div></div>
      <div class="row-btns"><button class="btn small" data-ed="splitrow" title="Per le file con un corridoio in mezzo: tocca il corridoio e la fila diventa due tratti">Dividi al corridoio</button></div>
      <div class="row-btns">${V.confirmRow?`<button class="btn small danger" data-ed="delrowok">Conferma: elimina fila</button><button class="btn small ghost" data-ed="delrowno">Annulla</button>`:`<button class="btn small ghost" data-ed="delrow">Elimina fila</button>`}</div>`}`;
   if(isNew)setTimeout(()=>{const el=document.getElementById(f.fila?'fN':'fFila');if(el&&window.matchMedia('(min-width:981px)').matches)el.focus();},0);
@@ -2261,7 +2274,12 @@ app.addEventListener('click',async e=>{
     if(a==='movestart'){V.pending={type:'start',rowId:V.selRow};renderHint();return;}
     if(a==='splitrow'){V.pending={type:'split',rowId:V.selRow};renderHint();return;}
     if(a==='curva0'&&r){pushHist();r.curva=0;markDirty();renderPanel();drawEd();return;}
-    if(a==='curvall'&&r){pushHist();const c=+r.curva||0;z.rows.forEach(x=>{x.curva=c;});markDirty();drawEd();toast(c?'Stessa curva applicata a tutte le file della zona':'Tutte le file della zona sono dritte');return;}
+    if(a==='curvall'&&r){pushHist();const c=+r.curva||0;const A=Math.atan2(r.y2-r.y1,r.x2-r.x1);let n=0;
+      z.rows.forEach(x=>{if(x.id===r.id){return;}x.curva=c;const mx=(x.x1+x.x2)/2,my=(x.y1+x.y2)/2,h=Math.hypot(x.x2-x.x1,x.y2-x.y1)/2;
+        /* stessa inclinazione, mantenendo il verso della fila (primo posto dallo stesso lato) */
+        const cur=Math.atan2(x.y2-x.y1,x.x2-x.x1);let a2=A;if(Math.cos(cur-A)<0){a2=A+Math.PI;x.curva=-c;}
+        x.x1=f2(mx-Math.cos(a2)*h);x.y1=f2(my-Math.sin(a2)*h);x.x2=f2(mx+Math.cos(a2)*h);x.y2=f2(my+Math.sin(a2)*h);n++;});
+      markDirty();drawEd();toast(`${n} file allineate: stessa curva e stessa inclinazione di questa`);return;}
     if(a==='moveend'){V.pending={type:'end',rowId:V.selRow};renderHint();return;}
     if(a==='delrow'){V.confirmRow=true;renderPanel();return;}
     if(a==='delrowno'){V.confirmRow=false;renderPanel();return;}
@@ -3131,7 +3149,7 @@ function renderQrList(){
   const reps=tp.repliche||[];V.qrOpen=V.qrOpen||{};
   let h=`<div class="page-head day-head">
     <div class="day-nav"><button class="icon-btn" data-qn="prev" ${pv?'':'disabled'} aria-label="Giorno precedente">‹</button><button class="icon-btn" data-qn="next" ${nx?'':'disabled'} aria-label="Giorno successivo">›</button></div>
-    <div>${canAll()?'<button class="btn small page-back" data-alltours>← Tutti i tour</button>':''}<span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
+    <div>${canAll()?'<button class="btn small page-back" data-alltours style="align-self:flex-start;width:auto;margin-bottom:8px">← Tutti i tour</button>':''}<span class="eyebrow">QR docenti · ${rel}</span><h1>${esc(cap(longDate(tp.data)))} · ${esc(tp.citta)}</h1><p class="muted small" style="margin:4px 0 0">${esc(tp.teatroNome||'')} · tocca una scuola per il suo codice</p></div></div>`;
   if(!reps.length)h+=`<div class="empty"><b>Nessuna replica indicata per questa data.</b></div>`;
   h+=`<div class="rep-list">`;
   reps.forEach((r,j)=>{const p=findP(tp.id,r);const open=V.qrOpen[tp.id+r]??(j===0);
