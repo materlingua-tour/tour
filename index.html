@@ -1920,7 +1920,7 @@ function previewLabels(arr){if(!arr.length)return 'Nessun posto: indica quanti s
 
 /* ---------- distribuzione ---------- */
 /* Distribuzione automatica dei posti.
-   Ordine dal palco: P1, P2, P3, medie, superiori (a parità, l’ordine dell’elenco; tra due P1 la più piccola). L’ordine si rispetta sempre.
+   Ordine dal palco: prima le medie, poi le superiori; dentro ogni grado P1, P2, P3, poi le altre (a parità, l’ordine dell’elenco; tra due P1 la più piccola). L’ordine si rispetta sempre.
    - Le scuole stanno una DIETRO l’altra: ogni fila è di una sola scuola.
    - Si riempie prima la platea. Se una scuola non ci sta intera: se in platea restano almeno 2 file la
      scuola si divide (davanti in platea, il resto in galleria); se resta 1 fila sola va tutta in galleria
@@ -1936,9 +1936,9 @@ function distribute(t,p){
   const zones=GT.order.map(({z,G})=>{const m=new Map(),lc=new Map();G.lines.forEach((l,i)=>{const f=String(l.fila||'').trim()||('#'+i);if(!m.has(f)){m.set(f,[]);lc.set(f,[]);}m.get(f).push(...l.seats.filter(s=>free.has(s.k)));lc.get(f).push(l);});
     const keys=[...m.keys()].filter(f=>m.get(f).length);const all=keys.flatMap(f=>m.get(f));const c=all.length?all.reduce((a,x)=>a+x.proj,0)/all.length:0;
     return {nome:z.nome,pl:(z.tipo||'platea')==='platea',c,rows:keys.map(f=>({fila:f,seats:m.get(f).slice().sort((a,b)=>a.proj-b.proj),lines:lc.get(f)}))};});
-  const rank=x=>x.pr==='P1'?0:x.pr==='P2'?1:x.pr==='P3'?2:lv(x.s)===0?3:4;
+  const rank=x=>lv(x.s)*4+(x.pr==='P1'?0:x.pr==='P2'?1:x.pr==='P3'?2:3);
   const sch0=p.scuole.map((s,idx)=>({s,idx,n:int(s.persone),dis:int(s.disabili),pr:prioOf(s)})).filter(x=>x.n>0)
-    .sort((a,b)=>rank(a)-rank(b)||(a.pr==='P1'&&b.pr==='P1'?a.n-b.n:0)||lv(a.s)-lv(b.s)||a.idx-b.idx);
+    .sort((a,b)=>rank(a)-rank(b)||(a.pr==='P1'&&b.pr==='P1'?a.n-b.n:0)||a.idx-b.idx);
   const near=(arr,c)=>arr.slice().sort((a,b)=>Math.abs(a.proj-c)-Math.abs(b.proj-c));
   /* posto carrozzina: la scuola con disabilità si mette attorno a quel posto */
   let anchor=null;const isCarr=k=>!!carr[k]||!!(GT.byK[k]&&GT.byK[k].carr);const ck=Object.keys(carr).find(k=>free.has(k))||Object.values(GT.byK).filter(q=>q.carr&&free.has(q.k)).map(q=>q.k)[0];
@@ -2399,7 +2399,7 @@ function renderSchools(){
   <div class="row-btns">${V.confirmClear?`<button class="btn danger" data-pl="clearok">Sì, svuota tutti i posti</button><button class="btn ghost" data-pl="clearno">Annulla</button>`:`<button class="btn" data-pl="clear" ${Object.keys(p.assign||{}).length||Object.keys(p.esclusi||{}).length?'':'disabled'}>Svuota disposizione</button>`}</div>
   <p class="muted small" style="margin:4px 0 0">“Svuota disposizione” toglie i posti assegnati e quelli esclusi, ma lascia la pianta del teatro e l’elenco delle scuole. Poi premi “Rigenera piantina” in alto per ripartire da zero.</p>
   <details class="rules"><summary>Come vengono distribuiti i posti</summary><ol class="guide small">
-   <li>Ordine dal palco: <b>P1</b>, <b>P2</b>, <b>P3</b>, <b>medie</b>, <b>superiori</b>. L’ordine si rispetta sempre. Le priorità arrivano dalle note del deal su HubSpot: si correggono lì.</li>
+   <li>Ordine dal palco: prima le <b>medie</b>, poi le <b>superiori</b>. Dentro ogni grado: <b>P1</b>, <b>P2</b>, <b>P3</b>, poi le scuole senza priorità. L’ordine si rispetta sempre. Le priorità arrivano dalle note del deal su HubSpot: si correggono lì.</li>
    <li>Le scuole stanno <b>una dietro l’altra</b>, mai affiancate: ogni fila è di una sola scuola.</li>
    <li>Si riempie prima la <b>platea</b>. Se una scuola non ci sta intera e restano almeno 2 file, si divide: davanti in platea, il resto in galleria. Se resta 1 fila sola, va tutta in galleria e la piantina indica i posti liberi in platea.</li>
    <li>Se la platea ha <b>due blocchi separati</b> dal corridoio, ogni scuola sta in <b>un blocco solo</b>, in colonna: la scuola successiva va nel blocco dove si arriva più avanti al palco.</li>
@@ -3231,7 +3231,10 @@ function twoBlocks(t){if(!t)return false;try{const GT=geomT(t,{});const z=GT.ord
   const first=z.G.lines[0];const f=first.fila;const seats=z.G.lines.filter(l=>l.fila===f).flatMap(l=>l.seats).filter(q=>!q.blocked).map(q=>q.proj).sort((a,b)=>a-b);
   if(seats.length<4)return false;const d=seats.slice(1).map((v,i)=>v-seats[i]);const md=d.slice().sort((a,b)=>a-b)[Math.floor(d.length/2)];const g=d.map((v,i)=>[v,i]).filter(([v])=>v>md*1.8);
   if(g.length!==1)return false;const l=g[0][1]+1;return Math.min(l,seats.length-l)/seats.length>=0.3;}catch(_){return false;}}
-function p1Conflict(scuole,t){const ps=(scuole||[]).filter(s=>prioOf(s)==='P1'&&int(s.persone)>0);if(ps.length<2)return null;if(ps.length===2&&twoBlocks(teatroOf({teatroId:t&&t.id})||null))return null;return ps;}
+function p1Conflict(scuole,t){/* P1 vale dentro il proprio grado: una P1 delle medie e una delle superiori non si contendono il posto */
+  const two=()=>twoBlocks(teatroOf({teatroId:t&&t.id})||null);let out=null;
+  ['medie','superiori'].forEach(g=>{const ps=(scuole||[]).filter(s=>prioOf(s)==='P1'&&int(s.persone)>0&&(s.livello==='superiori'?'superiori':'medie')===g);
+    if(ps.length<2||(ps.length===2&&two()))return;out=(out||[]).concat(ps);});return out;}
 function p1List(){const td=today(),lim=addDays(td,60),out=[];
   Object.values(S.c.tappe||{}).filter(tp=>!tp.rimossa&&tp.data>=td&&tp.data<=lim&&inZone(tp)).sort((a,b)=>a.data.localeCompare(b.data)).forEach(tp=>{
     (tp.repliche||[]).forEach(r=>{const p=findP(tp.id,r);const sc=p?p.scuole:dealsFor(tp,r).filter(d=>d.stage!=='Chiuso perso').map(dealToSchool);const c=p1Conflict(sc,teatroOf(tp));if(c)out.push({tp,r,c});});});
