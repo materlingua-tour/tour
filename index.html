@@ -2853,7 +2853,7 @@ function castForm(c){
    <div class="field"><span class="flabel">Copia del documento</span><button class="btn small" data-cs="file">${c.docFile||c._blob?'Sostituisci file':'Carica foto o PDF'}</button><span class="muted small" id="cFileName">${c._blobName?esc(c._blobName):c.docFile?'File caricato':''}</span></div></div></div>
    <input type="file" id="cFile" accept="image/*,application/pdf" hidden>
    <div class="row-btns"><button class="btn primary" data-cs="save">Salva</button><button class="btn" data-cs="cancel">Annulla</button>
-   ${c.isNew?'':(V.confirmDel?`<button class="btn small danger" data-cs="delok">Conferma eliminazione</button>`:`<button class="btn small ghost" data-cs="del">Elimina</button>`)}</div></article>`;
+   ${c.isNew?'':(V.confirmDel?(c._g&&hasForm(c.tour)&&formsOf(c).length>1?`<button class="btn small danger" data-cs="delfrom">Togli dalla Formazione ${c._g}</button><button class="btn small danger" data-cs="delok">Elimina da tutte le formazioni</button>`:`<button class="btn small danger" data-cs="delok">Conferma eliminazione</button>`):`<button class="btn small ghost" data-cs="del">Elimina</button>`)}</div></article>`;
 }
 document.addEventListener('change',async e=>{const fd=e.target.closest('[data-formdate]');if(!fd||V.name!=='cast'||!isDir())return;const tr=curTour(),n=+fd.dataset.formdate,v=fd.value;
   const fs=formOf(tr).map(f=>({n:f.n,dal:f.dal||''}));const prev=fs.find(f=>f.n===n-1),next=fs.find(f=>f.n===n+1);
@@ -2894,6 +2894,9 @@ document.addEventListener('click',async e=>{
   else if(a==='file'){readCast();document.getElementById('cFile').click();}
   else if(a==='dl'){const c=S.c.cast[b.dataset.id];blobSave(c.docFile,`Documento_${c.cognome}_${c.nome}.${c.docFileExt||'pdf'}`);}
   else if(a==='del'){readCast();V.confirmDel=true;render();}
+  else if(a==='delfrom'&&isDir()){const c=V.edit,src=S.c.cast[c.id];if(!src||!c._g)return;const rest=formsOf(src).filter(n=>n!==c._g);
+    const out=clone(src);delete out.id;delete out.formazioni;out.formazione=rest[0];if(rest.length>1)out.formazioni=rest;
+    try{await put('cast',c.id,out);V.edit=null;V.confirmDel=false;toast(`${src.nome} tolto dalla Formazione ${c._g}`);}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');}render();}
   else if(a==='delok'){try{await del('cast',V.edit.id);V.edit=null;toast('Persona eliminata');}catch(err){toast('Non eliminata ('+(err.code||err.message)+')','bad');}render();}
   else if(a==='save'){readCast();const c=V.edit;if(!c.nome||(!c.cognome&&!isTec(c))){toast(isTec(c)?'Scrivi il nome':'Scrivi nome e cognome','bad');return;}
     b.disabled=true;b.textContent='Salvataggio…';
