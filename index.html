@@ -997,7 +997,7 @@ function renderProfilo(){const u=me();if(!u){app.innerHTML='<div class="empty"><
    ${r==='venditore'?`<div class="field"><span class="flabel">Regioni di cui sei referente</span><span>${u.area?'Area '+esc(u.area)+': ':''}${esc((u.regioni||[]).join(', ')||'Nessuna')}</span><span class="muted small">Le assegna la Direzione in Accessi.</span></div>`:''}
    ${r==='tm'?`<div class="field"><span class="flabel">Tour</span><span>${esc(u.tour||'Nessuno')}</span><span class="muted small">Lo assegna la Direzione in Accessi.</span></div>`:''}
    <div class="row-btns"><button class="btn primary" data-pfsave>Salva il profilo</button></div></section>
-  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${viewAsCard()}${themeCard()}${azzeraCard()}${canArch()&&!VIEWAS?archCard():''}</div>`;
+  <div style="max-width:640px;margin-top:16px;display:flex;flex-direction:column;gap:16px">${viewAsCard()}${themeCard()}${azzeraCard()}${canArch()&&!VIEWAS?archCard():''}${canVH()&&!VIEWAS?vhCard():''}</div>`;
   app.innerHTML=h;}
 document.addEventListener('input',e=>{if(V.name==='profilo'&&e.target.dataset.pf)V.profDirty=true;});
 document.addEventListener('click',async e=>{if(V.name!=='profilo'||!e.target.closest('[data-pfsave]'))return;const u=me();if(!u)return;
@@ -3161,6 +3161,54 @@ function themePref(){return {modo:'sera',da:'19:00',a:'07:00',...(S.pref.tema||{
    L'app non scrive mai sul Drive direttamente: passa dalla funzione "drive-archivio", che sul Drive
    può solo aggiungere/aggiornare file (mai cancellare). */
 const ARCH_FN='drive-archivio';
+/* =================== VERIFICA HUBSPOT (solo Clivia; lo sviluppatore per le prove) — HubSpot solo in lettura =================== */
+function canVH(){return canPulizia()||(S.pref.user||'').toLowerCase()===DEV_EMAIL;}
+let VH={busy:false,last:null};
+function vhCard(){const L=VH.last;
+  return `<section class="card" id="vhCard"><div class="card-head"><h2>Verifica HubSpot</h2></div><p class="muted small" style="margin:0 0 10px">Controlla i deal delle prossime rappresentazioni, le chiamate e le note, e scarica un PDF con le incongruenze divise per Commerciali (per area), Logistica e Amministrazione. HubSpot viene solo letto: non si modifica nulla. Ci vogliono 1–2 minuti.</p>
+   <div class="row-btns"><button class="btn small primary" data-vh ${VH.busy?'disabled':''}>${VH.busy?'Controllo in corso…':'Scarica il report PDF'}</button>${L?`<span class="muted small">Ultimo: ${L.n} segnalazioni su ${L.deal} deal</span>`:''}</div>
+   ${L&&L.permessi&&L.permessi.length?`<div class="banner" style="margin-top:10px">Chiamate e note non lette: all’app su HubSpot manca il permesso di lettura (${esc(L.permessi.join(', '))}). Chi amministra HubSpot può aggiungerlo: è solo lettura, non cambia nessun dato.</div>`:''}</section>`;}
+function vhTappa(id){const d=S.c.deals['hs_'+id];if(!d)return null;return Object.values(S.c.tappe).find(t=>t.data===d.data&&t.tour===d.tour&&norm(t.citta)===norm(d.citta))||Object.values(S.c.tappe).find(t=>t.data===d.data&&norm(t.citta)===norm(d.citta))||null;}
+async function vhRun(){if(VH.busy)return;if(S.mode!=='supa'){toast('Disponibile solo nell’app online','warn');return;}
+  VH.busy=true;const paint=()=>{const el=document.getElementById('vhCard');if(el)el.outerHTML=vhCard();};paint();toast('Controllo HubSpot in corso: ci vogliono 1–2 minuti');
+  try{let {data,error}=await SB.functions.invoke('verifica-hubspot',{body:{}});
+    if(error){let m=error.message;try{const j=await error.context.json();m=j.errore||m;}catch(_){}throw new Error(m);}
+    if(!data||!data.ok)throw new Error((data&&data.errore)||'errore');
+    VH.last={n:data.findings.length,deal:data.controllati,permessi:data.permessi||[]};await vhPDF(data);}
+  catch(e){toast('Verifica non riuscita ('+(e.message||e)+')','bad');}
+  finally{VH.busy=false;paint();}}
+document.addEventListener('click',e=>{if(e.target.closest('[data-vh]')&&canVH())vhRun();});
+async function vhPDF(R){await loadScript(JSPDF);const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
+  const M=14,PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight();let y=M;const G='#196457',INK='#16211E',MU='#5C6B67',RED='#A3261B',OR='#9A5A0B';
+  const need=h=>{if(y+h>PH-M){doc.addPage();y=M;}};
+  const txt=(t,o={})=>{doc.setFont('helvetica',o.b?'bold':o.i?'italic':'normal');doc.setFontSize(o.fs||10);doc.setTextColor(o.c||INK);const ls=doc.splitTextToSize(String(t),PW-2*M-(o.x||0));ls.forEach(l=>{need(o.fs?o.fs*0.42:4.4);doc.text(l,M+(o.x||0),y);y+=(o.fs||10)*0.44;});};
+  const H=(t,sub)=>{need(18);y+=4;doc.setFillColor(G);doc.rect(M,y-4.5,PW-2*M,8,'F');doc.setTextColor('#FFFFFF');doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(t,M+3,y+1);y+=8;if(sub)txt(sub,{fs:9,c:MU});y+=1;};
+  const H2=t=>{need(12);y+=3;txt(t,{b:1,fs:11,c:G});doc.setDrawColor(G);doc.line(M,y-2.5,PW-M,y-2.5);y+=1;};
+  const when=d=>d?d.split('-').reverse().join('/'):'';
+  const item=f=>{const d=R.deals[f.deal]||{};need(16);const tag=(f.grave?'[!] ':'')+(f.forse?'(da verificare) ':'');
+    txt(`${tag}${f.tipo} · ${d.scuola||d.nome||''}`,{b:1,fs:10,c:f.grave?RED:INK});
+    txt(`${when(d.data)} · ${d.citta||''} · ${d.stadio||''}`,{fs:8.5,c:MU});txt(f.testo,{fs:9.5});if(f.fonte)txt(f.fonte,{fs:8.5,i:1,c:MU,x:3});
+    need(5);doc.setFontSize(8.5);doc.setTextColor(G);doc.textWithLink('Apri il deal su HubSpot',M,y,{url:'https://app.hubspot.com/contacts/25713675/record/0-3/'+f.deal});y+=6;};
+  // copertina
+  doc.setFillColor(G);doc.rect(0,0,PW,34,'F');doc.setTextColor('#FFFFFF');doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('Verifica HubSpot',M,17);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(`Mater Lingua · ${new Date(R.ts).toLocaleString('it-IT',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}`,M,26);y=44;
+  const F=R.findings;const by=t=>F.filter(f=>f.team===t);
+  txt(`Deal controllati: ${R.controllati} (rappresentazioni da oggi in poi, negli stadi che entrano nell’app). Chiamate lette: ${R.letture.chiamate}, note lette: ${R.letture.note}, collegate a questi deal: ${R.collegate}.`,{fs:9.5});
+  txt(`Segnalazioni: ${F.length} — Commerciali ${by('commerciali').length}, Logistica ${by('logistica').length}, Amministrazione ${by('amministrazione').length}. Urgenti [!]: ${F.filter(f=>f.grave).length}.`,{fs:9.5,b:1});y+=2;
+  txt('Come leggere: [!] cambia subito la piantina. “(da verificare)” vuol dire che l’app non ne è certa: controlla se è davvero così prima di correggere. Le correzioni si fanno su HubSpot; l’app le riprende da sola alla sincronizzazione. HubSpot è stato solo letto: nessun dato è stato modificato.',{fs:9,c:MU});
+  if(!R.ai)txt('Le frasi di chiamate e note sono state lette solo cercando parole chiave (servizio di lettura non disponibile): tutte le segnalazioni che vengono da lì sono da verificare.',{fs:9,c:OR});
+  if((R.permessi||[]).length)txt(`Chiamate e note NON lette: all’app su HubSpot manca il permesso di lettura (${R.permessi.join(', ')}). Chi amministra HubSpot può aggiungerlo all’app collegata: è solo lettura.`,{fs:9,c:RED,b:1});
+  // commerciali per area
+  const com=by('commerciali');H('Commerciali','Raggruppate per area e referente di zona.');
+  const grp={};com.forEach(f=>{const tp=vhTappa(f.deal);const r=tp?refOf(tp):null;const k=r?`${r.area?'Area '+r.area+' · ':''}${r.nome||r.email}`:'Area non trovata (data non presente nell’app)';(grp[k]=grp[k]||[]).push(f);});
+  Object.keys(grp).sort((a,b)=>a.includes('non trovata')-b.includes('non trovata')||a.localeCompare(b,'it',{numeric:true})).forEach(k=>{H2(`${k} · ${grp[k].length}`);grp[k].forEach(item);});
+  if(!com.length)txt('Nessuna segnalazione.',{c:MU});
+  H('Logistica','Rappresentazioni, date e teatri.');const lo=by('logistica');lo.forEach(item);if(!lo.length)txt('Nessuna segnalazione.',{c:MU});
+  H('Amministrazione','Pagamenti e fatture.');const am=by('amministrazione');am.forEach(item);if(!am.length)txt('Nessuna segnalazione.',{c:MU});
+  const pages=doc.internal.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(MU);doc.text(`Verifica HubSpot · pagina ${i} di ${pages}`,PW-M,PH-7,{align:'right'});}
+  const name=`Verifica_HubSpot_${new Date(R.ts).toISOString().slice(0,10)}.pdf`;
+  try{await S.downloads.save({filename:name,data:doc.output('blob')});}catch(err){const a=document.createElement('a');a.href=URL.createObjectURL(doc.output('blob'));a.download=name;a.click();}
+  toast(`Report pronto: ${F.length} segnalazioni`,'ok');}
 function archCard(){return `<section class="card"><div class="card-head"><h2>Archivio Drive</h2></div><p class="muted small" style="margin:0">Piantine, checklist e foto vengono copiate da sole nel Drive “7. Archivio applicazione Tour Manager”. ${canPulizia()?' A fine tournée puoi liberare l’app: prima si controlla che sul Drive ci sia tutto.':''}</p><div class="row-btns">${canPulizia()?'<button class="btn small primary" data-pulizia>Pulizia di fine tournée</button>':''}</div>${ftCard()}</section>`;}
 /* svuotare l'app a fine tournée: solo Clivia. Lo sviluppatore vede la scheda solo per provare il collegamento */
 function ftCard(){if((S.pref.user||'').toLowerCase()!==DEV_EMAIL)return '';const has=!!(S.c.impostazioni.fineTournee||{}).asset;
