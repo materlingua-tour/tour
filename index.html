@@ -2136,8 +2136,10 @@ function distribute(t,p){
     const keys=[...m.keys()].filter(f=>m.get(f).length);const all=keys.flatMap(f=>m.get(f));const c=all.length?all.reduce((a,x)=>a+x.proj,0)/all.length:0;
     return {nome:z.nome,pl:(z.tipo||'platea')==='platea',c,rows:keys.map(f=>({fila:f,seats:m.get(f).slice().sort((a,b)=>a.proj-b.proj),lines:lc.get(f)}))};});
   const rank=x=>lv(x.s)*4+(x.pr==='P1'?0:x.pr==='P2'?1:x.pr==='P3'?2:3);
-  const sch0=p.scuole.map((s,idx)=>({s,idx,n:int(s.persone),dis:int(s.disabili),pr:prioOf(s)})).filter(x=>x.n>0)
-    .sort((a,b)=>rank(a)-rank(b)||(a.pr==='P1'&&b.pr==='P1'?a.n-b.n:0)||a.idx-b.idx);
+  const sch0=p.scuole.map((s,idx)=>({s,idx,n:int(s.persone),dis:int(s.disabili),pr:prioOf(s),key:schoolKey(s)})).filter(x=>x.n>0);
+  /* classi della stessa scuola nella stessa replica: stanno vicine e prendono la priorità più alta tra loro */
+  const CL={};sch0.forEach(x=>{const k=x.key||('#'+x.idx);const c=CL[k]=CL[k]||{r:99,n:0,i:x.idx,pr:'',lv:lv(x.s)};const r=rank(x);if(r<c.r){c.r=r;c.pr=x.pr;}c.n+=x.n;c.i=Math.min(c.i,x.idx);x.cl=c;});
+  sch0.sort((a,b)=>a.cl.r-b.cl.r||(a.cl.pr==='P1'&&b.cl.pr==='P1'&&a.cl!==b.cl?a.cl.n-b.cl.n:0)||a.cl.i-b.cl.i||rank(a)-rank(b)||a.idx-b.idx);
   const near=(arr,c)=>arr.slice().sort((a,b)=>Math.abs(a.proj-c)-Math.abs(b.proj-c));
   /* posto carrozzina: la scuola con disabilità si mette attorno a quel posto */
   let anchor=null;const isCarr=k=>!!carr[k]||!!(GT.byK[k]&&GT.byK[k].carr);const ck=Object.keys(carr).find(k=>free.has(k))||Object.values(GT.byK).filter(q=>q.carr&&free.has(q.k)).map(q=>q.k)[0];
@@ -3623,10 +3625,12 @@ function twoBlocks(t){if(!t)return false;try{const GT=geomT(t,{});const z=GT.ord
   const first=z.G.lines[0];const f=first.fila;const seats=z.G.lines.filter(l=>l.fila===f).flatMap(l=>l.seats).filter(q=>!q.blocked).map(q=>q.proj).sort((a,b)=>a-b);
   if(seats.length<4)return false;const d=seats.slice(1).map((v,i)=>v-seats[i]);const md=d.slice().sort((a,b)=>a-b)[Math.floor(d.length/2)];const g=d.map((v,i)=>[v,i]).filter(([v])=>v>md*1.8);
   if(g.length!==1)return false;const l=g[0][1]+1;return Math.min(l,seats.length-l)/seats.length>=0.3;}catch(_){return false;}}
+function schoolKey(s){return norm((s&&(s.nome||s.scuola))||'').replace(/[^a-z0-9]+/g,'');}
 function p1Conflict(scuole,t){/* P1 vale dentro il proprio grado: una P1 delle medie e una delle superiori non si contendono il posto */
   const two=()=>twoBlocks(teatroOf({teatroId:t&&t.id})||null);let out=null;
   ['medie','superiori'].forEach(g=>{const ps=(scuole||[]).filter(s=>prioOf(s)==='P1'&&int(s.persone)>0&&(s.livello==='superiori'?'superiori':'medie')===g);
-    if(ps.length<2||(ps.length===2&&two()))return;out=(out||[]).concat(ps);});return out;}
+    const nk=new Set(ps.map((s,i)=>schoolKey(s)||('#'+i))).size;/* due classi della stessa scuola non sono un conflitto */
+    if(nk<2||(nk===2&&two()))return;out=(out||[]).concat(ps);});return out;}
 function p1List(){const td=today(),lim=addDays(td,60),out=[];
   Object.values(S.c.tappe||{}).filter(tp=>!tp.rimossa&&tp.data>=td&&tp.data<=lim&&inZone(tp)).sort((a,b)=>a.data.localeCompare(b.data)).forEach(tp=>{
     (tp.repliche||[]).forEach(r=>{const p=findP(tp.id,r);const sc=p?p.scuole:dealsFor(tp,r).filter(d=>d.stage!=='Chiuso perso').map(dealToSchool);const c=p1Conflict(sc,teatroOf(tp));if(c)out.push({tp,r,c});});});
