@@ -666,6 +666,11 @@ html.splashing .shell{animation:appIn 1.1s cubic-bezier(.3,.1,.3,1) 1.15s both}
 @media (max-width:900px){.mc{position:relative}.mc>.card-head,.mc>.tmonth{cursor:pointer;user-select:none;padding-right:30px;position:relative}.mc>.card-head>h2{margin-right:auto}.mc>.tmonth{display:flex;align-items:center;gap:8px}.mc>.tmonth .sec-chev{position:absolute;right:6px;top:8px}
 .mc.mc-closed .sec-chev{transform:rotate(45deg)}.mc.mc-closed>:not(.card-head):not(.tmonth){display:none!important}.card.mc.mc-closed{padding-top:14px;padding-bottom:14px}
 .mc>.card-head>.sec-chev,.mc>.tmonth>.sec-chev{right:6px;top:calc(50% - 7px)}.mc-tri{display:inline-flex;margin-left:6px;vertical-align:-3px}.mc-tri[hidden]{display:none}.mc-tri svg{width:18px;height:18px}}
+.loader{display:flex;justify-content:center;align-items:center;padding:72px 0}
+.ld-ring{width:38px;height:38px;border-radius:50%;border:3.5px solid color-mix(in srgb,var(--brand) 18%,transparent);border-top-color:var(--brand);animation:ldspin .8s linear infinite}
+.land .ld-ring{border-color:rgba(255,255,255,.25);border-top-color:#fff}
+@keyframes ldspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ld-ring{animation-duration:2.4s}}
 </style>
 
 <div id="splash" aria-hidden="true"><span class="logo"></span></div>
@@ -960,6 +965,7 @@ function mobCollapse(){if(!isMob()||['piantina','teatro','welcome','acc','check'
   app.querySelectorAll('section.sec').forEach(mcPaint);}
 document.addEventListener('click',e=>{const hd=e.target.closest('.mc>.card-head,.mc>.tmonth');if(hd&&!e.target.closest('button,a,input,label,select,textarea')){const box=hd.parentElement;const c=!box.classList.contains('mc-closed');box.classList.toggle('mc-closed',c);hd.setAttribute('aria-expanded',!c);MC[box.dataset.mc]=c;if(!c)delete MC[box.dataset.mc];try{localStorage.setItem('ml_mc',JSON.stringify(MC));}catch(_){ }mcPaint(box);return;}
   const sh=e.target.closest('section.sec>.card-head');if(sh&&!e.target.closest('button,a,input,label,select'))setTimeout(()=>mcPaint(sh.parentElement),0);});
+const LOADER='<div class="loader" role="status" aria-label="Caricamento"><span class="ld-ring"></span></div>';
 function addBack(){if(!V.back||['acc','check','piantina','teatro','welcome'].includes(V.name))return;if(app.querySelector('.page-back'))return;
   const dn=app.querySelector('.day-nav');(dn||app).insertAdjacentHTML('afterbegin',`<button class="btn small page-back" data-goback aria-label="Torna a ${esc(BACK_L[V.back.name]||'pagina precedente')}">← ${esc(BACK_L[V.back.name]||'Indietro')}</button>`);}
 /* due colonne indipendenti su schermi larghi: niente buchi tra le schede */
@@ -1053,7 +1059,7 @@ function tipForm(cats,ph){return `<div class="km-form">${cats.length>1?`<div cla
   <p class="muted small" style="margin:0">Lo vedrà il prossimo TM che lavora in questo teatro.</p>
   <div class="row-btns"><button class="btn small primary" data-og="tipSave">Salva consiglio</button><button class="btn small" data-og="tip">Annulla</button></div></div>`;}
 function renderOggi(){
-  if(!S.ready){app.innerHTML=`<div class="empty"><b>Carico la tournée…</b></div>`;return;}
+  if(!S.ready){app.innerHTML=LOADER;return;}
   const list=dayList();
   if(!list.length){app.innerHTML=`<div class="page-head"><span class="eyebrow">Oggi</span><h1>Nessuna data in calendario</h1><p class="muted">Le date della tournée arrivano da HubSpot e dal Google Calendar di Mater Lingua: appena ce n’è una per il tuo tour, la trovi qui.</p></div>`;return;}
   let i=V.dayId?list.findIndex(t=>t.id===V.dayId):-1;let kind='scelta';
@@ -1603,7 +1609,7 @@ function renderPiantineList(){
   const tourOfP=p=>{const tp=p.tappaId&&S.c.tappe[p.tappaId];return tp?tp.tour:'';};
   h+=`<div class="t-filters"><input class="in" id="pSearch" type="search" placeholder="Cerca teatro, città, scuola o data (es. 23/11)" value="${esc(V.pq||'')}" aria-label="Cerca piantine">
    ${isDir()?`<select class="in" id="pTour" aria-label="Tournée"><option value="">Tutte le tournée</option>${allTours().map(t=>`<option value="${esc(t)}" ${V.pt===t?'selected':''}>${esc(tourShort(t))}</option>`).join('')}</select>`:''}</div><p class="muted small" id="pCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
-  if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
+  if(!S.ready)h+=LOADER;
   else if(!ps.length)h+=`<div class="empty"><b>${V.showArch?'Nessuna piantina archiviata.':'Ancora nessuna piantina.'}</b></div>`;
   else h+=`<div class="list">${ps.map(p=>{const t=S.c.teatri[p.teatroId];const tot=(p.scuole||[]).reduce((a,s)=>a+int(s.persone),0);
     const tr=tourOfP(p);
@@ -1628,7 +1634,7 @@ function renderPiantineTour(dir){
   const list=tourTappe();const td=today();const all=curTour()===ALL;
   let h=`<div class="page-head"><span class="eyebrow">${esc(tourLbl())}</span><h1>Piantine</h1><p class="muted" style="margin:0">${dir?'Tutte le date, in ordine: puoi creare le piantine in anticipo, con le scuole prese da HubSpot. Se la sala non è ancora mappata, mappala prima: poi vale per tutti i tour.':'Tutte le repliche della tournée, in ordine di data. Se la sala non è ancora mappata, mappala la prima volta: poi vale per tutti i tour.'}</p></div>`;
   if(dir)h+=plTabs()+`<div class="t-filters"><input class="in" id="ptSearch" type="search" placeholder="Cerca teatro, città o data (es. 23/11)" value="${esc(V.ptq||'')}" aria-label="Cerca date"><select class="in" id="ptF" aria-label="Filtro"><option value="">Tutte le date</option><option value="new" ${V.ptf==='new'?'selected':''}>Piantine da creare</option><option value="map" ${V.ptf==='map'?'selected':''}>Sala da mappare</option></select></div><p class="muted small" id="ptCount" style="margin:0 0 10px"></p>`;
-  if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
+  if(!S.ready)h+=LOADER;
   else if(!list.length)h+=`<div class="empty"><b>Nessuna data in calendario.</b></div>`;
   else h+=`<div class="list">${list.map(tp=>{const t=teatroOf(tp);const past=tp.data<td;
     const kk=(t?'':'map ')+((tp.repliche||[]).some(r=>!pStatus(tp,r).p)?'new':'');
@@ -1795,7 +1801,7 @@ function renderTeatriList(){
   <div class="t-filters"><input class="in" id="tSearch" type="search" placeholder="Cerca teatro o città" value="${esc(V.tq||'')}" aria-label="Cerca teatro o città">
    <select class="in" id="tLang" aria-label="Quali teatri"><option value="">Tutti i teatri</option><option value="__iss" ${V.tl==='__iss'?'selected':''}>Da sistemare (${nIss})</option>${allTours().map(tr=>`<option value="${esc(tr)}" ${V.tl===tr?'selected':''}>Teatri tour ${esc(tr)}</option>`).join('')}<option value="__none" ${V.tl==='__none'?'selected':''}>Non in calendario (${nNone})</option></select></div>
   <p class="muted small" id="tCount" style="margin:0 0 10px"></p>${archToggle(nArch)}`;
-  if(!S.ready)h+=`<div class="empty"><b>Carico…</b></div>`;
+  if(!S.ready)h+=LOADER;
   else if(!ts.length)h+=`<div class="empty"><b>${V.showArch?'Nessun teatro archiviato.':'Nessun teatro mappato.'}</b></div>`;
   else h+=`<div class="list">${ts.map(({t,i})=>{const files=t.zone.reduce((a,z)=>a+new Set(z.rows.map(r=>r.fila)).size,0);
     const nome=/^[\s\-–—]*$/.test(t.nome||'')?'Teatro da definire':t.nome;
@@ -3461,7 +3467,7 @@ function renderLanding(){
   const m=tok.match(/^sala-([A-Za-z0-9_.-]+)~([A-Za-z0-9_.-]+)$/);
   if(!m){shell.innerHTML=`<main class="land"><span class="logo land-logo" role="img" aria-label="Mater Lingua"></span><h1 class="land-title">E mo?!<br>Che facciamo?</h1><p class="land-sub">Qui arriverà la pagina per i docenti dopo lo spettacolo.</p></main>`;return;}
   const p=S.c.piantine[m[1]];const s=p&&p.scuole.find(x=>x.id===m[2]);const t=p&&S.c.teatri[p.teatroId];
-  if(!S.ready){shell.innerHTML=`<main class="land"><span class="logo land-logo" role="img" aria-label="Mater Lingua"></span><p class="land-sub">Carico la piantina…</p></main>`;return;}
+  if(!S.ready){shell.innerHTML=`<main class="land"><span class="logo land-logo" role="img" aria-label="Mater Lingua"></span><div class="loader" role="status" aria-label="Caricamento"><span class="ld-ring"></span></div></main>`;return;}
   if(!p||!s||!t){shell.innerHTML=`<main class="land"><span class="logo land-logo" role="img" aria-label="Mater Lingua"></span><h1 class="land-title" style="font-size:44px">Piantina non trovata</h1><p class="land-sub">Il codice potrebbe essere di una replica passata. Chiedi al Tour Manager Mater Lingua in sala.</p></main>`;return;}
   shell.innerHTML=salaHTML(p,s,t);
 }
@@ -3580,7 +3586,7 @@ const NAV_DESC={feedback:'Idee e problemi da segnalare a chi sviluppa l’app.',
 function renderWelcome(){
   document.body.classList.add('welcome');const step=V.wstep||1;const u=V.wuser?users().find(x=>x.email===V.wuser):null;
   let h=`<div class="wel"><div class="wel-card"><span class="logo wel-logo" role="img" aria-label="Mater Lingua"></span>`;
-  if(!S.ready)h+=`<p class="muted">Carico…</p>`;
+  if(!S.ready)h+=LOADER;
   else if(CFG&&step===1){
     const em=S.pref.user||'';
     h+=`<h1>Benvenuto</h1><p class="muted" style="margin:0">Entra con il tuo account Google Mater Lingua (nome@materlingua.eu).</p>
@@ -3742,6 +3748,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-av]'
   else if(a==='done'){const id=b.dataset.id,av=S.c.avvisi[id];if(!av)return;const u=me()||{};const o={...clone(av),fatto:true,fattoDa:u.nome||u.email||'',fattoTs:new Date().toISOString()};delete o.id;b.disabled=true;
     try{await put('avvisi',id,o);S.c.avvisi[id]={...o,id};toast('Segnato come fatto','ok');render();}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');b.disabled=false;}}});
 function renderControllo(){
+  if(!S.ready){app.innerHTML=LOADER;return;}
   setTimeout(avSeed,0);const td=today();const ts=tours();
   let h=`<div class="page-head"><span class="eyebrow">${esc(cap(new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})))}</span><h1>Controllo tournée</h1><p class="muted">Dove sono oggi i tour, se le piantine sono pronte e cosa hanno segnalato i Tour Manager.</p></div>${isDir()?avvisiHTML()+promListHTML()+hsTeatriHTML():''}${isDir()||role()==='venditore'?p1HTML():''}<div class="ctl-grid${isDir()?' has-table':''}">`;
   const tOrd=ts.map(tr=>{const l=Object.values(S.c.tappe).filter(t=>t.tour===tr&&inZone(t)).sort((a,b)=>a.data.localeCompare(b.data));return {tr,d:l.length?l[pickDay(l).i].data:'9999'};}).sort((a,b)=>a.d.localeCompare(b.d)||a.tr.localeCompare(b.tr)).map(x=>x.tr);
@@ -3758,7 +3765,7 @@ function renderControllo(){
       ${(()=>{const fs=fotoFor(tp);return `<div class="ctl-row"><span class="flabel">Scenografia</span>${fs.length?thumbs(fs.slice(-2)):'<span class="muted small">Nessuna foto per questa data</span>'}</div>`;})()}
       <div class="row-btns"><button class="btn small primary" data-ctl="${tp.id}">Apri la giornata</button><button class="btn small" data-ctlmap="${esc(tr)}">Mappa</button></div></article>`;});
   h+=`</div>`;
-  if(!tOrd.some(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t))))h+=`<div class="empty"><b>${S.ready?(role()==='venditore'?'Nessuna data in calendario nella tua zona.':'Nessuna data in calendario.'):'Carico…'}</b>${S.ready&&role()==='venditore'?'<p class="muted small">Quando un tour avrà date nelle tue regioni, le vedrai qui.</p>':''}</div>`;
+  if(!tOrd.some(tr=>Object.values(S.c.tappe).some(t=>t.tour===tr&&inZone(t))))h+=!S.ready?LOADER:`<div class="empty"><b>${(role()==='venditore'?'Nessuna data in calendario nella tua zona.':'Nessuna data in calendario.')}</b>${S.ready&&role()==='venditore'?'<p class="muted small">Quando un tour avrà date nelle tue regioni, le vedrai qui.</p>':''}</div>`;
   if(isDir()&&ts.length){h+=`<div class="ctl-table-wrap"><h2 class="alt-sec">Tutti i tour</h2><table class="ctl-table"><thead><tr><th>Tour</th><th>Tour Manager</th><th>Giornata</th><th>Piantine</th><th>Ultima rappresentazione</th><th>Da sistemare</th><th></th></tr></thead><tbody>`;
     tOrd.forEach(tr=>{const list=Object.values(S.c.tappe).filter(t=>t.tour===tr).sort((a,b)=>a.data.localeCompare(b.data));if(!list.length)return;const pk=pickDay(list);const tp=list[pk.i];
       const tm=users().find(u=>u.ruolo==='tm'&&u.tour===tr);const reps=tp.repliche||[];const okP=reps.filter(r=>pStatus(tp,r).k==='ok').length;
