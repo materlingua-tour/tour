@@ -2908,7 +2908,7 @@ document.addEventListener('input',e=>{if(V.name==='documenti'&&e.target.id==='dq
 /* =================== ALTRO (telefono) =================== */
 /* =================== SUGGERIMENTI ALLO SVILUPPATORE =================== */
 const DEV_EMAIL='matteomongiorgi1@gmail.com';
-function isDev(){const u=me();return !!u&&(u.email||'').toLowerCase()===DEV_EMAIL;}
+function isDev(){const u=me();return !VIEWAS&&!!u&&(u.email||'').toLowerCase()===DEV_EMAIL;}
 function fbUnread(){return Object.values(S.c.segnalazioni||{}).filter(x=>!x.letto&&!x.risolta).length;}
 function fbLbl(){if(!isDev())return 'Suggerimenti';const n=fbUnread();return 'Segnalazioni'+(n?` <span class="nav-badge">${n}</span>`:'');}
 const FB_ARG=['Oggi / giornata','Tournée','Piantine','Mappatura del teatro','Mappa','Checklist','Teatri','Cast','Documenti','QR docenti','Auto ed emergenze','Controllo','Accessi','Profilo','Accesso e login','Altro'];
