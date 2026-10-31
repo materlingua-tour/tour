@@ -770,7 +770,7 @@ async function initSupa(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){S.pref.user='';savePref();V={name:'welcome'};render();}});
   if(!session){S.pref.user='';S.ready=true;V={name:'welcome'};render();return;}
   S.pref.user=(session.user.email||'').toLowerCase();savePref();
-  await loadAllSupa();S.ready=true;onData();segnaPresenza();startOnline();setTimeout(archCatchup,45000);setTimeout(hsLearn,20000);
+  await loadAllSupa();S.ready=true;onData();restoreView();segnaPresenza();startOnline();setTimeout(archCatchup,45000);setTimeout(hsLearn,20000);
   const RT={};SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>{const c=(p.new&&p.new.coll)||(p.old&&p.old.coll);if(!c||!COLLS.includes(c))return;clearTimeout(RT[c]);RT[c]=setTimeout(()=>loadCollSupa(c).then(()=>onData(c)),1500);}).subscribe();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.ready)loadAllSupa().then(()=>{onData();segnaPresenza();});});
 }
@@ -825,7 +825,7 @@ async function initStore(){
     COLLS.forEach(c=>db.collection(c).onSnapshot(q=>{const o={};q.docs.forEach(d=>{o[d.id]={...d.data(),id:d.id};if(c==='teatri')o[d.id]=normT(o[d.id]);});S.c[c]=o;
         if(!S.ready&&++first>=COLLS.length)S.ready=true;onData(c);},
       e=>toast('Archivio non raggiungibile ('+e.code+')','bad')));
-  }else{S.mode='local';loadLocal();S.ready=true;setPill();onData();}
+  }else{S.mode='local';loadLocal();S.ready=true;setPill();onData();restoreView();}
 }
 const LIVE_VIEWS=['oggi','tournee','piantine','teatri','checklist','cast','documenti','altro','qr','welcome','controllo','mappa','acc','auto'];
 function onData(c){if(landingToken()){renderLanding();return;}if(c==='segnalazioni'||c===undefined)fbNotify();renderNav();if((V.name==='cast'&&V.edit)||(V.name==='documenti'&&V.up)||(V.name==='oggi'&&V.cronoEdit)||(V.name==='documenti'&&V.fattEdit)||(V.name==='auto'&&(V.vEdit||V.rNew||V.eEdit))||(V.name==='oggi'&&(V.tipOpen||V.noteEdit))||(V.name==='profilo'&&V.profDirty)||((V.name==='altro'||V.name==='accessi')&&V.spEdit))return;if(LIVE_VIEWS.includes(V.name))render();}
@@ -926,6 +926,20 @@ function mobTop(){const u=me();if(!u||V.name==='welcome')return;let h='';
       P.w.scrollLeft=P.cv.offsetLeft+P.ox*f-P.m.x;P.w.scrollTop=P.cv.offsetTop+P.oy*f-P.m.y;});},{passive:false});
   const end=()=>{if(P&&P.raf)cancelAnimationFrame(P.raf);P=null;};
   document.addEventListener('touchend',e=>{if(P&&e.touches.length<2)end();},{passive:true});document.addEventListener('touchcancel',end,{passive:true});})();
+/* dopo un refresh l'app si riapre sulla stessa pagina (vale per la scheda aperta, non per una nuova apertura) */
+function viewKey(){if(!V||['welcome'].includes(V.name))return null;const k={name:V.name,from:V.from||'',dayId:V.dayId||null,qrDay:V.qrDay||null,y:Math.round(scrollY)};
+  if(V.name==='piantina'&&V.p)k.pid=V.p.id;if(V.name==='teatro'&&V.t)k.tid=V.t.id;if(V.name==='check'&&V.ck)k.tappaId=V.ck.tappaId;if(V.name==='acc')k.pid=V.pid;return k;}
+let VK_T=0;function saveView(){clearTimeout(VK_T);VK_T=setTimeout(()=>{try{const k=viewKey();if(k)sessionStorage.setItem('ml_view',JSON.stringify(k));}catch(e){}},250);}
+addEventListener('scroll',saveView,{passive:true});
+let VIEW_DONE=false;
+function restoreView(){if(VIEW_DONE)return;VIEW_DONE=true;let k=null;try{k=JSON.parse(sessionStorage.getItem('ml_view')||'null');}catch(e){}
+  if(!k||!me()||!me().confermato)return;const nav=navFor().map(x=>x[0]).concat(['altro','oggi']);
+  try{if(k.name==='piantina'&&k.pid&&S.c.piantine[k.pid])openPiantina(k.pid,k.from);
+    else if(k.name==='teatro'&&k.tid&&S.c.teatri[k.tid])openEditor(k.tid);
+    else if(k.name==='check'&&k.tappaId&&S.c.tappe[k.tappaId])openCheck(k.tappaId,k.from);
+    else if(k.name==='acc'&&k.pid&&S.c.piantine[k.pid]){V={name:'oggi',dayId:k.dayId};openAcc(k.pid);}
+    else if(nav.includes(k.name))go(k.name,{dayId:k.dayId,qrDay:k.qrDay});else return;
+    if(k.y)setTimeout(()=>window.scrollTo(0,k.y),120);}catch(e){console.warn('restoreView',e);}}
 function addBack(){if(!V.back||['acc','check','piantina','teatro','welcome'].includes(V.name))return;if(app.querySelector('.page-back'))return;
   const dn=app.querySelector('.day-nav');(dn||app).insertAdjacentHTML('afterbegin',`<button class="btn small page-back" data-goback aria-label="Torna a ${esc(BACK_L[V.back.name]||'pagina precedente')}">← ${esc(BACK_L[V.back.name]||'Indietro')}</button>`);}
 /* due colonne indipendenti su schermi larghi: niente buchi tra le schede */
@@ -940,7 +954,7 @@ function render(){
   const nv=navFor().map(x=>x[0]).concat(['altro','check','teatro','piantina','oggi','welcome','acc']);if(!nv.includes(V.name))V={name:navFor()[0][0]};
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo,feedback:renderFeedback}[V.name];
-  if(f)f();mobTop();const vb=viewAsBanner();if(vb)app.insertAdjacentHTML('afterbegin',vb);layoutMas();
+  if(f)f();mobTop();saveView();const vb=viewAsBanner();if(vb)app.insertAdjacentHTML('afterbegin',vb);layoutMas();
   setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
