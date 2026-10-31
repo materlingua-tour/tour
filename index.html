@@ -656,6 +656,7 @@ html.splashing .shell{animation:appIn 1.1s cubic-bezier(.3,.1,.3,1) 1.15s both}
 .form-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0 10px}.form-head>div:first-child{flex:1;min-width:180px}.form-ctl{display:flex;align-items:center;gap:8px}.form-ctl .in{width:auto}
 .form-add{display:flex;justify-content:center;margin:14px 0 6px}
 .list>.card.edit{grid-column:1/-1;max-width:680px}
+.form-flag{display:flex;margin:-4px 0 6px}.form-field{grid-column:1/-1}.form-field select.in{width:auto;min-width:220px}.form-checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:4px}.form-pick{margin-top:6px}
 </style>
 
 <div id="splash" aria-hidden="true"><span class="logo"></span></div>
@@ -2783,7 +2784,12 @@ function formRange(tr,n){const fs=formOf(tr);if(n==='tutte')return {dal:firstDat
   const cur=n===1?{dal:firstDate(tr)}:fs.find(f=>f.n===n)||{};const nx=fs.find(f=>f.n===n+1);
   return {dal:cur.dal||'',al:nx&&nx.dal?addDays(nx.dal,-1):lastDateOf(tr),daDef:n>1&&!cur.dal};}
 function formNow(tr){const t=today();let cur=1;formOf(tr).forEach(f=>{if(f.dal&&f.dal<=t)cur=f.n;});return cur;}
-function castForm_(c){return c.formazione==='tutte'?'tutte':(+c.formazione||1);}
+function formAll(tr){return [1,...formOf(tr).map(f=>f.n)];}
+function inTutte(c){return c.formazione==='tutte';}
+function formsOf(c){if(inTutte(c))return formAll(c.tour);if(Array.isArray(c.formazioni)&&c.formazioni.length)return c.formazioni.map(Number);return [+c.formazione||1];}
+function memberOf(c,n){return formsOf(c).includes(n);}
+function formLabel(c){if(inTutte(c))return 'in tutte le formazioni';const f=formsOf(c);return f.length>1?'formazioni '+f.join(' e '):'formazione '+f[0];}
+function personEnd(c){return formsOf(c).map(n=>formRange(c.tour,n).al).filter(Boolean).sort().pop()||'';}
 async function saveForm(tr,list){const all=clone(S.c.impostazioni.formazioni||{});all[tr]={list};await put('impostazioni','formazioni',all);}
 function lastDate(){const l=tourTappe();return l.length?l[l.length-1].data:'';}
 function renderCast(){
@@ -2792,35 +2798,37 @@ function renderCast(){
   ${isDir()?'<div class="newp"><button class="btn primary" data-cs="add">+ Aggiungi persona</button></div>':`<p class="muted small">Il cast e i documenti li carica la Direzione.${role()==='tm'?' Ruolo e telefono dei tecnici li inserisci tu.':''}</p>`}`;
   if(!list.length&&!V.edit)h+=`<div class="empty"><b>Nessuno in elenco per questo tour.</b><span class="muted small">Aggiungi attori e tecnici con il loro documento.</span></div>`;
   const trc=curTour(),FM=isDir()&&trc!==ALL&&hasForm(trc);
-  if(!isDir()){const keep=c=>{if(!hasForm(c.tour))return true;const f=castForm_(c);return f==='tutte'||f===formNow(c.tour);};for(let i=list.length-1;i>=0;i--)if(!keep(list[i]))list.splice(i,1);}
+  if(!isDir()){const keep=c=>!hasForm(c.tour)||memberOf(c,formNow(c.tour));for(let i=list.length-1;i>=0;i--)if(!keep(list[i]))list.splice(i,1);}
   if(isDir()&&trc!==ALL)h=h.replace('<button class="btn primary" data-cs="add">+ Aggiungi persona</button>',FM?'<button class="btn" data-cs="newform">+ Nuova formazione</button>':'<button class="btn primary" data-cs="add">+ Aggiungi persona</button><button class="btn" data-cs="newform">+ Nuova formazione</button>');
   const attori=list.filter(c=>!isTec(c)),tecnici=list.filter(isTec);
   let seq=[...attori,'__TEC__',...tecnici];
-  if(FM){const now=formNow(trc);const groups=['tutte',1,...formOf(trc).map(f=>f.n)];seq=[];
-    groups.forEach(g=>{const mem=list.filter(c=>castForm_(c)===g);if(g==='tutte'&&!mem.length&&!isDir())return;seq.push({__g:g,now,n:mem.length});seq.push(...mem.filter(c=>!isTec(c)),...mem.filter(isTec));if(isDir())seq.push({__add:g});});}
+  if(FM){const now=formNow(trc);seq=[];
+    formAll(trc).forEach(g=>{const mem=list.filter(c=>memberOf(c,g));seq.push({__g:g,now,n:mem.filter(c=>!inTutte(c)).length});seq.push(...mem.filter(c=>!isTec(c)),...mem.filter(isTec));seq.push({__add:g});});}
+  let curG=null;const T=FM?formAll(trc).length:0;
+  const flag=c=>FM?`<label class="chk small form-flag"><input type="checkbox" data-alltog="${c.id}" data-g="${curG}" ${inTutte(c)?'checked':''}> Presente in tutte le formazioni</label>${!inTutte(c)&&formsOf(c).length>1?`<span class="muted small">In ${formLabel(c)}</span>`:''}`:'';
   h+=`<div class="list">`;
   if(V.edit&&V.edit.isNew&&!(FM&&V.edit._grp))h+=castForm(V.edit);
   seq.forEach(c=>{
-    if(c&&c.__add!==undefined){if(V.edit&&V.edit.isNew&&V.edit._grp===c.__add)return;h+=`</div><div class="form-add"><button class="btn" data-cs="addf" data-n="${c.__add}">${c.__add==='tutte'?'+ Aggiungi persona a tutte le formazioni':'+ Aggiungi persona alla Formazione '+c.__add}</button></div><div class="list">`;return;}
-    if(c&&c.__g!==undefined){const g=c.__g,r=formRange(trc,g);
-      const per=g==='tutte'?'Per tutta la tournée':r.daDef?'Data del cambio da definire':`${r.dal?'Dal '+fmtDate(r.dal):'Dall’inizio'}${r.al&&(!r.dal||r.al>=r.dal)?' al '+fmtDate(r.al):''}`;
-      h+=`</div><div class="form-head" id="fh_${g}"><div><h2 class="cast-sec" style="margin:0">${g==='tutte'?'In tutte le formazioni':'Formazione '+g}</h2><span class="muted small">${per}</span></div>${g!=='tutte'&&g===c.now&&!r.daDef?'<span class="pill ok">In servizio</span>':g!=='tutte'&&r.daDef?'<span class="pill warn">In arrivo</span>':''}
-        ${isDir()&&g!=='tutte'&&g>1?`<div class="form-ctl"><label class="muted small" for="fd_${g}">Cambio dal</label><input class="in" type="date" id="fd_${g}" data-formdate="${g}" value="${esc((formOf(trc).find(f=>f.n===g)||{}).dal||'')}">${!c.n&&g===formOf(trc).length+1?`<button class="btn small ghost" data-cs="delform" data-n="${g}">Togli</button>`:''}</div>`:''}</div><div class="list">${V.edit&&V.edit.isNew&&V.edit._grp===g?castForm(V.edit):''}`;return;}
+    if(c&&c.__add!==undefined){if(V.edit&&V.edit.isNew&&V.edit._grp===c.__add)return;h+=`</div><div class="form-add"><button class="btn" data-cs="addf" data-n="${c.__add}">+ Aggiungi persona alla Formazione ${c.__add}</button></div><div class="list">`;return;}
+    if(c&&c.__g!==undefined){const g=c.__g,r=formRange(trc,g);curG=g;
+      const per=r.daDef?'Data del cambio da definire':`${r.dal?'Dal '+fmtDate(r.dal):'Dall’inizio'}${r.al&&(!r.dal||r.al>=r.dal)?' al '+fmtDate(r.al):''}`;
+      h+=`</div><div class="form-head" id="fh_${g}"><div><h2 class="cast-sec" style="margin:0">Formazione ${g}</h2><span class="muted small">${per}</span></div>${g===c.now&&!r.daDef?'<span class="pill ok">In servizio</span>':r.daDef?'<span class="pill warn">In arrivo</span>':''}
+        ${g>1?`<div class="form-ctl"><label class="muted small" for="fd_${g}">Cambio dal</label><input class="in" type="date" id="fd_${g}" data-formdate="${g}" value="${esc((formOf(trc).find(f=>f.n===g)||{}).dal||'')}">${!c.n&&g===formOf(trc).length+1?`<button class="btn small ghost" data-cs="delform" data-n="${g}">Togli</button>`:''}</div>`:''}</div><div class="list">${V.edit&&V.edit.isNew&&V.edit._grp===g?castForm(V.edit):''}`;return;}
     if(c==='__TEC__'){h+=`</div>${tecnici.length?`<h2 class="cast-sec">Tecnici</h2><p class="muted small" style="margin:0 0 10px">Fonico e tecnico luci di Mater Lingua che viaggiano con il tour.${role()==='tm'?' Il primo giorno scegli chi fa cosa e salva il numero.':''}</p>`:''}<div class="list">`;return;}
-    if(V.edit&&V.edit.id===c.id){h+=castForm(V.edit);return;}
+    if(V.edit&&V.edit.id===c.id&&(!FM||V.edit._g===curG)){h+=castForm(V.edit);return;}
     if(isTec(c)){const rd=TEC_R.includes(c.ruolo),canT=role()==='tm'||isDir(),open=canT&&((V.tecEdit&&V.tecEdit===c.id)||!rd||!c.telefono);
-      h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}${isDir()&&hasForm(c.tour)?' · '+(castForm_(c)==='tutte'?'tutte le formazioni':'formazione '+castForm_(c)):''}</div>`:''}</div>${rd?`<span class="pill">${esc(c.ruolo)}</span>`:'<span class="pill warn">Ruolo da scegliere</span>'}</div>
+      h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}${isDir()&&hasForm(c.tour)?' · '+formLabel(c):''}</div>`:''}</div>${rd?`<span class="pill">${esc(c.ruolo)}</span>`:'<span class="pill warn">Ruolo da scegliere</span>'}</div>${flag(c)}
       ${open?`<div class="tec-form"><div class="field" style="grid-column:1/-1"><label for="tn_${c.id}">Nome</label><input class="in" id="tn_${c.id}" value="${esc([c.nome,c.cognome].filter(Boolean).join(' '))}" autocomplete="off"></div><div class="field"><label for="tr_${c.id}">Ruolo</label><select class="in" id="tr_${c.id}"><option value="">Scegli…</option>${TEC_R.map(r=>`<option ${c.ruolo===r?'selected':''}>${r}</option>`).join('')}</select></div>
         <div class="field"><label for="tt_${c.id}">Telefono</label><input class="in" id="tt_${c.id}" type="tel" inputmode="tel" value="${esc(c.telefono||'')}" placeholder="+39 …"></div></div>
-        <div class="card-actions"><button class="btn small primary" data-cs="tecsave" data-id="${c.id}">Salva</button>${V.tecEdit&&V.tecEdit===c.id?`<button class="btn small" data-cs="teccancel">Annulla</button>`:''}${isDir()?`<button class="btn small ghost" data-cs="edit" data-id="${c.id}">Modifica nome</button>`:''}</div>`
+        <div class="card-actions"><button class="btn small primary" data-cs="tecsave" data-id="${c.id}">Salva</button>${V.tecEdit&&V.tecEdit===c.id?`<button class="btn small" data-cs="teccancel">Annulla</button>`:''}${isDir()?`<button class="btn small ghost" data-cs="edit" data-id="${c.id}" data-g="${curG}">Modifica nome</button>`:''}</div>`
       :`<div class="card-actions">${c.telefono?`<a class="btn small primary" href="${telHref(c.telefono)}">Chiama ${esc(c.telefono)}</a>`:'<span class="muted small">Telefono non inserito</span>'}${canT?`<button class="btn small ghost" data-cs="tecedit" data-id="${c.id}">Modifica</button>`:''}</div>`}</article>`;return;}
-    const endC=hasForm(c.tour)?formRange(c.tour,castForm_(c)).al:end;const exp=c.docScadenza&&endC&&c.docScadenza<endC;const expired=c.docScadenza&&c.docScadenza<today();
-    h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}${isDir()&&hasForm(c.tour)?' · '+(castForm_(c)==='tutte'?'tutte le formazioni':'formazione '+castForm_(c)):''}</div>`:''}</div>${c.ruolo?`<span class="pill">${esc(c.ruolo)}</span>`:''}</div>
+    const endC=hasForm(c.tour)?personEnd(c):end;const exp=c.docScadenza&&endC&&c.docScadenza<endC;const expired=c.docScadenza&&c.docScadenza<today();
+    h+=`<article class="card"${curTour()===ALL?` style="border-left:5px solid ${tourCol(c.tour)}"`:''}><div class="card-head"><div class="card-title">${esc(c.nome)} ${esc(c.cognome)}${curTour()===ALL?`<div class="muted small" style="color:${tourCol(c.tour)};font-weight:700">${esc(c.tour)}${isDir()&&hasForm(c.tour)?' · '+formLabel(c):''}</div>`:''}</div>${c.ruolo?`<span class="pill">${esc(c.ruolo)}</span>`:''}</div>${flag(c)}
       ${c.telefono?`<div><button class="link" data-copy="${esc(c.telefono)}">${esc(c.telefono)}</button></div>`:''}
       <dl class="facts one"><div><dt>Documento</dt><dd>${c.docTipo?esc(c.docTipo):'—'}${c.docNumero?' · '+esc(c.docNumero):''}</dd></div>
       <div><dt>Scadenza</dt><dd>${c.docScadenza?fmtDate(c.docScadenza):'—'} ${expired?'<span class="pill bad">Scaduto</span>':exp?`<span class="pill warn">${hasForm(c.tour)?'Scade durante il suo periodo in tour':'Scade prima della fine del tour'}</span>`:''}</dd></div></dl>
       <div class="card-actions">${c.docFile?`<button class="btn small" data-view="${esc(c.docFile)}" data-ext="${esc(c.docFileExt||'')}" data-title="Documento di ${esc(c.nome)} ${esc(c.cognome)}">Vedi documento</button><button class="btn small ghost" data-cs="dl" data-id="${c.id}">Scarica</button>`:'<span class="pill warn">Copia del documento mancante</span>'}
-      ${isDir()?`<button class="btn small ghost" data-cs="edit" data-id="${c.id}">Modifica</button>`:''}</div></article>`;});
+      ${isDir()?`<button class="btn small ghost" data-cs="edit" data-id="${c.id}" data-g="${curG}">Modifica</button>`:''}</div></article>`;});
   h+=`</div><p class="muted small" style="margin-top:16px">I documenti d’identità sono dati personali: li vedono solo le persone con accesso a questa app.</p>`;
   app.innerHTML=h;
   if(V.castScroll){const el=document.getElementById(V.castScroll);V.castScroll=null;if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:el.classList.contains('edit')?'center':'start'}),60);}
@@ -2828,12 +2836,16 @@ function renderCast(){
 const TEC_R=['Fonico','Tecnico luci'];
 function isTec(c){return /tecnic|fonic|luci|audio/i.test((c&&c.ruolo)||'');}
 function castForm(c){
-  return `<article class="card edit"${c.isNew?' id="castNew"':''}><div class="card-head"><h3>${c.isNew?(c._grp?'Nuova persona · '+(c._grp==='tutte'?'in tutte le formazioni':'Formazione '+c._grp):'Nuova persona'):'Modifica'}</h3></div>
+  return `<article class="card edit"${c.isNew?' id="castNew"':''}><div class="card-head"><h3>${c.isNew?(c._grp?'Nuova persona · Formazione '+c._grp:'Nuova persona'):'Modifica'}</h3></div>
    <div class="grid2"><div class="field"><label for="cNome">Nome</label><input class="in" id="cNome" value="${esc(c.nome||'')}"></div>
    <div class="field"><label for="cCogn">Cognome</label><input class="in" id="cCogn" value="${esc(c.cognome||'')}"></div>
    <div class="field"><label for="cRuolo">Ruolo</label><select class="in" id="cRuolo">${[['Attore','Attore'],['Attrice','Attrice'],['Fonico','Fonico'],['Tecnico luci','Tecnico luci'],['Tecnico','Tecnico (ruolo lo sceglie il TM)']].map(([v,l])=>`<option value="${v}" ${(c.ruolo||'Attore')===v?'selected':''}>${l}</option>`).join('')}${c.ruolo&&!['Attore','Attrice','Fonico','Tecnico luci','Tecnico'].includes(c.ruolo)?`<option selected>${esc(c.ruolo)}</option>`:''}</select></div>
    <div class="field"><label for="cTour">Tour</label><select class="in" id="cTour" ${c._grp?'disabled':''}>${allTours().map(t=>`<option value="${esc(t)}" ${t===(c.tour&&c.tour!==ALL?c.tour:allTours()[0])?'selected':''}>${esc(tourShort(t))}</option>`).join('')}</select></div>
-   ${(()=>{const t=c.tour&&c.tour!==ALL?c.tour:curTour();return t!==ALL&&hasForm(t)?`<div class="field"><label for="cForm">Formazione</label><select class="in" id="cForm" ${c._grp?'disabled':''}><option value="tutte" ${castForm_(c)==='tutte'?'selected':''}>In tutte le formazioni</option>${[1,...formOf(t).map(f=>f.n)].map(n=>`<option value="${n}" ${castForm_(c)===n?'selected':''}>Formazione ${n}</option>`).join('')}</select></div>`:'';})()}
+   ${(()=>{const t=c.tour&&c.tour!==ALL?c.tour:curTour();if(t===ALL||!hasForm(t))return '';const all=formAll(t),cur=c.isNew?[c._grp||1]:formsOf({...c,tour:t}),tut=!c.isNew&&inTutte(c);
+     const one=tut?(c._g||1):cur[0];
+     return `<div class="field form-field"><span class="flabel">Formazione</span><label class="chk"><input type="checkbox" id="cAll" ${tut?'checked':''}> Presente in tutte le formazioni</label>
+      <div class="form-pick" ${tut?'hidden':''}>${all.length<=2?`<select class="in" id="cForm" ${c.isNew?'disabled':''} aria-label="Formazione">${all.map(n=>`<option value="${n}" ${one===n?'selected':''}>Formazione ${n}</option>`).join('')}</select>`
+       :`<div class="form-checks">${all.map(n=>`<label class="chk"><input type="checkbox" data-fm="${n}" ${cur.includes(n)?'checked':''}> Formazione ${n}</label>`).join('')}</div>`}</div></div>`;})()}
    <div class="field"><label for="cTel">Telefono</label><input class="in" id="cTel" type="tel" value="${esc(c.telefono||'')}"></div>
    <div class="doc-fields grid2" style="grid-column:1/-1" ${isTec(c)?'hidden':''}><div class="field"><label for="cDocT">Documento</label><select class="in" id="cDocT">${DOC_TIPI.map(d=>`<option ${c.docTipo===d?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="field"><label for="cDocN">Numero</label><input class="in" id="cDocN" value="${esc(c.docNumero||'')}" autocomplete="off"></div>
@@ -2847,19 +2859,28 @@ document.addEventListener('change',async e=>{const fd=e.target.closest('[data-fo
   const fs=formOf(tr).map(f=>({n:f.n,dal:f.dal||''}));const prev=fs.find(f=>f.n===n-1),next=fs.find(f=>f.n===n+1);
   if(v&&((prev&&prev.dal&&v<=prev.dal)||(next&&next.dal&&v>=next.dal))){toast('La data deve stare tra il cambio precedente e quello successivo','bad');render();return;}
   fs.find(f=>f.n===n).dal=v;try{await saveForm(tr,fs);toast(v?'Data del cambio salvata':'Data tolta: cambio da definire');render();}catch(err){toast('Non salvata ('+(err.code||err.message)+')','bad');}});
+document.addEventListener('change',async e=>{if(V.name!=='cast')return;
+  if(e.target.id==='cAll'){const pk=document.querySelector('.form-pick');if(pk)pk.hidden=e.target.checked;return;}
+  const t=e.target.closest('[data-alltog]');if(!t||!isDir())return;const id=t.dataset.alltog,c=S.c.cast[id];if(!c)return;
+  const out=clone(c);delete out.id;delete out.formazioni;out.formazione=t.checked?'tutte':(+t.dataset.g||1);t.disabled=true;
+  try{await put('cast',id,out);toast(t.checked?`${c.nome} è ora in tutte le formazioni`:`${c.nome} resta solo nella Formazione ${out.formazione}`);render();}catch(err){toast('Non salvato ('+(err.code||err.message)+')','bad');t.checked=!t.checked;t.disabled=false;}});
 document.addEventListener('change',e=>{if(V.name==='cast'&&e.target.id==='cRuolo'){const d=document.querySelector('.doc-fields');if(d)d.hidden=isTec({ruolo:e.target.value});}});
 function readCast(){const g=id=>document.getElementById(id);const c=V.edit;if(!c||!g('cNome'))return;
   c.nome=g('cNome').value.trim();c.cognome=g('cCogn').value.trim();c.ruolo=g('cRuolo').value.trim();c.telefono=g('cTel').value.trim();if(g('cTour'))c.tour=g('cTour').value||c.tour;
-  c.docTipo=g('cDocT').value;c.docNumero=g('cDocN').value.trim();c.docScadenza=g('cDocS').value;if(g('cForm'))c.formazione=g('cForm').value==='tutte'?'tutte':+g('cForm').value;}
+  c.docTipo=g('cDocT').value;c.docNumero=g('cDocN').value.trim();c.docScadenza=g('cDocS').value;if(g('cAll')){const all=formAll(c.tour||curTour());delete c.formazioni;
+    if(g('cAll').checked)c.formazione='tutte';
+    else if(g('cForm'))c.formazione=+g('cForm').value;
+    else{const sel=[...document.querySelectorAll('[data-fm]:checked')].map(x=>+x.dataset.fm);
+      if(!sel.length)c.formazione=c._grp||c._g||1;else if(sel.length===all.length)c.formazione='tutte';else{c.formazione=sel[0];if(sel.length>1)c.formazioni=sel;}}}}
 async function blobSave(id,name){try{if(!S.downloads)throw {code:'unavailable'};const r=await fetch(await blobURL(id));const b=await r.blob();await S.downloads.save({filename:name,data:b});}
   catch(err){if(!(err&&err.code==='declined'))toast('Download non disponibile ('+((err&&err.code)||'errore')+')','bad');}}
 document.addEventListener('click',async e=>{
   if(V.name!=='cast')return;const cp=e.target.closest('[data-copy]');if(cp){copyText(cp.dataset.copy,'Numero copiato');return;}
   const b=e.target.closest('[data-cs]');if(!b)return;const a=b.dataset.cs;
   if(a==='add'){V.edit={id:uid('c'),isNew:true,tour:curTour()===ALL?allTours()[0]:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;render();document.getElementById('cNome').focus();}
-  else if(a==='edit'){V.edit={...clone(S.c.cast[b.dataset.id]),id:b.dataset.id};V.confirmDel=false;render();}
+  else if(a==='edit'){V.edit={...clone(S.c.cast[b.dataset.id]),id:b.dataset.id,_g:b.dataset.g&&b.dataset.g!=='null'?+b.dataset.g:null};V.confirmDel=false;render();}
   else if(a==='cancel'){V.edit=null;render();}
-  else if(a==='addf'&&isDir()){const n=b.dataset.n==='tutte'?'tutte':+b.dataset.n;V.edit={id:uid('c'),isNew:true,_grp:n,formazione:n,tour:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;V.castScroll='castNew';render();const f=document.getElementById('cNome');if(f)f.focus({preventScroll:true});}
+  else if(a==='addf'&&isDir()){const n=+b.dataset.n;V.edit={id:uid('c'),isNew:true,_grp:n,formazione:n,tour:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;V.castScroll='castNew';render();const f=document.getElementById('cNome');if(f)f.focus({preventScroll:true});}
   else if(a==='newform'&&isDir()){const tr=curTour();if(tr===ALL)return;const fs=formOf(tr);const n=fs.length+2;b.disabled=true;
     try{await saveForm(tr,[...fs.map(f=>({n:f.n,dal:f.dal||''})),{n,dal:''}]);toast(`Formazione ${n} creata: aggiungi le persone e, quando la sai, la data del cambio`);V.castScroll='fh_'+n;render();}catch(err){toast('Non creata ('+(err.code||err.message)+')','bad');b.disabled=false;}}
   else if(a==='delform'&&isDir()){const tr=curTour(),n=+b.dataset.n;try{await saveForm(tr,formOf(tr).filter(f=>f.n!==n).map(f=>({n:f.n,dal:f.dal||''})));toast('Formazione tolta');render();}catch(err){toast('Non tolta ('+(err.code||err.message)+')','bad');}}
@@ -2877,7 +2898,7 @@ document.addEventListener('click',async e=>{
   else if(a==='save'){readCast();const c=V.edit;if(!c.nome||(!c.cognome&&!isTec(c))){toast(isTec(c)?'Scrivi il nome':'Scrivi nome e cognome','bad');return;}
     b.disabled=true;b.textContent='Salvataggio…';
     try{if(c._blob){const up=await upAsset(c._blob,true);c.docFile=up.id;c.docFileExt=(c._blobName.split('.').pop()||'pdf').toLowerCase();}
-      const out=clone(c);['_blob','_blobName','isNew','id','_grp'].forEach(k=>delete out[k]);out.tour=c.tour||curTour();
+      const out=clone(c);['_blob','_blobName','isNew','id','_grp','_g'].forEach(k=>delete out[k]);out.tour=c.tour||curTour();
       await put('cast',c.id,out);V.edit=null;toast('Salvato');render();}
     catch(err){toast('Salvataggio non riuscito ('+(err.code||err.message)+')','bad');b.disabled=false;b.textContent='Salva';}}
 });
