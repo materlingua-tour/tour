@@ -663,6 +663,9 @@ html.splashing .shell{animation:appIn 1.1s cubic-bezier(.3,.1,.3,1) 1.15s both}
 #plWrap,#edWrap{touch-action:pan-x pan-y}
 .mob-top{display:none}@media (max-width:900px){.mob-top{display:flex!important;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}.mob-top .page-back{margin:0}.mob-tour{align-items:center;gap:8px;margin-left:auto}.mob-tour label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.mob-tour select{width:auto;min-width:150px}}
 @supports (-webkit-touch-callout:none){input.in,select.in,textarea.in,textarea.sname,input[type=text],input[type=number],input[type=tel],input[type=email],input[type=search],input[type=date],select,textarea{font-size:16px!important}}
+@media (max-width:900px){.mc{position:relative}.mc>.card-head,.mc>.tmonth{cursor:pointer;user-select:none;padding-right:30px;position:relative}.mc>.card-head>h2{margin-right:auto}.mc>.tmonth{display:flex;align-items:center;gap:8px}.mc>.tmonth .sec-chev{position:absolute;right:6px;top:8px}
+.mc.mc-closed .sec-chev{transform:rotate(45deg)}.mc.mc-closed>:not(.card-head):not(.tmonth){display:none!important}.card.mc.mc-closed{padding-top:14px;padding-bottom:14px}
+.mc>.card-head>.sec-chev,.mc>.tmonth>.sec-chev{right:6px;top:calc(50% - 7px)}.mc-tri{display:inline-flex;margin-left:6px;vertical-align:-3px}.mc-tri[hidden]{display:none}.mc-tri svg{width:18px;height:18px}}
 </style>
 
 <div id="splash" aria-hidden="true"><span class="logo"></span></div>
@@ -940,6 +943,23 @@ function restoreView(){if(VIEW_DONE)return;VIEW_DONE=true;let k=null;try{k=JSON.
     else if(k.name==='acc'&&k.pid&&S.c.piantine[k.pid]){V={name:'oggi',dayId:k.dayId};openAcc(k.pid);}
     else if(nav.includes(k.name))go(k.name,{dayId:k.dayId,qrDay:k.qrDay});else return;
     if(k.y)setTimeout(()=>window.scrollTo(0,k.y),120);}catch(e){console.warn('restoreView',e);}}
+/* telefono: sezioni apribili e chiudibili, con triangolo se dentro c'è qualcosa da fare */
+let MC={};try{MC=JSON.parse(localStorage.getItem('ml_mc')||'{}');}catch(e){}
+const isMob=()=>matchMedia('(max-width:900px)').matches;
+function mcUrgent(box){return !!box.querySelector('.pill.warn,.pill.bad,.t-iss li,.iss-row,.banner.warn,.banner.bad,svg.tri:not(.mc-tri *)');}
+function mcPaint(box){const closed=box.classList.contains('mc-closed')||box.classList.contains('sec-c');const hd=box.querySelector(':scope>.card-head,:scope>.tmonth');if(!hd)return;
+  let w=hd.querySelector('.mc-tri');if(!w){const tg=hd.querySelector('h2')||hd;const sp=document.createElement('span');sp.className='mc-tri';sp.hidden=true;sp.title='Dentro c’è qualcosa da fare';sp.innerHTML=TRI;if(tg===hd){const ch=hd.querySelector('.sec-chev');hd.insertBefore(sp,ch||null);}else tg.appendChild(sp);w=sp;}
+  w.hidden=!(closed&&mcUrgent(box));}
+function mobCollapse(){if(!isMob()||['piantina','teatro','welcome','acc','check'].includes(V.name))return;
+  const heads=[...app.querySelectorAll('.card:not(.edit):not(.sec)>.card-head'),...app.querySelectorAll('.acc-group>.tmonth')];
+  heads.forEach(hd=>{const box=hd.parentElement;if(box.closest('.edit,.bulk,.as-card,.bulk-done,.avv-new'))return;const h2=hd.querySelector('h2');if(hd.classList.contains('card-head')&&!h2)return;
+    const t=(h2||hd).textContent.replace(/\s+/g,' ').trim().replace(/\d+/g,'#').slice(0,50);if(!t)return;const key=V.name+'|'+t;
+    box.classList.add('mc');box.dataset.mc=key;hd.setAttribute('role','button');hd.tabIndex=0;
+    if(!hd.querySelector(':scope>.sec-chev'))hd.insertAdjacentHTML('beforeend','<span class="sec-chev" aria-hidden="true"></span>');
+    box.classList.toggle('mc-closed',!!MC[key]);hd.setAttribute('aria-expanded',!MC[key]);mcPaint(box);});
+  app.querySelectorAll('section.sec').forEach(mcPaint);}
+document.addEventListener('click',e=>{const hd=e.target.closest('.mc>.card-head,.mc>.tmonth');if(hd&&!e.target.closest('button,a,input,label,select,textarea')){const box=hd.parentElement;const c=!box.classList.contains('mc-closed');box.classList.toggle('mc-closed',c);hd.setAttribute('aria-expanded',!c);MC[box.dataset.mc]=c;if(!c)delete MC[box.dataset.mc];try{localStorage.setItem('ml_mc',JSON.stringify(MC));}catch(_){ }mcPaint(box);return;}
+  const sh=e.target.closest('section.sec>.card-head');if(sh&&!e.target.closest('button,a,input,label,select'))setTimeout(()=>mcPaint(sh.parentElement),0);});
 function addBack(){if(!V.back||['acc','check','piantina','teatro','welcome'].includes(V.name))return;if(app.querySelector('.page-back'))return;
   const dn=app.querySelector('.day-nav');(dn||app).insertAdjacentHTML('afterbegin',`<button class="btn small page-back" data-goback aria-label="Torna a ${esc(BACK_L[V.back.name]||'pagina precedente')}">← ${esc(BACK_L[V.back.name]||'Indietro')}</button>`);}
 /* due colonne indipendenti su schermi larghi: niente buchi tra le schede */
@@ -954,7 +974,7 @@ function render(){
   const nv=navFor().map(x=>x[0]).concat(['altro','check','teatro','piantina','oggi','welcome','acc']);if(!nv.includes(V.name))V={name:navFor()[0][0]};
   renderNav();
   const f={welcome:renderWelcome,controllo:renderControllo,mappa:renderMappa,accessi:renderAccessi,oggi:renderOggi,tournee:renderTournee,piantine:renderPiantineList,teatri:renderTeatriList,checklist:renderChecklistList,check:renderCheck,teatro:renderEditor,piantina:renderPiantina,cast:renderCast,documenti:renderDocs,altro:renderAltro,qr:renderQrList,acc:renderAcc,auto:renderAuto,profilo:renderProfilo,feedback:renderFeedback}[V.name];
-  if(f)f();mobTop();saveView();const vb=viewAsBanner();if(vb)app.insertAdjacentHTML('afterbegin',vb);layoutMas();
+  if(f)f();mobTop();saveView();mobCollapse();const vb=viewAsBanner();if(vb)app.insertAdjacentHTML('afterbegin',vb);layoutMas();
   setTimeout(fillPriv,0);
   if(CFG&&V.name==='accessi'&&isDir())app.insertAdjacentHTML('beforeend',`<section class="card" style="margin-top:18px;max-width:640px"><div class="card-head"><h2>Importa file</h2></div><p class="muted small" style="margin:0 0 10px">Solo per il trasferimento iniziale: carica i file (documenti del cast, foto, sfondi) ricevuti dall’archivio precedente. Si riconoscono dal nome.</p><input type="file" id="impFiles" multiple hidden><div class="row-btns"><button class="btn" data-impf>Scegli i file</button><span class="muted small" id="impOut"></span></div></section>`);
   if(f)addBack();
@@ -3632,7 +3652,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-prom]');if
 function promListHTML(){const ts=tours();const all=[];ts.forEach(tr=>all.push(...pendenze(tr)));
   const tmOf=tr=>users().find(u=>u.ruolo==='tm'&&u.tour===tr);const now=Date.now();
   const grp=[['oggi','Oggi'],['prossimi','Prossimi 3 giorni'],['admin','Amministrazione']];
-  let s=`<section class="card prom-dir"><div class="card-head"><h2>Da sistemare</h2><span class="pill ${all.length?'warn':'ok'}">${all.length?all.length+' cose':'Tutto a posto'}</span></div>
+  let s=`<section class="card prom-dir"><div class="card-head"><h2>Da sistemare</h2><span class="pill ${all.length?'warn':'ok'}">${all.length?all.length+(all.length===1?' cosa':' cose'):'Tutto a posto'}</span></div>
    <p class="muted small" style="margin:0">Cose che deve fare il Tour Manager. Con “Invia promemoria” gli compare un avviso nell’app, senza mittente. Quelle segnate “automatico” le vede già da solo.</p>`;
   if(!all.length)return s+`<p style="margin:0">Niente da sistemare in questo momento.</p></section>`;
   grp.forEach(([g,l])=>{const xs=all.filter(x=>x.lvl===g).sort((a,b)=>a.data.localeCompare(b.data)||a.tour.localeCompare(b.tour));if(!xs.length)return;
@@ -3681,6 +3701,7 @@ function renderControllo(){
       <div class="ctl-day"><span class="eyebrow">${pk.kind==='oggi'?'Oggi':pk.kind==='prossima'?'Prossima data':'Ultima data'}</span><b>${esc(cap(shortDate(tp.data)))} · ${esc(tp.citta)}</b><span class="muted small">${esc(tp.teatroNome||'')}</span></div>
       <div class="ctl-row"><span class="flabel">Piantine</span>${reps.map(r=>{const st=pStatus(tp,r);const lk=st.p&&plLocked(st.p);return `<span class="pill ${st.k==='ok'?'ok':st.k==='stale'?'bad':'warn'}">${esc(r)} · ${st.l}${lk?' · bloccata':''}</span>`;}).join('')}</div>
       <div class="ctl-row"><span class="flabel">Ultima checklist</span>${!last?'<span class="muted small">Nessuna data passata</span>':ck&&ck.inviata?`<span class="pill ${nos?'warn':'ok'}">${fmtDate(last.data)} · ${nos?nos+' segnalazioni':'tutto ok'}</span>`:`<span class="pill bad">${fmtDate(last.data)} · non inviata</span>`}</div>
+      ${isDir()?(()=>{const iss=list.filter(t=>t.data>=td).reduce((a,t)=>a+dayIssues(t).length,0);return `<div class="ctl-row mob-only"><span class="flabel">Da sistemare</span>${iss?`<span class="pill warn">${iss} ${iss===1?'cosa':'cose'}</span>`:'<span class="pill ok">niente</span>'}</div>`;})():''}
       ${(()=>{const fs=fotoFor(tp);return `<div class="ctl-row"><span class="flabel">Scenografia</span>${fs.length?thumbs(fs.slice(-2)):'<span class="muted small">Nessuna foto per questa data</span>'}</div>`;})()}
       <div class="row-btns"><button class="btn small primary" data-ctl="${tp.id}">Apri la giornata</button><button class="btn small" data-ctlmap="${esc(tr)}">Mappa</button></div></article>`;});
   h+=`</div>`;
