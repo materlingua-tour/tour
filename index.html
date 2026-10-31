@@ -2793,15 +2793,15 @@ function renderCast(){
   if(!list.length&&!V.edit)h+=`<div class="empty"><b>Nessuno in elenco per questo tour.</b><span class="muted small">Aggiungi attori e tecnici con il loro documento.</span></div>`;
   const trc=curTour(),FM=isDir()&&trc!==ALL&&hasForm(trc);
   if(!isDir()){const keep=c=>{if(!hasForm(c.tour))return true;const f=castForm_(c);return f==='tutte'||f===formNow(c.tour);};for(let i=list.length-1;i>=0;i--)if(!keep(list[i]))list.splice(i,1);}
-  if(isDir()&&trc!==ALL)h=h.replace('+ Aggiungi persona</button>','+ Aggiungi persona</button><button class="btn" data-cs="newform">+ Nuova formazione</button>');
+  if(isDir()&&trc!==ALL)h=h.replace('<button class="btn primary" data-cs="add">+ Aggiungi persona</button>',FM?'<button class="btn" data-cs="newform">+ Nuova formazione</button>':'<button class="btn primary" data-cs="add">+ Aggiungi persona</button><button class="btn" data-cs="newform">+ Nuova formazione</button>');
   const attori=list.filter(c=>!isTec(c)),tecnici=list.filter(isTec);
   let seq=[...attori,'__TEC__',...tecnici];
   if(FM){const now=formNow(trc);const groups=['tutte',1,...formOf(trc).map(f=>f.n)];seq=[];
-    groups.forEach(g=>{const mem=list.filter(c=>castForm_(c)===g);if(g==='tutte'&&!mem.length)return;seq.push({__g:g,now,n:mem.length});seq.push(...mem.filter(c=>!isTec(c)),...mem.filter(isTec));if(isDir()&&g!=='tutte')seq.push({__add:g});});}
+    groups.forEach(g=>{const mem=list.filter(c=>castForm_(c)===g);if(g==='tutte'&&!mem.length&&!isDir())return;seq.push({__g:g,now,n:mem.length});seq.push(...mem.filter(c=>!isTec(c)),...mem.filter(isTec));if(isDir())seq.push({__add:g});});}
   h+=`<div class="list">`;
   if(V.edit&&V.edit.isNew&&!(FM&&V.edit._grp))h+=castForm(V.edit);
   seq.forEach(c=>{
-    if(c&&c.__add!==undefined){if(V.edit&&V.edit.isNew&&V.edit._grp===c.__add)return;h+=`</div><div class="form-add"><button class="btn" data-cs="addf" data-n="${c.__add}">+ Aggiungi persona alla Formazione ${c.__add}</button></div><div class="list">`;return;}
+    if(c&&c.__add!==undefined){if(V.edit&&V.edit.isNew&&V.edit._grp===c.__add)return;h+=`</div><div class="form-add"><button class="btn" data-cs="addf" data-n="${c.__add}">${c.__add==='tutte'?'+ Aggiungi persona a tutte le formazioni':'+ Aggiungi persona alla Formazione '+c.__add}</button></div><div class="list">`;return;}
     if(c&&c.__g!==undefined){const g=c.__g,r=formRange(trc,g);
       const per=g==='tutte'?'Per tutta la tournée':r.daDef?'Data del cambio da definire':`${r.dal?'Dal '+fmtDate(r.dal):'Dall’inizio'}${r.al&&(!r.dal||r.al>=r.dal)?' al '+fmtDate(r.al):''}`;
       h+=`</div><div class="form-head" id="fh_${g}"><div><h2 class="cast-sec" style="margin:0">${g==='tutte'?'In tutte le formazioni':'Formazione '+g}</h2><span class="muted small">${per}</span></div>${g!=='tutte'&&g===c.now&&!r.daDef?'<span class="pill ok">In servizio</span>':g!=='tutte'&&r.daDef?'<span class="pill warn">In arrivo</span>':''}
@@ -2828,7 +2828,7 @@ function renderCast(){
 const TEC_R=['Fonico','Tecnico luci'];
 function isTec(c){return /tecnic|fonic|luci|audio/i.test((c&&c.ruolo)||'');}
 function castForm(c){
-  return `<article class="card edit"${c.isNew?' id="castNew"':''}><div class="card-head"><h3>${c.isNew?(c._grp?'Nuova persona · Formazione '+c._grp:'Nuova persona'):'Modifica'}</h3></div>
+  return `<article class="card edit"${c.isNew?' id="castNew"':''}><div class="card-head"><h3>${c.isNew?(c._grp?'Nuova persona · '+(c._grp==='tutte'?'in tutte le formazioni':'Formazione '+c._grp):'Nuova persona'):'Modifica'}</h3></div>
    <div class="grid2"><div class="field"><label for="cNome">Nome</label><input class="in" id="cNome" value="${esc(c.nome||'')}"></div>
    <div class="field"><label for="cCogn">Cognome</label><input class="in" id="cCogn" value="${esc(c.cognome||'')}"></div>
    <div class="field"><label for="cRuolo">Ruolo</label><select class="in" id="cRuolo">${[['Attore','Attore'],['Attrice','Attrice'],['Fonico','Fonico'],['Tecnico luci','Tecnico luci'],['Tecnico','Tecnico (ruolo lo sceglie il TM)']].map(([v,l])=>`<option value="${v}" ${(c.ruolo||'Attore')===v?'selected':''}>${l}</option>`).join('')}${c.ruolo&&!['Attore','Attrice','Fonico','Tecnico luci','Tecnico'].includes(c.ruolo)?`<option selected>${esc(c.ruolo)}</option>`:''}</select></div>
@@ -2859,7 +2859,7 @@ document.addEventListener('click',async e=>{
   if(a==='add'){V.edit={id:uid('c'),isNew:true,tour:curTour()===ALL?allTours()[0]:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;render();document.getElementById('cNome').focus();}
   else if(a==='edit'){V.edit={...clone(S.c.cast[b.dataset.id]),id:b.dataset.id};V.confirmDel=false;render();}
   else if(a==='cancel'){V.edit=null;render();}
-  else if(a==='addf'&&isDir()){const n=+b.dataset.n;V.edit={id:uid('c'),isNew:true,_grp:n,formazione:n,tour:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;V.castScroll='castNew';render();const f=document.getElementById('cNome');if(f)f.focus({preventScroll:true});}
+  else if(a==='addf'&&isDir()){const n=b.dataset.n==='tutte'?'tutte':+b.dataset.n;V.edit={id:uid('c'),isNew:true,_grp:n,formazione:n,tour:curTour(),docTipo:DOC_TIPI[0]};V.confirmDel=false;V.castScroll='castNew';render();const f=document.getElementById('cNome');if(f)f.focus({preventScroll:true});}
   else if(a==='newform'&&isDir()){const tr=curTour();if(tr===ALL)return;const fs=formOf(tr);const n=fs.length+2;b.disabled=true;
     try{await saveForm(tr,[...fs.map(f=>({n:f.n,dal:f.dal||''})),{n,dal:''}]);toast(`Formazione ${n} creata: aggiungi le persone e, quando la sai, la data del cambio`);V.castScroll='fh_'+n;render();}catch(err){toast('Non creata ('+(err.code||err.message)+')','bad');b.disabled=false;}}
   else if(a==='delform'&&isDir()){const tr=curTour(),n=+b.dataset.n;try{await saveForm(tr,formOf(tr).filter(f=>f.n!==n).map(f=>({n:f.n,dal:f.dal||''})));toast('Formazione tolta');render();}catch(err){toast('Non tolta ('+(err.code||err.message)+')','bad');}}
