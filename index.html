@@ -3197,6 +3197,7 @@ async function vhPDF(R){await loadScript(JSPDF);const {jsPDF}=window.jspdf;const
   txt(`Segnalazioni: ${F.length} — Commerciali ${by('commerciali').length}, Logistica ${by('logistica').length}, Amministrazione ${by('amministrazione').length}. Urgenti [!]: ${F.filter(f=>f.grave).length}.`,{fs:9.5,b:1});y+=2;
   txt('Come leggere: [!] cambia subito la piantina. “(da verificare)” vuol dire che l’app non ne è certa: controlla se è davvero così prima di correggere. Le correzioni si fanno su HubSpot; l’app le riprende da sola alla sincronizzazione. HubSpot è stato solo letto: nessun dato è stato modificato.',{fs:9,c:MU});
   if(!R.ai)txt('Le frasi di chiamate e note sono state lette solo cercando parole chiave (servizio di lettura non disponibile): tutte le segnalazioni che vengono da lì sono da verificare.',{fs:9,c:OR});
+  (R.avvisi||[]).forEach(a=>txt(a,{fs:9,c:OR}));
   if((R.permessi||[]).length)txt(`Chiamate e note NON lette: all’app su HubSpot manca il permesso di lettura (${R.permessi.join(', ')}). Chi amministra HubSpot può aggiungerlo all’app collegata: è solo lettura.`,{fs:9,c:RED,b:1});
   // commerciali per area
   const com=by('commerciali');H('Commerciali','Raggruppate per area e referente di zona.');
