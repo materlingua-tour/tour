@@ -915,14 +915,19 @@ function mobTop(){const u=me();if(!u||V.name==='welcome')return;let h='';
   if(u.ruolo!=='tm'&&ts.length>1&&!noTour.includes(V.name)){const tr=curTour();
     h+=`<div class="mob-tour mob-only"><label for="tourSel3">Tour</label><select class="in" id="tourSel3">${canAll()&&ALL_VIEWS.includes(V.name)?`<option value="${ALL}" ${tr===ALL?'selected':''}>Tutti i tour</option>`:''}${ts.map(t=>`<option value="${esc(t)}" ${t===tr?'selected':''}>${esc(tourShort(t))}</option>`).join('')}</select></div>`;}
   if(h)app.insertAdjacentHTML('afterbegin',`<div class="mob-top mob-only">${h}</div>`);}
-/* zoom con due dita sulle piantine e sulle mappe */
-(function(){let P=null;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+/* zoom con due dita sulle piantine e sulle mappe: durante il gesto si ingrandisce l'immagine (fluido), alla fine si ridisegna una volta */
+(function(){let P=null;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);const mid=(t,r)=>({x:(t[0].clientX+t[1].clientX)/2-r.left,y:(t[0].clientY+t[1].clientY)/2-r.top});
   document.addEventListener('touchstart',e=>{const w=e.target.closest&&e.target.closest('#plWrap,#edWrap');if(!w||e.touches.length!==2)return;
-    if(typeof painting!=='undefined'&&painting){painting=false;}const r=w.getBoundingClientRect();const mx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,my=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top;
-    P={w,d0:dist(e.touches),z0:V.zoom||1,cx:(w.scrollLeft+mx)/w.scrollWidth,cy:(w.scrollTop+my)/w.scrollHeight,mx,my,raf:0};},{passive:true});
-  document.addEventListener('touchmove',e=>{if(!P||e.touches.length!==2)return;e.preventDefault();const z=Math.max(1,Math.min(5,P.z0*dist(e.touches)/P.d0));if(Math.abs(z-V.zoom)<0.01)return;V.zoom=z;
-    if(P.raf)return;P.raf=requestAnimationFrame(()=>{if(!P)return;P.raf=0;(P.w.id==='plWrap'?drawPl:drawEd)();P.w.scrollLeft=P.cx*P.w.scrollWidth-P.mx;P.w.scrollTop=P.cy*P.w.scrollHeight-P.my;});},{passive:false});
-  document.addEventListener('touchend',e=>{if(P&&e.touches.length<2)P=null;},{passive:true});})();
+    if(typeof painting!=='undefined'&&painting){painting=false;}const cv=w.querySelector('#plCanvas,#edCanvas');if(!cv)return;const r=w.getBoundingClientRect();const m=mid(e.touches,r);
+    const ox=w.scrollLeft+m.x-cv.offsetLeft,oy=w.scrollTop+m.y-cv.offsetTop;cv.style.transformOrigin=`${ox}px ${oy}px`;cv.style.willChange='transform';
+    P={w,cv,r,d0:dist(e.touches),z0:V.zoom||1,ox,oy,m0:m,k:1,dx:0,dy:0,raf:0};},{passive:true});
+  document.addEventListener('touchmove',e=>{if(!P||e.touches.length!==2)return;e.preventDefault();const m=mid(e.touches,P.r);
+    P.k=Math.max(1/P.z0,Math.min(5/P.z0,dist(e.touches)/P.d0));P.dx=m.x-P.m0.x;P.dy=m.y-P.m0.y;
+    if(P.raf)return;P.raf=requestAnimationFrame(()=>{if(!P)return;P.raf=0;P.cv.style.transform=`translate(${P.dx}px,${P.dy}px) scale(${P.k})`;});},{passive:false});
+  const end=()=>{if(!P)return;const Q=P;P=null;if(Q.raf)cancelAnimationFrame(Q.raf);const z=Math.max(1,Math.min(5,Q.z0*Q.k));
+    Q.cv.style.transform='';Q.cv.style.transformOrigin='';Q.cv.style.willChange='';V.zoom=z;(Q.w.id==='plWrap'?drawPl:drawEd)();
+    const f=z/Q.z0;Q.w.scrollLeft=Q.cv.offsetLeft+Q.ox*f-(Q.m0.x+Q.dx);Q.w.scrollTop=Q.cv.offsetTop+Q.oy*f-(Q.m0.y+Q.dy);};
+  document.addEventListener('touchend',e=>{if(P&&e.touches.length<2)end();},{passive:true});document.addEventListener('touchcancel',()=>end(),{passive:true});})();
 function addBack(){if(!V.back||['acc','check','piantina','teatro','welcome'].includes(V.name))return;if(app.querySelector('.page-back'))return;
   const dn=app.querySelector('.day-nav');(dn||app).insertAdjacentHTML('afterbegin',`<button class="btn small page-back" data-goback aria-label="Torna a ${esc(BACK_L[V.back.name]||'pagina precedente')}">← ${esc(BACK_L[V.back.name]||'Indietro')}</button>`);}
 /* due colonne indipendenti su schermi larghi: niente buchi tra le schede */
